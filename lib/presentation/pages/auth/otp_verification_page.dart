@@ -110,11 +110,19 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                 setState(() {
                   _isResponseLoading = false;
                 });
+                
+                print('Authentication successful, navigating to: ${AppRoutes.userInfo}');
+                print('User data: ${state.user}');
+                
                 Navigator.pushNamedAndRemoveUntil(
                   context,
                   AppRoutes.userInfo,
                   (route) => false,
-                );
+                ).then((_) {
+                  print('Navigation completed successfully');
+                }).catchError((error) {
+                  print('Navigation error: $error');
+                });
               } 
               // Handle OTP verification errors
               else if (state is OtpError) {
@@ -157,7 +165,7 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
               builder: (context, state) {
                 // Get phone number from current state if available
                 if (state is OtpSent && _phoneNumber.isEmpty) {
-                  _phoneNumber = state.phone ;
+                  _phoneNumber = state.phone;
                 }
 
                 return Column(

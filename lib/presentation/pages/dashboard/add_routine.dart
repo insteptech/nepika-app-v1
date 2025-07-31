@@ -135,7 +135,7 @@ class AddRoutine extends StatelessWidget {
                       onTap: () {
                         Navigator.pushNamedAndRemoveUntil(
                           context,
-                          AppRoutes.dashboardHome,
+                          AppRoutes.dashboardReminderSettings,
                           (route) => false,
                         );
                       },
@@ -145,7 +145,6 @@ class AddRoutine extends StatelessWidget {
                           Text(
                             'Done',
                             style: Theme.of(context).textTheme.headlineMedium!.hint(context)
-
                           ),
                         ],
                       ),

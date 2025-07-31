@@ -17,7 +17,6 @@ class _HelpAndSupportState extends State<HelpAndSupport> {
     _SettingsOptionData('FAQ', onTap: () {}),
     _SettingsOptionData('Live Chat or Contact Support', onTap: () {}),
     _SettingsOptionData('Feedback / Rate Us Page', onTap: () {}),
-    _SettingsOptionData('Delete Account', onTap: () {}),
   ];
 
   @override

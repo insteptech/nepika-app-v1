@@ -4,6 +4,7 @@ import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/presentation/pages/dashboard/components/settings/community_and_engagement_page.dart';
 import 'package:nepika/presentation/pages/dashboard/components/settings/help_and_support_page.dart';
 import 'package:nepika/presentation/pages/dashboard/components/settings/notifications_and_settings_page.dart';
+import 'package:nepika/presentation/pages/dashboard/set_reminder_page.dart';
 import 'package:nepika/presentation/pages/dashboard/settings_page.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
 import 'package:nepika/presentation/pages/dashboard/add_routine.dart';
@@ -139,6 +140,11 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                 return MaterialPageRoute(
                   settings: RouteSettings(name: AppRoutes.dashboardAddRoutine),
                   builder: (_) => const AddRoutine(),
+                );
+              case AppRoutes.dashboardReminderSettings:
+                return MaterialPageRoute(
+                  settings: RouteSettings(name: AppRoutes.dashboardReminderSettings),
+                  builder: (_) => const ReminderSettings(),
                 );
               case AppRoutes.dashboardAllProducts:
                 return MaterialPageRoute(

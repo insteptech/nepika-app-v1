@@ -24,30 +24,102 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
   String _selectedCountryCode = '+91';
   String _selectedCountryFlag = '🇮🇳';
   String _phoneNumber = '';
+  String _phoneHint = '9876543210';
+  num phoneLimit = 10;
 
   final List<Map<String, String>> _countries = [
-    {'code': '+1', 'flag': '🇺🇸', 'name': 'United States'},
-    {'code': '+91', 'flag': '🇮🇳', 'name': 'India'},
-    {'code': '+44', 'flag': '🇬🇧', 'name': 'United Kingdom'},
-    {'code': '+86', 'flag': '🇨🇳', 'name': 'China'},
-    {'code': '+33', 'flag': '🇫🇷', 'name': 'France'},
-    {'code': '+49', 'flag': '🇩🇪', 'name': 'Germany'},
-    {'code': '+81', 'flag': '🇯🇵', 'name': 'Japan'},
-    {'code': '+61', 'flag': '🇦🇺', 'name': 'Australia'},
-    {'code': '+82', 'flag': '🇰🇷', 'name': 'South Korea'},
-    {'code': '+55', 'flag': '🇧🇷', 'name': 'Brazil'},
+    {
+      'code': '+1',
+      'limit': '10',
+      'flag': '🇺🇸',
+      'name': 'United States',
+      'hint': '2025550123',
+    },
+    {
+      'code': '+91',
+      'limit': '10',
+      'flag': '🇮🇳',
+      'name': 'India',
+      'hint': '9876543210',
+    },
+    {
+      'code': '+44',
+      'limit': '10',
+      'flag': '🇬🇧',
+      'name': 'United Kingdom',
+      'hint': '7123456789',
+    },
+    {
+      'code': '+86',
+      'limit': '11',
+      'flag': '🇨🇳',
+      'name': 'China',
+      'hint': '13800138000',
+    },
+    {
+      'code': '+33',
+      'limit': '9',
+      'flag': '🇫🇷',
+      'name': 'France',
+      'hint': '612345678',
+    },
+    {
+      'code': '+49',
+      'limit': '11',
+      'flag': '🇩🇪',
+      'name': 'Germany',
+      'hint': '15123456789',
+    },
+    {
+      'code': '+81',
+      'limit': '10',
+      'flag': '🇯🇵',
+      'name': 'Japan',
+      'hint': '0312345678',
+    },
+    {
+      'code': '+61',
+      'limit': '9',
+      'flag': '🇦🇺',
+      'name': 'Australia',
+      'hint': '412345678',
+    },
+    {
+      'code': '+82',
+      'limit': '10',
+      'flag': '🇰🇷',
+      'name': 'South Korea',
+      'hint': '1023456789',
+    },
+    {
+      'code': '+55',
+      'limit': '11',
+      'flag': '🇧🇷',
+      'name': 'Brazil',
+      'hint': '11912345678',
+    },
   ];
 
   @override
   void initState() {
     super.initState();
     _countryCodeController.text = '$_selectedCountryFlag $_selectedCountryCode';
+    // _phoneController.addListener(() {
+    //   setState(() {
+    //     _phoneNumber = _phoneController.text;
+    //   });
+    //   _phoneHint = _countries.firstWhere(
+    //     (country) => country['code'] == _selectedCountryCode,
+    //     orElse: () => {'hint': '000 000 0000'},
+    //   )['hint']!;
+    // });
   }
 
   @override
   void dispose() {
     _phoneController.dispose();
     _countryCodeController.dispose();
+    _phoneController.removeListener(() {});
     super.dispose();
   }
 
@@ -96,7 +168,9 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                     ),
                     trailing: Text(
                       country['code']!,
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium!.hint(context),
                     ),
                     onTap: () {
                       setState(() {
@@ -104,6 +178,9 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                         _selectedCountryFlag = country['flag']!;
                         _countryCodeController.text =
                             '$_selectedCountryFlag $_selectedCountryCode';
+                        _phoneHint = country['hint']!;
+                        phoneLimit = int.parse(country['limit']!);
+                        _phoneController.clear();
                       });
                       Navigator.pop(context);
                     },
@@ -189,12 +266,13 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                   const SizedBox(height: 40),
                   // Phone number input
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 55.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
                     child: Row(
                       children: [
                         SizedBox(
                           width: 120,
                           child: UnderlinedTextField(
+
                             hint: '+91',
                             readOnly: true,
                             onTap: _showCountryPicker,
@@ -215,13 +293,16 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                         ),
                         Expanded(
                           child: UnderlinedTextField(
-                            hint: '9876543212',
+                            key: ValueKey(_phoneHint),
+                            hint: _phoneHint,
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
                             textAlign: TextAlign.center,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
-                              LengthLimitingTextInputFormatter(10),
+                              LengthLimitingTextInputFormatter(
+                                phoneLimit.toInt(),
+                              ),
                             ],
                             onChanged: (value) {
                               setState(() {
@@ -237,8 +318,8 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your\nphone number';
                               }
-                              if (value.length < 10) {
-                                return 'Please enter a\nvalid phone number';
+                              if (value.length != phoneLimit) {
+                                return 'Phone number should be $phoneLimit digits';
                               }
                               return null;
                             },
@@ -253,10 +334,11 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                     width: double.infinity,
                     child: CustomButton(
                       text: 'Continue',
-                      onPressed: _phoneNumber.length == 10
+                      onPressed: _phoneNumber.length == phoneLimit
                           ? _handleContinue
                           : null,
-                      isDisabled: _phoneNumber.length != 10,
+                      isDisabled: _phoneNumber.length != phoneLimit,
+
                       isLoading: _isResponseLoading,
                     ),
                   ),

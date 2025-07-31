@@ -411,7 +411,7 @@ class UnderlinedTextField extends StatelessWidget {
         errorText: errorText,
         contentPadding: contentPadding ?? const EdgeInsets.symmetric(vertical: 12),
         filled: backgroundColor != Colors.transparent,
-        fillColor: backgroundColor,
+        fillColor: backgroundColor ?? Colors.transparent,
         border: const UnderlineInputBorder(
           borderSide: BorderSide(color: Color(0x663898ED), width: 1),
         ),
