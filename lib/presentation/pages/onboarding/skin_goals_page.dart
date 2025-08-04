@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/widgets/index.dart';
 import '../../../core/widgets/selection_button.dart';
-import '../first_scan/face_scan_page.dart';
+import '../first_scan/scan_onboarding_page.dart';
 
 
 class SkinGoalsPage extends StatefulWidget {
@@ -90,27 +90,23 @@ class _SkinGoalsPageState extends State<SkinGoalsPage> {
       );
 
       // Navigate after 1 second
-      Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const FaceScanPage()),
           );
         }
-      });
     }
   }
 
   Widget _buildGoalButton(String text, String value) {
     final isSelected = _selectedGoals.contains(value);
     
-    return Expanded(
-      child: SelectionButton(
-        text: text,
-        padding: const EdgeInsets.symmetric(horizontal: 10),
-        isSelected: isSelected,
-        onPressed: () => _toggleGoal(value),
-      ),
+    return SelectionButton(
+      text: text,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      isSelected: isSelected,
+      onPressed: () => _toggleGoal(value),
     );
   }
 
@@ -118,22 +114,19 @@ class _SkinGoalsPageState extends State<SkinGoalsPage> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          title,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
+        Text(title, style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 10),
         // First row with 2 goals
-    Wrap(
-  spacing: 10,
-  runSpacing: 12,
-  children: goals.map((goal) {
-    return SizedBox(
-      width: (MediaQuery.of(context).size.width - 60) / 2, 
-      child: _buildGoalButton(goal['text']!, goal['value']!),
-    );
-  }).toList(),
-),
+        Wrap(
+          spacing: 5,
+          runSpacing: 12,
+          children: goals.map((goal) {
+            return SizedBox(
+              width: (MediaQuery.of(context).size.width - 45) / 2,
+              child: _buildGoalButton(goal['text']!, goal['value']!),
+            );
+          }).toList(),
+        ),
       ],
     );
   }

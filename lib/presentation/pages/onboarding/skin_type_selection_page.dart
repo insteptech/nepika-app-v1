@@ -82,7 +82,7 @@ class _SkinTypeSelectionPageState extends State<SkinTypeSelectionPage> {
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 16),
-        padding: const EdgeInsets.all(20),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
         decoration: BoxDecoration(
           color: isSelected ? theme.colorScheme.primary : Colors.transparent,
           border: Border.all(
@@ -99,19 +99,19 @@ class _SkinTypeSelectionPageState extends State<SkinTypeSelectionPage> {
               height: 48,
               decoration: BoxDecoration(
                 color: isSelected
-                    ? theme.colorScheme.surface.withOpacity(0.2)
+                    ? theme.colorScheme.onSecondary.withOpacity(0.1)
                     : theme.colorScheme.primary.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: isSelected
-                      ? theme.colorScheme.onPrimary.withOpacity(0.3)
+                      ? theme.colorScheme.onSecondary.withOpacity(0.3)
                       : theme.colorScheme.primary.withOpacity(0.2),
                   width: 1,
                 ),
               ),
               child: Icon(
                 getIconForSkinType(value),
-                color: isSelected ? theme.colorScheme.surface : theme.colorScheme.primary,
+                color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.primary,
                 size: 24,
               ),
             ),
@@ -124,14 +124,15 @@ class _SkinTypeSelectionPageState extends State<SkinTypeSelectionPage> {
                   Text(
                     title,
                     style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                      color: isSelected ? theme.colorScheme.surface : theme.textTheme.headlineMedium?.color,
+                      color: isSelected ? theme.colorScheme.onSecondary : theme.textTheme.headlineMedium?.color,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     description,
                     style: theme.textTheme.bodyLarge?.copyWith(
-                      color: isSelected ? theme.colorScheme.surface.withOpacity(0.8) : theme.textTheme.bodyLarge!.secondary(context).color,
+                      color: isSelected ? theme.colorScheme.onSecondary.withOpacity(0.8) : theme.textTheme.bodyLarge!.secondary(context).color,
+                      fontSize: theme.textTheme.bodyLarge!.fontSize! - 1,
                     )
                   ),
                 ],

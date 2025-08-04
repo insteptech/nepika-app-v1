@@ -26,13 +26,6 @@ class ProgressSummaryChart extends StatelessWidget {
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.onTertiary,
           borderRadius: BorderRadius.circular(20),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.grey.withOpacity(0.1),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
         ),
         child: Center(
           child: Text(
@@ -52,13 +45,7 @@ class ProgressSummaryChart extends StatelessWidget {
       decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+      
       ),
       child: Padding(
         padding: padding,
@@ -91,18 +78,18 @@ class ProgressChartPainter extends CustomPainter {
     if (data.isEmpty) return;
 
     final paint = Paint()
-      ..color = Theme.of(context).colorScheme.onPrimary
+      ..color = Theme.of(context).colorScheme.primary
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
     final fillPaint = Paint()
-      ..color = Theme.of(context).colorScheme.onPrimary.withOpacity(0.1)
+      ..color = Theme.of(context).colorScheme.primary.withOpacity(0.2)
       ..style = PaintingStyle.fill;
 
     final gridPaint = Paint()
-      ..color = Colors.grey.withOpacity(0.3)
+      ..color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)
       ..strokeWidth = 1.0;
 
     final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(

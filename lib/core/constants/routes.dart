@@ -1,14 +1,23 @@
 class AppRoutes {
-  // Authentication Routes
-  static const String notFound = '/not-found';
   static const String splash = '/';
+  static const String welcome = '/welcome';
   static const String login = '/login';
   static const String phoneEntry = '/phone-entry';
   static const String otpVerification = '/otp-verification';
+
+
   static const String userInfo = '/user-info';
+
+
+
+
+  static const String todaysRoutine = '/todays-routine';
+  static const String cameraScanGuidence = '/camera-scan';
+  static const String faceScanResult = '/face-scan-result-page';
+  // Authentication Routes
+  static const String notFound = '/not-found';
   
   // Onboarding Routes
-  static const String onboarding = '/onboarding';
   static const String faceScanOnboarding = '/face-scan-onboarding';
   
   // Main App Routes
@@ -21,8 +30,7 @@ class AppRoutes {
   static const String settings = '/settings';
 
   // Dashboard Routes
-// Dashboard Entry
-  static const  String dashboard = '/dashboard';
+  // static const  String dashboardSlash = '/dashboard';
 
   // Dashboard Internal Routes (with navbar)
   static const String dashboardHome = '/dashboard/home';
@@ -43,12 +51,9 @@ class AppRoutes {
   static const String notificationsAndSettings = '/dashboard/settings/notifications-and-settings';
   static const String helpAndSupport = '/dashboard/settings/help-and-support';
   static const String communityAndEngagement = '/dashboard/settings/community-and-engagement';
+  static const String setupNotifications = '/dashboard/settings/setup_notifications';
 
 
-
-  static const String todaysRoutine = '/todays-routine';
-  static const String cameraScan = '/camera-scan';
-  static const String faceScanResult = '/face-scan-result-page';
 
   
   // Profile Routes
@@ -68,4 +73,38 @@ class AppRoutes {
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';
   static const String about = '/about';
+
+  // static const DashboardRoutes dashboard = DashboardRoutes();
 }
+
+
+
+// class DashboardRoutes {
+//   const DashboardRoutes();
+
+//   static const String slash = '/';
+//   static const String home = '/home';
+//   static const String explore = '/explore';
+//   static const String scan = '/scan';
+//   static const String profile = '/profile';
+//   static const String todaysRoutine = '/routine';
+//   static const String editRoutine = '/routine/edit';
+//   static const String addRoutine = '/routine/add';
+//   static const String reminderSettings = '/routine/reminder';
+//   static const String allProducts = '/products/all';
+//   static const String specificProduct = '/products/info';
+
+
+//   static const SettingsRoutes settings = SettingsRoutes();
+// }
+
+
+// class SettingsRoutes{
+//   const SettingsRoutes();
+
+//   static const String slash = '/';
+//   static const String notificationsAndSettings = '/notifications-and-settings';
+//   static const String helpAndSupport = '/help-and-support';
+//   static const String communityAndEngagement = '/community-and-engagement';
+//   static const String setupNotifications = '/setup_notifications';
+// }

@@ -1,5 +1,8 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
+// import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/core/widgets/toggle_switch.dart';
 
 class SettingsOptionTile extends StatefulWidget {
@@ -18,6 +21,9 @@ class SettingsOptionTile extends StatefulWidget {
   final bool? toggleValue;
   final ValueChanged<bool>? onToggleChanged;
 
+  // Storage
+final String? toggleStorageKey;
+
   const SettingsOptionTile({
     super.key,
     required this.text,
@@ -32,6 +38,7 @@ class SettingsOptionTile extends StatefulWidget {
     this.showToggle = false,
     this.toggleValue,
     this.onToggleChanged,
+    this.toggleStorageKey,
   });
 
   @override
@@ -41,27 +48,57 @@ class SettingsOptionTile extends StatefulWidget {
 class _SettingsOptionTileState extends State<SettingsOptionTile> {
   bool? _localToggleValue;
 
+  String get _transformedKey {
+    final baseKey = widget.toggleStorageKey ?? widget.text;
+    final random = Random().nextInt(9000) + 1000;
+    return '${baseKey.trim().toLowerCase().replaceAll(' ', '-')}-$random';
+  }
+
+  String? _persistentKey;
+
   @override
   void initState() {
     super.initState();
-    _localToggleValue = widget.toggleValue;
+    _initToggleValue();
   }
 
-  @override
-  void didUpdateWidget(SettingsOptionTile oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (widget.toggleValue != oldWidget.toggleValue) {
+  Future<void> _initToggleValue() async {
+    if (widget.showToggle && widget.toggleStorageKey != null) {
+      final transformedKey = _transformedKey;
+      _persistentKey = transformedKey;
+      final storedValue = await SharedPrefsHelper().getBool(transformedKey);
+      if (storedValue != null) {
+        setState(() {
+          _localToggleValue = storedValue;
+        });
+      } else {
+        _localToggleValue = widget.toggleValue ?? false;
+        await SharedPrefsHelper().setBool(transformedKey, _localToggleValue!);
+      }
+    } else {
       _localToggleValue = widget.toggleValue;
     }
   }
 
-  void _handleToggleChange(bool value) {
+  Future<void> _handleToggleChange(bool value) async {
     setState(() {
       _localToggleValue = value;
     });
 
-    // Call parent callback if provided
+    // Save to shared preferences if storage key exists
+    if (_persistentKey != null) {
+      await SharedPrefsHelper().setBool(_persistentKey!, value);
+    }
+
     widget.onToggleChanged?.call(value);
+  }
+
+  @override
+  void didUpdateWidget(covariant SettingsOptionTile oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.toggleValue != oldWidget.toggleValue) {
+      _localToggleValue = widget.toggleValue;
+    }
   }
 
   @override
@@ -74,34 +111,31 @@ class _SettingsOptionTileState extends State<SettingsOptionTile> {
             onTap: widget.showToggle ? null : widget.onTap,
             child: Container(
               height: 55,
-              padding:
-                  widget.padding ?? const EdgeInsets.symmetric(horizontal: 20),
+              padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 20),
               child: Row(
                 children: [
                   Expanded(
                     child: Text(
                       widget.text,
-                      style: Theme.of(context).textTheme.headlineMedium
+                      style: Theme.of(context).textTheme.headlineMedium,
                     ),
                   ),
                   if (widget.showToggle)
-                  ToggleSwitch(
-                    value: _localToggleValue ?? false,
-                    onChanged: _handleToggleChange,
-                  )
-                  // else if (widget.onTap != null
-                  // )
-                    // Switch(
-                    //   value: _localToggleValue ?? false,
-                    //   onChanged: _handleToggleChange,
-                    // )
+                    ToggleSwitch(
+                      value: _localToggleValue ?? false,
+                      onChanged: _handleToggleChange,
+                    )
                   else
                     widget.rightIcon ??
                         Image.asset(
                           'assets/icons/chevron_right.png',
                           width: 14,
                           height: 14,
-                          color: Theme.of(context).textTheme.headlineMedium!.secondary(context).color
+                          color: Theme.of(context)
+                              .textTheme
+                              .headlineMedium!
+                              .secondary(context)
+                              .color,
                         ),
                 ],
               ),
@@ -117,66 +151,6 @@ class _SettingsOptionTileState extends State<SettingsOptionTile> {
               color: Theme.of(context).dividerColor,
             ),
           ),
-      ],
-    );
-  }
-}
-
-// Example usage
-class SettingsScreen extends StatefulWidget {
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  bool notificationsEnabled = true;
-  bool darkModeEnabled = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Regular tile
-        SettingsOptionTile(
-          text: 'Profile Settings',
-          onTap: () {
-            // Navigate to profile
-          },
-        ),
-
-        // Toggle tile with parent sync
-        SettingsOptionTile(
-          text: 'Notifications',
-          showToggle: true,
-          toggleValue: notificationsEnabled,
-          onToggleChanged: (value) {
-            setState(() {
-              notificationsEnabled = value;
-            });
-            print('Notifications: $value');
-            // Do something with the value
-          },
-        ),
-
-        SettingsOptionTile(
-          text: 'Dark Mode',
-          showToggle: true,
-          toggleValue: darkModeEnabled,
-          onToggleChanged: (value) {
-            setState(() {
-              darkModeEnabled = value;
-            });
-            print('Dark Mode: $value');
-          },
-        ),
-
-        // Toggle tile without parent callback (local only)
-        SettingsOptionTile(
-          text: 'Local Setting',
-          showToggle: true,
-          toggleValue: false,
-          // No onToggleChanged - will work locally only
-        ),
       ],
     );
   }

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/constants/theme.dart';
 import 'back_button.dart';
-import '../../presentation/pages/first_scan/face_scan_page.dart';
+import '../../presentation/pages/first_scan/scan_onboarding_page.dart';
 
 class QuestionHeader extends StatelessWidget {
   final int currentStep;

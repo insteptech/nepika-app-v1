@@ -3,7 +3,7 @@ import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/widgets/custom_button.dart';
-import 'camera_scan_screen.dart';
+import 'scan_guidence_page.dart';
 
 class FaceScanPage extends StatefulWidget {
   const FaceScanPage({super.key});
@@ -84,7 +84,7 @@ class _FaceScanPageState extends State<FaceScanPage> {
   void _navigateToScanScreen() {
     if (mounted) {
       Navigator.of(context).push(
-        MaterialPageRoute(builder: (_) => const CameraScanScreen()),
+        MaterialPageRoute(builder: (_) => const ScanGuidenceScreen()),
       );
     }
   }
@@ -170,9 +170,10 @@ class _FaceScanPageState extends State<FaceScanPage> {
     );
   }
 void _handleSkipForNow() {
+  print(AppRoutes.dashboardHome);
   Navigator.pushNamedAndRemoveUntil(
     context,
-    AppRoutes.dashboard,
+    AppRoutes.dashboardHome,
     (route) => false, // Remove all previous routes
   );
 }
@@ -215,7 +216,7 @@ void _handleSkipForNow() {
                           textAlign: TextAlign.center,
                         ),
 
-                        const SizedBox(height: 40),
+                        const SizedBox(height: 30),
 
                         // Start Scan button with loading state
                         SizedBox(
@@ -229,7 +230,7 @@ void _handleSkipForNow() {
                                     height: 20,
                                     child: CircularProgressIndicator(strokeWidth: 2),
                                   )
-                                : const Icon(Icons.arrow_forward),
+                                : const Icon(Icons.arrow_forward,color: Colors.white,),
                           ),
                         ),
                         
@@ -262,6 +263,7 @@ void _handleSkipForNow() {
   }
 
   Widget _buildAssetBasedScanPreview() {
+    final screenHeight = MediaQuery.of(context).size.height;
     return Container(
       alignment: Alignment.bottomCenter,
       child: Stack(
@@ -269,13 +271,13 @@ void _handleSkipForNow() {
         children: [
           // Girl image (bottom layer on z-axis) - full width, no spacing
           Positioned(
-            bottom: -15,
+            bottom: 0,
             left: 0,
             right: 0,
             child: Image.asset(
               'assets/images/face_scan_girl_image.png',
               fit: BoxFit.contain,
-              height: 580,
+              height: screenHeight * 0.6,
             ),
           ),
 
@@ -285,7 +287,7 @@ void _handleSkipForNow() {
             child: Image.asset(
               'assets/images/mobile_phone_image.png',
               fit: BoxFit.contain,
-              height: 530,
+              height: screenHeight * 0.57,
             ),
           ),
 
@@ -297,7 +299,7 @@ void _handleSkipForNow() {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: Theme.of(context).colorScheme.onTertiary,
                 borderRadius: BorderRadius.circular(100),
                 boxShadow: [
                   BoxShadow(
@@ -321,7 +323,7 @@ void _handleSkipForNow() {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: Theme.of(context).colorScheme.onTertiary,
                 borderRadius: BorderRadius.circular(100),
                 boxShadow: [
                   BoxShadow(
@@ -333,10 +335,7 @@ void _handleSkipForNow() {
               ),
               child: Text(
                 'Skin health: 76%',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w400,
-                ),
+                style: Theme.of(context).textTheme.bodyMedium
               ),
             ),
           ),
@@ -348,7 +347,7 @@ void _handleSkipForNow() {
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
               decoration: BoxDecoration(
-                color: Theme.of(context).cardColor,
+                color: Theme.of(context).colorScheme.onTertiary,
                 borderRadius: BorderRadius.circular(20),
                 boxShadow: [
                   BoxShadow(
@@ -363,18 +362,12 @@ void _handleSkipForNow() {
                 children: [
                   Text(
                     'Dry skin',
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontSize: 16,
-                      fontWeight: FontWeight.w400,
-                    ),
+                style: Theme.of(context).textTheme.bodyMedium
                   ),
                   const SizedBox(height: 4),
                   Text(
                     'Skin type',
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      fontSize: 12,
-                      color: Theme.of(context).textTheme.bodySmall?.color,
-                    ),
+                style: Theme.of(context).textTheme.bodySmall!.secondary(context)
                   ),
                 ],
               ),

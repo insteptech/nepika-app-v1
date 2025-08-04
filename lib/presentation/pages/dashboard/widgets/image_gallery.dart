@@ -61,6 +61,7 @@ class ImageGallerySection extends StatelessWidget {
                     width: 125,
                     height: 130,
                     fit: BoxFit.cover,
+                    color: Theme.of(context).colorScheme.onTertiary,
                   ),
           );
         },

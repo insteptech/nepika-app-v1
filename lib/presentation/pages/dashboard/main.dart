@@ -4,6 +4,7 @@ import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/presentation/pages/dashboard/components/settings/community_and_engagement_page.dart';
 import 'package:nepika/presentation/pages/dashboard/components/settings/help_and_support_page.dart';
 import 'package:nepika/presentation/pages/dashboard/components/settings/notifications_and_settings_page.dart';
+import 'package:nepika/presentation/pages/dashboard/components/settings/setup_notifications_page.dart';
 import 'package:nepika/presentation/pages/dashboard/set_reminder_page.dart';
 import 'package:nepika/presentation/pages/dashboard/settings_page.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
@@ -60,8 +61,8 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
   }
 
   void _onNavBarTap(int index, String route) {
-    if (route == AppRoutes.cameraScan) {
-      Navigator.of(context).pushNamed(AppRoutes.cameraScan);
+    if (route == AppRoutes.cameraScanGuidence) {
+      Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
       return;
     }
 
@@ -112,13 +113,12 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
           ],
           onGenerateRoute: (settings) {
             switch (settings.name) {
-              case AppRoutes.dashboard:
               case AppRoutes.dashboardHome:
                 return MaterialPageRoute(
                   settings: RouteSettings(name: AppRoutes.dashboardHome),
                   builder: (_) => DashboardPage(
                     token: '',
-                    onFaceScanTap: () => Navigator.of(context).pushNamed(AppRoutes.cameraScan),
+                    onFaceScanTap: () => Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence),
                   ),
                 );
               case AppRoutes.dashboardExplore:
@@ -166,6 +166,11 @@ class _DashboardState extends State<Dashboard> with WidgetsBindingObserver {
                 return MaterialPageRoute(
                   settings: RouteSettings(name: AppRoutes.notificationsAndSettings),
                   builder: (_) => const NotificationsAndSettings(),
+                );
+              case AppRoutes.setupNotifications:
+                return MaterialPageRoute(
+                  settings: RouteSettings(name: AppRoutes.setupNotifications),
+                  builder: (_) => const SetupNotificationsPage(),
                 );
               case AppRoutes.communityAndEngagement:
                 return MaterialPageRoute(

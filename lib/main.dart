@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/constants/theme_notifier.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/privacy_policy_page.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
-import 'package:nepika/presentation/pages/first_scan/camera_scan_screen.dart';
-import 'package:nepika/presentation/pages/first_scan/face_scan_result_page.dart';
+import 'package:nepika/presentation/pages/first_scan/scan_guidence_page.dart';
+import 'package:nepika/presentation/pages/first_scan/face_scan.dart';
 import 'package:nepika/presentation/pages/dashboard/main.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/pricing_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -16,16 +18,25 @@ import 'data/auth/repositories/auth_repository_impl.dart';
 import 'core/api_base.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/pages/splash/splash_screen.dart';
-import 'presentation/pages/onboarding/onboarding_screen.dart';
+import 'presentation/pages/welcome/welcome_screen.dart';
 import 'presentation/pages/auth/phone_entry_page.dart';
 import 'presentation/pages/auth/otp_verification_page.dart';
-import 'presentation/pages/questions/user_info_page.dart';
+import 'presentation/pages/onboarding/user_info_page.dart';
+import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final sharedPreferences = await SharedPreferences.getInstance();
-  runApp(MyApp(sharedPreferences: sharedPreferences));
+  await SharedPrefsHelper.init(); // Initialize shared preferences helper
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => ThemeNotifier(),
+      child: MyApp(sharedPreferences: sharedPreferences),
+    ),
+  );
 }
+
 
 class MyApp extends StatelessWidget {
   final SharedPreferences sharedPreferences;
@@ -33,7 +44,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Direct instantiation of dependencies
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
+
     final apiBase = ApiBase();
     final remoteDataSource = AuthRemoteDataSourceImpl(apiBase);
     final localDataSource = AuthLocalDataSourceImpl(sharedPreferences);
@@ -49,16 +62,16 @@ class MyApp extends StatelessWidget {
         title: 'Nepika',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,
-        themeMode: ThemeMode.system,
+        themeMode: themeNotifier.themeMode,
         debugShowCheckedModeBanner: false,
         initialRoute: AppRoutes.splash,
         onGenerateRoute: (RouteSettings settings) {
           switch (settings.name) {
             case AppRoutes.splash:
               return MaterialPageRoute(builder: (_) => const SplashScreen());
-            case AppRoutes.onboarding:
+            case AppRoutes.welcome:
               return MaterialPageRoute(
-                builder: (_) => const OnboardingScreen(),
+                builder: (_) => const WelcomeScreen(),
               );
             case AppRoutes.login:
             case AppRoutes.phoneEntry:
@@ -69,26 +82,15 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.userInfo:
               return MaterialPageRoute(builder: (_) => const UserInfoPage());
-            case AppRoutes.home:
+            case AppRoutes.cameraScanGuidence:
               return MaterialPageRoute(
-                builder: (_) => const PlaceholderHomePage(),
-              );
-            case AppRoutes.cameraScan:
-              return MaterialPageRoute(
-                builder: (_) => const CameraScanScreen(),
+                builder: (_) => const ScanGuidenceScreen(),
               );
             case AppRoutes.faceScanResult:
-              final args = settings.arguments as Map<String, dynamic>;
               return MaterialPageRoute(
-                builder: (_) => FaceScanResultPage(
-                  skinScore: args['skinScore'],
-                  faceImagePath: args['faceImagePath'],
-                  acnePercent: args['acnePercent'],
-                  issues: args['issues'],
-                  onIssueTap: args['onIssueTap'],
-                ),
+                builder: (_) => FaceScanResultPage(),
               );
-            case AppRoutes.dashboard:
+            case AppRoutes.dashboardHome:
               return MaterialPageRoute(builder: (_) => const Dashboard());
             case AppRoutes.subscription:
               return MaterialPageRoute(builder: (_) => const PricingPage());

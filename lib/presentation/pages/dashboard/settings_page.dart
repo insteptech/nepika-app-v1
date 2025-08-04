@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/presentation/pages/dashboard/components/settings/community_and_engagement_page.dart';
+import 'package:nepika/presentation/pages/dashboard/components/settings/help_and_support_page.dart';
+import 'package:nepika/presentation/pages/dashboard/components/settings/notifications_and_settings_page.dart';
+import 'package:nepika/presentation/pages/dashboard/products_page.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/setting_header.dart';
+import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
 import 'widgets/settings_option_tile.dart';
 
 class SettingsPage extends StatelessWidget {
@@ -13,25 +18,33 @@ class SettingsPage extends StatelessWidget {
       _SettingsOptionData(
         'My Products',
         onTap: () {
-          Navigator.of(context).pushNamed(AppRoutes.dashboardAllProducts);
+          Navigator.of(
+            context,
+          ).pushNamed(AppRoutes.dashboardAllProducts);
         },
       ),
       _SettingsOptionData(
         'Community & Engagement',
         onTap: () {
-          Navigator.of(context).pushNamed(AppRoutes.communityAndEngagement);
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const CommunityAndEngagement()),
+          );
         },
       ),
       _SettingsOptionData(
         'Notifications & Settings',
         onTap: () {
-          Navigator.of(context).pushNamed(AppRoutes.notificationsAndSettings);
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const NotificationsAndSettings()),
+          );
         },
       ),
       _SettingsOptionData(
         'Help and Support',
         onTap: () {
-          Navigator.of(context).pushNamed(AppRoutes.helpAndSupport);
+          Navigator.of(
+            context,
+          ).push(MaterialPageRoute(builder: (_) => const HelpAndSupport()));
         },
       ),
       _SettingsOptionData(
@@ -40,7 +53,7 @@ class SettingsPage extends StatelessWidget {
           Navigator.of(
             context,
             rootNavigator: true,
-          ).pushNamed(AppRoutes.termsOfUse);
+          ).push(MaterialPageRoute(builder: (_) => const TermsOfUsePage()));
         },
       ),
       _SettingsOptionData(
@@ -140,7 +153,7 @@ class SettingsPage extends StatelessWidget {
                                               context,
                                               rootNavigator: true,
                                             ).pushNamedAndRemoveUntil(
-                                              AppRoutes.onboarding,
+                                              AppRoutes.welcome,
                                               (route) => false,
                                             );
                                           },

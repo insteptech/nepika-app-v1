@@ -1,4 +1,5 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:nepika/core/utils/secure_storage.dart';
 import '../../../data/auth/repositories/auth_repository.dart';
 import '../../../domain/auth/entities/user.dart';
 import 'auth_event.dart';
@@ -6,6 +7,7 @@ import 'auth_state.dart';
 
 class AuthBloc extends Bloc<AuthEvent, AuthState> {
   final AuthRepository authRepository;
+
 
   AuthBloc({required this.authRepository}) : super(const AuthInitial()) {
     on<SendOtpRequested>(_onSendOtpRequested);
@@ -46,7 +48,11 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
           ),
         );
       }
-      print(result);
+      await SecureStorage().saveAccessToken(result['accessToken'] ?? '');
+
+      // final data = await SecureStorage().getAccessToken();
+      // print('OTP verification successful: ${result['message']}');
+      // print('Access Token: $data');
     } catch (e) {
       print('Error verifying OTP: $e');
       print(e.toString());

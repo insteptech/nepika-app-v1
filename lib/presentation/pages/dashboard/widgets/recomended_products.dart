@@ -84,13 +84,6 @@ class RecommendedProductsSection extends StatelessWidget {
               decoration: BoxDecoration(
                 color: colorScheme.onTertiary,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: colorScheme.shadow.withOpacity(0.08),
-                    blurRadius: 24,
-                    offset: const Offset(0, 12),
-                  ),
-                ],
               ),
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.center,
@@ -100,7 +93,7 @@ class RecommendedProductsSection extends StatelessWidget {
                     borderRadius: BorderRadius.circular(8),
                     child: Image.network(
                       product['imageUrl'] ?? '',
-                      width: 90,
+                      width: 80,
                       height: 90,
                       fit: BoxFit.cover,
                       loadingBuilder: (context, child, loadingProgress) {
@@ -181,14 +174,14 @@ class RecommendedProductsSection extends StatelessWidget {
                                       ),
                                       decoration: BoxDecoration(
                                         border: Border.all(
-                                          color: colorScheme.onPrimary,
+                                          color: colorScheme.primary,
                                         ),
                                         borderRadius: BorderRadius.circular(100),
                                       ),
                                       child: Text(
                                         product['tag'] ?? 'Tag',
                                         style: textTheme.bodyLarge?.copyWith(
-                                          color: colorScheme.onPrimary,
+                                          color: colorScheme.primary,
                                         ),
                                         maxLines: 1,
                                         overflow: TextOverflow.ellipsis,

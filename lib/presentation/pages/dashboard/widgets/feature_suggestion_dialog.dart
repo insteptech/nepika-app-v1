@@ -137,7 +137,7 @@ class ThankYouDialog extends StatelessWidget {
             GestureDetector(
               onTap: () {
                 Navigator.of(context).pushNamedAndRemoveUntil(
-                  AppRoutes.dashboard,
+                  AppRoutes.dashboardHome,
                   (route) => false,
                 );
               },

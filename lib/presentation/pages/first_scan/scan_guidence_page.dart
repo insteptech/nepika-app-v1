@@ -1,18 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:nepika/core/widgets/back_button.dart';
+import 'package:nepika/presentation/pages/first_scan/face_scan.dart';
 import '../../../core/widgets/custom_button.dart';
-// import '../questions/menstrual_cycle_tracking_page.dart';
-import 'face_scan_result_page.dart';
 
-class CameraScanScreen extends StatefulWidget {
-  const CameraScanScreen({super.key});
+class ScanGuidenceScreen extends StatefulWidget {
+  const ScanGuidenceScreen({super.key});
 
   @override
-  State<CameraScanScreen> createState() => _CameraScanScreenState();
+  State<ScanGuidenceScreen> createState() => _ScanGuidenceScreenState();
 }
 
-class _CameraScanScreenState extends State<CameraScanScreen> {
+class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   int _currentStep = 1;
@@ -67,13 +66,7 @@ class _CameraScanScreenState extends State<CameraScanScreen> {
       // Navigate to result page after scan
       Navigator.of(context).pushReplacement(
         MaterialPageRoute(
-          builder: (context) => FaceScanResultPage(
-            skinScore: 80,
-            faceImagePath: 'assets/images/face_scan_girl_image.png',
-            acnePercent: 30,
-            issues: const ['Acne', 'Open Pors', 'Dark Spot'],
-            onIssueTap: (issue) {},
-          ),
+          builder: (context) => const FaceScanResultPage(),
         ),
       );
     }
@@ -235,7 +228,7 @@ return Scaffold(
             child: CustomButton(
               text: _buttonText,
               onPressed: _handleNext,
-              icon: const Icon(Icons.arrow_forward),
+              icon: const Icon(Icons.arrow_forward, color: Colors.white,),
               iconOnLeft: false,
             ),
           ),

@@ -3,6 +3,8 @@ class ApiEndpoints {
   static const String sendOtp = '/auth/send-otp';
   static const String verifyOtp = '/auth/verify-otp';
 
+  static const String userOnboarding = '/user/onboarding';
+
   static const String userDailyRoutine = '/user/routine';
   static const String userMyProducts = '/user/my-products';
   static const String userDetails = '/user/details';

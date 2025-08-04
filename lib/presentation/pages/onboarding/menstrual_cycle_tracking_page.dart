@@ -277,8 +277,30 @@ class _MenstrualCycleTrackingPageState
       initialDate: DateTime.now(),
       firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now(),
+      builder: (BuildContext context, Widget? child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Theme.of(context).colorScheme.primary,
+              onPrimary: Colors.white,
+              onSurface: Theme.of(context).textTheme.bodyMedium!.color!,
+              surface: Colors.white,
+              onSurfaceVariant: Theme.of(
+                context,
+              ).textTheme.bodyMedium!.secondary(context).color,
+            ),
+            datePickerTheme: DatePickerThemeData(
+              backgroundColor: Theme.of(context).colorScheme.onTertiary,
+              headerBackgroundColor: Theme.of(context).colorScheme.primary,
+              headerForegroundColor: Colors.white,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
+    // Handle the selected date after the picker closes
     if (picked != null) {
       setState(() {
         controller.text = '${picked.day}/${picked.month}/${picked.year}';
@@ -690,19 +712,19 @@ class _MenstrualCycleTrackingPageState
         //     ),
         //   ),
         // ),
-         UnderlinedTextField(
-              controller: _lastPeriodController,
-              hint: 'Enter date',
-              
-              readOnly: true,
-              onTap: () => _selectDate(_lastPeriodController, 'Date of Birth'),
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please select your date of birth';
-                }
-                return null;
-              },
-            ),
+        UnderlinedTextField(
+          controller: _lastPeriodController,
+          hint: 'Enter date',
+
+          readOnly: true,
+          onTap: () => _selectDate(_lastPeriodController, 'Date of Birth'),
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return 'Please select your date of birth';
+            }
+            return null;
+          },
+        ),
 
         const SizedBox(height: 30),
 
@@ -746,53 +768,56 @@ class _MenstrualCycleTrackingPageState
   }
 
   Widget _buildMenopauseSymptoms() {
-    final symptoms = ['Hot flushes', 'Mood swings', 'Dry Skin'];
+  final symptoms = ['Hot flushes', 'Mood swings', 'Dry Skin'];
 
-    return Row(
-      children: symptoms.map((symptom) {
-        final isSelected = _menopauseSymptoms.contains(symptom);
-        return Padding(
-          padding: const EdgeInsets.only(right: 12),
-          child: Row(
-            children: [
-              GestureDetector(
-                onTap: () => _toggleMenopauseSymptom(symptom),
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  decoration: BoxDecoration(
-                    border: Border.all(
-                      color: Theme.of(context).colorScheme.primary,
-                      width: 1,
-                    ),
-                    color: isSelected
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.transparent,
-                    borderRadius: BorderRadius.circular(4.5),
+  return Wrap(
+    spacing: 10,
+    runSpacing: 12,
+    children: symptoms.map((symptom) {
+      final isSelected = _menopauseSymptoms.contains(symptom);
+      return Padding(  // ✅ Return Padding directly
+        padding: const EdgeInsets.only(right: 12),
+        child: Row(
+          mainAxisSize: MainAxisSize.min, // ✅ Add this to prevent Row from taking full width
+          children: [
+            GestureDetector(
+              onTap: () => _toggleMenopauseSymptom(symptom),
+              child: Container(
+                width: 20,
+                height: 20,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary,
+                    width: 1,
                   ),
-                  child: isSelected
-                      ? Icon(
-                          Icons.check,
-                          size: 14,
-                          color: Theme.of(context).colorScheme.surface,
-                        )
-                      : null,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.primary
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(4.5),
                 ),
+                child: isSelected
+                    ? Icon(
+                        Icons.check,
+                        size: 14,
+                        color: Theme.of(context).colorScheme.onSecondary,
+                        weight: 990.0,
+                      )
+                    : null,
               ),
-              const SizedBox(width: 12),
-
-              Text(
-                symptom,
-                style: Theme.of(
-                  context,
-                ).textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w400),
+            ),
+            const SizedBox(width: 12),
+            Text(
+              symptom,
+              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                fontWeight: FontWeight.w400,
               ),
-            ],
-          ),
-        );
-      }).toList(),
-    );
-  }
+            ),
+          ],
+        ),
+      );
+    }).toList(),
+  );
+}
 
   Widget _getCurrentStepContent() {
     switch (_currentSubStep) {

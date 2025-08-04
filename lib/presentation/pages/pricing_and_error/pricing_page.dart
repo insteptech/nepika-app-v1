@@ -48,7 +48,7 @@ class _PricingPageState extends State<PricingPage> {
                     Padding(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 25,
-                        vertical: 5,
+                        vertical: 20,
                       ),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.end,
@@ -72,16 +72,17 @@ class _PricingPageState extends State<PricingPage> {
                     ),
                     const SizedBox(height: 10),
                     Container(
-                      width: 124,
-                      height: 124,
+                      width: 110,
+                      height: 110,
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.surface,
+                        color: theme.colorScheme.onSecondary,
                         shape: BoxShape.circle,
                       ),
                       child: Padding(
                         padding: const EdgeInsets.all(18),
                         child: Image.asset(
                           'assets/images/nepika_logo_image.png',
+                          color: theme.primaryIconTheme.color,
                         ),
                       ),
                     ),
@@ -101,9 +102,9 @@ class _PricingPageState extends State<PricingPage> {
                     ...features.map(
                       (feature) => Padding(
                         padding: const EdgeInsets.only(
-                          bottom: 20,
-                          left: 24,
-                          right: 24,
+                          bottom: 15,
+                          left: 20,
+                          right: 20,
                         ),
                         child: Row(
                           children: [
@@ -221,7 +222,7 @@ class _PricingPageState extends State<PricingPage> {
                         onPressed: () {},
                       ),
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 20),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
                       child: Row(

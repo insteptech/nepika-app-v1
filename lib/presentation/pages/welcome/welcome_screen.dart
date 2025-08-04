@@ -4,14 +4,14 @@ import '../../../core/constants/routes.dart';
 import '../../../core/constants/assets.dart';
 import '../../../core/widgets/custom_button.dart';
 
-class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+class WelcomeScreen extends StatefulWidget {
+  const WelcomeScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  State<WelcomeScreen> createState() => _WelcomeScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen>
+class _WelcomeScreenState extends State<WelcomeScreen>
   with SingleTickerProviderStateMixin {
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;

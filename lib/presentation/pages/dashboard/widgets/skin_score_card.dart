@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/constants/theme.dart';
 
 String _monthName(int month) {
   const months = [
@@ -85,7 +86,7 @@ class SkinScoreCard extends StatelessWidget {
         children: [
           Text(
             'Your skin score',
-            style: textTheme.bodyLarge
+            style: textTheme.bodyLarge!.secondary(context),
           ),
           const SizedBox(height: 12),
           Row(
@@ -95,7 +96,7 @@ class SkinScoreCard extends StatelessWidget {
                 style: textTheme.headlineMedium?.copyWith(
                   fontSize: 30,
                   fontWeight: FontWeight.w700,
-                  color: colorScheme.onPrimary,
+                  color: colorScheme.primary,
                 ),
               ),
               const SizedBox(width: 8),
@@ -112,12 +113,15 @@ class SkinScoreCard extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            'Last updated:',
-            style: textTheme.bodyMedium
-          ),
-          Text(
-            formattedDate,
-            style: textTheme.bodyMedium
+            'Last updated:', style: textTheme.bodyMedium!.secondary(context),),
+
+          Expanded(
+            child: Text(
+              formattedDate,
+              overflow: TextOverflow.visible,
+              softWrap: true,
+              style: textTheme.bodyMedium!.secondary(context),
+            ),
           ),
         ],
       ),
@@ -163,26 +167,7 @@ class SkinScoreCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
               // Skeleton for change value (backend data)
-              Container(
-                width: 40,
-                height: 16,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: _buildShimmerEffect(),
-              ),
-              const SizedBox(width: 4),
-              // Skeleton for change icon (backend data)
-              Container(
-                width: 20,
-                height: 20,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: _buildShimmerEffect(),
-              ),
+             
             ],
           ),
           const Spacer(),

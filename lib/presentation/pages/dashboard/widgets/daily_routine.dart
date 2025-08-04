@@ -30,13 +30,6 @@ class DailyRoutineSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: completed ? Colors.green[50] :  theme.colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
@@ -46,7 +39,7 @@ class DailyRoutineSection extends StatelessWidget {
             'assets/icons/calender_icon.png',
             width: 37,
             height: 37,
-            color: Theme.of(context).colorScheme.onPrimary,
+            color: Theme.of(context).colorScheme.primary,
           ),
           const SizedBox(width: 30),
           Text(
@@ -59,7 +52,7 @@ class DailyRoutineSection extends StatelessWidget {
               value: completed ? 1.0 : progress / 100,
               backgroundColor: Colors.grey[200],
               valueColor: AlwaysStoppedAnimation<Color>(
-                completed ? Colors.green : Theme.of(context).colorScheme.onPrimary,
+                completed ? Colors.green : Theme.of(context).colorScheme.primary,
               ),
               minHeight: 8,
               borderRadius: BorderRadius.circular(6),
@@ -75,13 +68,7 @@ class DailyRoutineSection extends StatelessWidget {
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withOpacity(0.1),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
+
       ),
       padding: const EdgeInsets.all(20),
       child: Row(

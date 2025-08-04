@@ -46,7 +46,7 @@ class _SplashScreenState extends State<SplashScreen>
     // Navigate to onboarding after 3 seconds
     Timer(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.of(context).pushReplacementNamed(AppRoutes.onboarding);
+        Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
       }
     });
   }

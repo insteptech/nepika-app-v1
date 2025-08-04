@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/constants/routes.dart';
+import 'package:nepika/core/constants/theme.dart';
 
 const double kNavBarIconSize = 24.0;
 const double kScanIconSize = 28.0;
@@ -9,7 +10,7 @@ class DashboardNavBar extends StatefulWidget {
   final Function(int index, String route) onNavBarTap;
 
   const DashboardNavBar({
-    Key? key, 
+    Key? key,
     required this.selectedIndex,
     required this.onNavBarTap,
   }) : super(key: key);
@@ -21,83 +22,97 @@ class DashboardNavBar extends StatefulWidget {
 class _DashboardNavBarState extends State<DashboardNavBar> {
   static const _icons = [
     'assets/icons/home_icon.png',
-    'assets/icons/clock_icon.png',
+    'assets/icons/community_icon.png',
     'assets/icons/scan_icon.png',
     'assets/icons/box_icon.png',
     'assets/icons/person_icon.png',
+  ];
+  static const _filledIcons = [
+    'assets/icons/filled/home_icon.png',
+    'assets/icons/filled/community_icon.png',
+    'assets/icons/scan_icon.png',
+    'assets/icons/filled/box_icon.png',
+    'assets/icons/filled/person_icon.png',
   ];
 
   static const _navRoutes = [
     AppRoutes.dashboardHome,
     AppRoutes.dashboardExplore,
-    AppRoutes.cameraScan,
+    AppRoutes.cameraScanGuidence,
     AppRoutes.dashboardAllProducts,
     AppRoutes.dashboardSettings,
   ];
 
+  static const _navRoutesName = [
+    'Home',
+    'Community',
+    'Scan',
+    'Products',
+    'Settings',
+  ];
+
   void _onTabTapped(int index) {
-    if (widget.selectedIndex == index && _navRoutes[index] != AppRoutes.cameraScan) {
-      // Don't navigate if same tab is tapped (except for camera scan)
-      return;
+    if (widget.selectedIndex == index && _navRoutes[index] != AppRoutes.cameraScanGuidence) {
+      return; // avoid re-navigating except for scan
     }
-
-    final route = _navRoutes[index];
-
-    print('\n\n\n\n\n');
-    print('============ Tapped index: $index, route: $route ============');
-    print('\n\n\n\n\n');
-
-    // Call the parent's navigation handler
-    widget.onNavBarTap(index, route);
+    widget.onNavBarTap(index, _navRoutes[index]);
   }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.only(top: 15, bottom: 35, left: 10, right: 10),
+      padding: const EdgeInsets.only(top: 10, bottom: 25, left: 10, right: 10),
       color: Colors.transparent,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: List.generate(_icons.length, (index) {
           final isActive = index == widget.selectedIndex;
-
+          final iconPath = isActive ? _filledIcons[index] : _icons[index];
+          
           return GestureDetector(
             onTap: () => _onTabTapped(index),
-            child: index == 2
-                ? Container(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (index == 2) ...[
+                  // Scan icon larger and no label
+                  Container(
                     width: 65,
                     height: 65,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primary,
                       shape: BoxShape.circle,
-                      boxShadow: [
-                        // BoxShadow(
-                        //   color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
-                        //   blurRadius: 12,
-                        //   offset: const Offset(0, 4),
-                        // ),
-                      ],
                     ),
                     child: Image.asset(
-                      _icons[index],
+                      iconPath,
                       width: kScanIconSize,
                       height: kScanIconSize,
                       color: Theme.of(context).colorScheme.onSecondary,
                     ),
-                  )
-                : SizedBox(
-                    width: 22,
-                    height: 22,
+                  ),
+                ] else ...[
+                  // Regular tab icon
+                  SizedBox(
+                    width: kNavBarIconSize,
+                    height: kNavBarIconSize,
                     child: Image.asset(
-                      _icons[index],
-                      width: 12,
-                      height: 12,
-                      color: isActive
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).iconTheme.color,
+                      iconPath,
+                      width: kNavBarIconSize,
+                      height: kNavBarIconSize,
+                      color: Theme.of(context).colorScheme.primary,
                     ),
                   ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _navRoutesName[index],
+                    style: isActive
+                        ? Theme.of(context).textTheme.bodySmall!.hint(context)
+                        : Theme.of(context).textTheme.bodySmall!.secondary(context),
+                  ),
+                ],
+              ],
+            ),
           );
         }),
       ),

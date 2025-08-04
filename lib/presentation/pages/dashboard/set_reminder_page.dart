@@ -23,6 +23,7 @@ class ReminderSettings extends StatefulWidget {
   State<ReminderSettings> createState() => _ReminderSettingsState();
 }
 
+
 class _ReminderSettingsState extends State<ReminderSettings> {
   ReminderDays? _selectedDay = ReminderDays.daily;
   ReminderType? _selectedType = ReminderType.morning;
@@ -162,6 +163,28 @@ bool get _isFormValid {
     final TimeOfDay? picked = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.now(),
+      builder: (context, child) {
+        return Theme(
+        data: Theme.of(context).copyWith(
+          colorScheme: ColorScheme.light(
+            primary: Theme.of(context).colorScheme.primary,
+            secondary: Theme.of(context).colorScheme.onTertiary,
+            onPrimary: Colors.white,
+            onSecondary: Colors.white,
+            onSurface: Theme.of(context).textTheme.bodyMedium!.color!,
+            surface: Theme.of(context).scaffoldBackgroundColor,
+            onSurfaceVariant: Theme.of(context).textTheme.bodyMedium!.secondary(context).color,
+          ),
+          datePickerTheme: DatePickerThemeData(
+            backgroundColor:  Theme.of(context).scaffoldBackgroundColor,
+            headerBackgroundColor:  Theme.of(context).colorScheme.primary,
+            headerForegroundColor: Colors.white,
+          ),
+        ),
+        child: child!,
+      );
+      },
+      
     );
     if (picked != null) {
       final hour = picked.hour % 12 == 0 ? 12 : picked.hour % 12;

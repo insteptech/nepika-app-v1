@@ -266,13 +266,12 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                   const SizedBox(height: 40),
                   // Phone number input
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 40.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 30.0),
                     child: Row(
                       children: [
                         SizedBox(
                           width: 120,
                           child: UnderlinedTextField(
-
                             hint: '+91',
                             readOnly: true,
                             onTap: _showCountryPicker,

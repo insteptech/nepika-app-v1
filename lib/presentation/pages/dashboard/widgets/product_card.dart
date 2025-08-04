@@ -142,7 +142,7 @@ class ProductCard extends StatelessWidget {
                       ),
                       child: Icon(
                         Icons.check,
-                        color: colorScheme.surface,
+                        color: Colors.white,
                         size: 20,
                       ),
                     ),

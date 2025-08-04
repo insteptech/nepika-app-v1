@@ -4,7 +4,7 @@ import 'fonts.dart';
 class AppTheme {
   // Primary Colors
   static const Color primaryColor = Color(0xFF4A90E2);
-  static const Color primaryDark = Color(0xFF357ABD);
+  static const Color primaryDark = Color(0xFF315E95);
   static const Color secondaryColor = Color(0xFF00C896);
   static const Color errorColor = Color(0xFFEF4444);
   static const Color warningColor = Color(0xFFFFD748);
@@ -22,7 +22,8 @@ class AppTheme {
   static const Color surfaceColorDark = Color(0xFF1E293B);
   static const Color textPrimaryDark = Color(0xFFE5E7EB);
   static const Color textSecondaryDark = Color(0xFFB0B0B0);
-  static const Color textTertiaryDark = Color(0xFF6B7280);
+  // static const Color textTertiaryDark = Color(0xFF6B7280);
+  static const Color textTertiaryDark = Color(0xFF101C2F);
 
 
   static const Color blackWhite = Color(0xFF000000);
@@ -41,6 +42,7 @@ class AppTheme {
       onPrimary: primaryColor,
       onSecondary: Color(0xFFFFFFFF),
       onTertiary: Color(0xFFFFFFFF),
+      onSecondaryContainer: backgroundColorDark,
     ),
     scaffoldBackgroundColor: backgroundColorLight,
     appBarTheme: const AppBarTheme(
@@ -48,6 +50,9 @@ class AppTheme {
       foregroundColor: textPrimaryLight,
       elevation: 0,
       centerTitle: true,
+    ),
+    primaryIconTheme: IconThemeData(
+      color: const Color(0xFF07223B),
     ),
     textTheme: _textTheme(isDark: false),
     elevatedButtonTheme: _elevatedButtonTheme(),
@@ -69,13 +74,18 @@ class AppTheme {
       onSurface: whiteBlack,
       onSecondary: Color(0xFFFFFFFF),
       onTertiary: textTertiaryDark,
+      onSecondaryContainer: backgroundColorLight,
     ),
-    scaffoldBackgroundColor: backgroundColorDark,
+    scaffoldBackgroundColor: const Color.fromARGB(255, 11, 17, 30),
     appBarTheme: const AppBarTheme(
       backgroundColor: surfaceColorDark,
       foregroundColor: textPrimaryDark,
       elevation: 0,
       centerTitle: true,
+    ),
+    primaryIconTheme: IconThemeData(
+      color: const Color(0xFF07223B),
+      
     ),
     textTheme: _textTheme(isDark: true),
     elevatedButtonTheme: _elevatedButtonTheme(),
@@ -211,7 +221,7 @@ extension TextStyleColorShortcut on TextStyle {
 
   TextStyle hint(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    final color = isDark ? AppTheme.primaryDark : AppTheme.primaryColor;
+    final color = isDark ? const Color.fromARGB(255, 125, 178, 244) : const Color.fromARGB(255, 21, 111, 215);
     return copyWith(color: color);
   }
 }
