@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/setting_header.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/settings_option_tile.dart';
+import 'package:nepika/presentation/settings/widgets/setting_header.dart';
+import 'package:nepika/presentation/settings/widgets/settings_option_tile.dart';
 
 class SetupNotificationsPage extends StatefulWidget {
   const SetupNotificationsPage({super.key});

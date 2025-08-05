@@ -4,8 +4,8 @@ import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme_notifier.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/delete_account_dialog.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/setting_header.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/settings_option_tile.dart';
+import 'package:nepika/presentation/settings/widgets/setting_header.dart';
+import 'package:nepika/presentation/settings/widgets/settings_option_tile.dart';
 import 'package:provider/provider.dart';
 
 class NotificationsAndSettings extends StatefulWidget {

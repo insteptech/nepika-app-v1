@@ -11,7 +11,7 @@ import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_event.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_state.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/settings_option_tile.dart';
+import 'package:nepika/presentation/settings/widgets/settings_option_tile.dart';
 
 enum ReminderDays { daily, weekdays, weekends }
 enum ReminderType { morning, night }
@@ -203,7 +203,7 @@ bool get _isFormValid {
 
     return BlocProvider(
       create: (context) =>
-          DashboardBloc(DashboardRepository(ApiBase()))
+          DashboardBloc(DashboardRepositoryImpl(ApiBase()))
             ..add(FetchTodaysRoutine(token, 'add')),
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {

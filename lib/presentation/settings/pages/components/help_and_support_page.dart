@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/setting_header.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/settings_option_tile.dart';
+import 'package:nepika/presentation/settings/widgets/setting_header.dart';
+import 'package:nepika/presentation/settings/widgets/settings_option_tile.dart';
 
 class HelpAndSupport extends StatefulWidget {
   const HelpAndSupport({super.key});

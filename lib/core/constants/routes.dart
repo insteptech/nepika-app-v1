@@ -79,32 +79,46 @@ class AppRoutes {
 
 
 
-// class DashboardRoutes {
-//   const DashboardRoutes();
+class DashboardRoutes {
+  const DashboardRoutes();
 
-//   static const String slash = '/';
-//   static const String home = '/home';
-//   static const String explore = '/explore';
-//   static const String scan = '/scan';
-//   static const String profile = '/profile';
-//   static const String todaysRoutine = '/routine';
-//   static const String editRoutine = '/routine/edit';
-//   static const String addRoutine = '/routine/add';
-//   static const String reminderSettings = '/routine/reminder';
-//   static const String allProducts = '/products/all';
-//   static const String specificProduct = '/products/info';
-
-
-//   static const SettingsRoutes settings = SettingsRoutes();
-// }
+  static const String slash = '/';
+  static const String home = '/home';
+  static const String explore = '/explore';
+  static const String scan = '/scan';
+  static const String profile = '/profile';
+  static const String todaysRoutine = '/routine';
+  static const String editRoutine = '/routine/edit';
+  static const String addRoutine = '/routine/add';
+  static const String reminderSettings = '/routine/reminder';
+  static const String allProducts = '/products/all';
+  static const String specificProduct = '/products/info';
 
 
-// class SettingsRoutes{
-//   const SettingsRoutes();
+  static const SettingsRoutes settings = SettingsRoutes();
+}
 
-//   static const String slash = '/';
-//   static const String notificationsAndSettings = '/notifications-and-settings';
-//   static const String helpAndSupport = '/help-and-support';
-//   static const String communityAndEngagement = '/community-and-engagement';
-//   static const String setupNotifications = '/setup_notifications';
-// }
+class OnboardingRoutes {
+  const OnboardingRoutes();
+
+  static const String userInfo = '/onboarding/user_info';
+  static const String userDetails = '/onboarding/user_detail';
+  static const String skinType = '/onboarding/skin_type';
+  static const String naturalRhythm = '/onboarding/natural_rhythm';
+  static const String skinGoals = '/onboarding/skin_goals';
+  static const String lifestyle = '/onboarding/lifestyle';
+  static const String cycleInfo = '/onboarding/cycle_info';
+  static const String cycleDetails = '/onboarding/cycle_details';
+  static const String menopause = '/onboarding/menopause_status';
+}
+
+
+class SettingsRoutes{
+  const SettingsRoutes();
+
+  static const String slash = '/';
+  static const String notificationsAndSettings = '/notifications-and-settings';
+  static const String helpAndSupport = '/help-and-support';
+  static const String communityAndEngagement = '/community-and-engagement';
+  static const String setupNotifications = '/setup_notifications';
+}

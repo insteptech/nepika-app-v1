@@ -1,4 +1,6 @@
 import 'package:nepika/data/onboarding/models/onboarding_models.dart';
+import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/constants/api_endpoints.dart';
 
 abstract class IOnboardingRemoteDataSource {
   Future<UserBasicsModel> fetchUserBasics(String token);
@@ -30,114 +32,189 @@ abstract class IOnboardingRemoteDataSource {
 }
 
 class OnboardingRemoteDataSource implements IOnboardingRemoteDataSource {
-  // Example: final http.Client client;
-  // You can inject client via constructor if needed
+  final ApiBase apiBase;
+  OnboardingRemoteDataSource(this.apiBase);
 
   @override
   Future<UserBasicsModel> fetchUserBasics(String token) async {
-    // TODO: Replace with actual API call
-    return UserBasicsModel(fullName: 'Demo', email: 'demo@email.com');
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingUserInfo,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return UserBasicsModel.fromJson(response.data['data']);
   }
 
   @override
   Future<void> submitUserBasics(String token, UserBasicsModel model) async {
-    // TODO: Replace with POST call
+    await apiBase.request(
+      path: ApiEndpoints.onboardingUserInfo,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
   }
 
   @override
   Future<UserDetailsModel> fetchUserDetails(String token) async {
-    return UserDetailsModel(
-      gender: 'Female',
-      dateOfBirth: '2000-01-01',
-      heightUnit: 'cm',
-      heightCm: 160,
-      weightUnit: 'kg',
-      weightValue: 50,
-      waistUnit: 'cm',
-      waistValue: 70,
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingUserDetail,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
     );
+    return UserDetailsModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitUserDetails(String token, UserDetailsModel model) async {}
+  Future<void> submitUserDetails(String token, UserDetailsModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingUserDetail,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<LifestyleModel> fetchLifestyle(String token) async {
-    return LifestyleModel(
-      jobType: 'Desk Job',
-      workEnvironment: 'Indoor',
-      stressLevel: 'Moderate',
-      physicalActivityLevel: 'Low',
-      hydrationEntry: '2L',
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingLifestyle,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
     );
+    return LifestyleModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitLifestyle(String token, LifestyleModel model) async {}
+  Future<void> submitLifestyle(String token, LifestyleModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingLifestyle,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<SkinTypeModel> fetchSkinType(String token, String productId) async {
-    return SkinTypeModel(skinType: 'Oily');
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingSkinType,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
+      query: {'product_id': productId},
+    );
+    return SkinTypeModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitSkinType(String token, SkinTypeModel model) async {}
+  Future<void> submitSkinType(String token, SkinTypeModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingSkinType,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<NaturalRhythmModel> fetchNaturalRhythm(String token) async {
-    return NaturalRhythmModel(doYouMenstruate: true);
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingUserNaturalRhythm,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
+    );
+    return NaturalRhythmModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitNaturalRhythm(String token, NaturalRhythmModel model) async {}
+  Future<void> submitNaturalRhythm(String token, NaturalRhythmModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingUserNaturalRhythm,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<MenstrualCycleOverviewModel> fetchCycleOverview(String token, String productId) async {
-    return MenstrualCycleOverviewModel(
-      currentPhase: 'Luteal',
-      cycleRegularity: 'Regular',
-      pmsSymptoms: ['Bloating'],
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingCycleInfo,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
+      query: {'product_id': productId},
     );
+    return MenstrualCycleOverviewModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitCycleOverview(String token, MenstrualCycleOverviewModel model) async {}
+  Future<void> submitCycleOverview(String token, MenstrualCycleOverviewModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingCycleInfo,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<CycleDetailsModel> fetchCycleDetails(String token) async {
-    return CycleDetailsModel(
-      cycleStartDate: '2025-08-01',
-      cycleLengthDays: 28,
-      currentDayInCycle: 3,
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingCycleDetail,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
     );
+    return CycleDetailsModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitCycleDetails(String token, CycleDetailsModel model) async {}
+  Future<void> submitCycleDetails(String token, CycleDetailsModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingCycleDetail,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<MenopauseModel> fetchMenopauseStatus(String token) async {
-    return MenopauseModel(
-      menopauseStatus: 'Perimenopause',
-      lastPeriodDate: '2024-12-01',
-      commonSymptoms: ['Hot flashes'],
-      usingHrtSupplements: false,
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingMenopauseStatus,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
     );
+    return MenopauseModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitMenopauseStatus(String token, MenopauseModel model) async {}
+  Future<void> submitMenopauseStatus(String token, MenopauseModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingMenopauseStatus,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 
   @override
   Future<SkinGoalsModel> fetchSkinGoals(String token, String productId) async {
-    return SkinGoalsModel(
-      acneBlemishGoals: ['Reduce acne'],
-      glowRadianceGoals: ['Increase glow'],
-      hydrationTextureGoals: ['Improve texture'],
-      notSureYet: false,
+    final response = await apiBase.request(
+      path: ApiEndpoints.onboardingSkinGoal,
+      method: 'GET',
+      headers: {'Authorization': 'Bearer $token'},
+      query: {'product_id': productId},
     );
+    return SkinGoalsModel.fromJson(response.data['data']);
   }
 
   @override
-  Future<void> submitSkinGoals(String token, SkinGoalsModel model) async {}
+  Future<void> submitSkinGoals(String token, SkinGoalsModel model) async {
+    await apiBase.request(
+      path: ApiEndpoints.onboardingSkinGoal,
+      method: 'POST',
+      headers: {'Authorization': 'Bearer $token'},
+      body: model.toJson(),
+    );
+  }
 }

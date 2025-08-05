@@ -1,5 +1,6 @@
 import 'package:equatable/equatable.dart';
-import '../../../domain/auth/entities/user.dart';
+import 'package:nepika/domain/auth/entities/user.dart';
+// import '../../../domain/auth/entities/user.dart';
 
 abstract class AuthState extends Equatable {
   const AuthState();
@@ -13,36 +14,15 @@ class AuthInitial extends AuthState {
   const AuthInitial();
 }
 
-// Loading States
-class AuthLoading extends AuthState {
-  const AuthLoading();
-}
 
+
+
+
+// # ==========================. Send Otp States. ==========================. 
 class SendingOtp extends AuthState {
   const SendingOtp();
 }
 
-class VerifyingOtp extends AuthState {
-  const VerifyingOtp();
-}
-
-class LoggingIn extends AuthState {
-  const LoggingIn();
-}
-
-class Registering extends AuthState {
-  const Registering();
-}
-
-class UpdatingProfile extends AuthState {
-  const UpdatingProfile();
-}
-
-class ChangingPassword extends AuthState {
-  const ChangingPassword();
-}
-
-// Success States
 class OtpSent extends AuthState {
   final String? email;
   final String phone;
@@ -56,97 +36,12 @@ class OtpSent extends AuthState {
   List<Object?> get props => [email, phone];
 }
 
-class OtpVerified extends AuthState {
-  final User user;
-  
-  const OtpVerified({
-    required this.user,
-  });
-  
-  @override
-  List<Object> get props => [user];
-}
-
-class AuthenticationSuccess extends AuthState {
-  final User user;
-  
-  const AuthenticationSuccess({
-    required this.user,
-  });
-  
-  @override
-  List<Object> get props => [user];
-}
-
-class Authenticated extends AuthState {
-  final User user;
-  
-  const Authenticated({
-    required this.user,
-  });
-  
-  @override
-  List<Object> get props => [user];
-}
-
-class ProfileUpdated extends AuthState {
-  final User user;
-  
-  const ProfileUpdated({
-    required this.user,
-  });
-  
-  @override
-  List<Object> get props => [user];
-}
-
-class PasswordChanged extends AuthState {
-  const PasswordChanged();
-}
-
-class PasswordResetEmailSent extends AuthState {
-  final String email;
-  
-  const PasswordResetEmailSent({
-    required this.email,
-  });
-  
-  @override
-  List<Object> get props => [email];
-}
-
-class PasswordReset extends AuthState {
-  const PasswordReset();
-}
-
-class Unauthenticated extends AuthState {
-  const Unauthenticated();
-}
-
-class AccountDeleted extends AuthState {
-  const AccountDeleted();
-}
-
-// Error States
-class AuthError extends AuthState {
-  final String message;
-  final String? errorCode;
-  
-  const AuthError({
-    required this.message,
-    this.errorCode,
-  });
-  
-  @override
-  List<Object?> get props => [message, errorCode];
-}
-
-class OtpError extends AuthState {
+class ErrorWhileSendingOtp extends AuthState {
   final String message;
   final String? email;
   final String? phone;
   
-  const OtpError({
+  const ErrorWhileSendingOtp({
     required this.message,
     this.email,
     this.phone,
@@ -156,83 +51,38 @@ class OtpError extends AuthState {
   List<Object?> get props => [message, email, phone];
 }
 
-class LoginError extends AuthState {
-  final String message;
-  
-  const LoginError({
-    required this.message,
-  });
-  
-  @override
-  List<Object> get props => [message];
+
+
+
+
+// # ==========================. Verify Otp States. ==========================.
+class VerifyingOtp extends AuthState {
+  const VerifyingOtp();
 }
 
-class RegistrationError extends AuthState {
-  final String message;
-  
-  const RegistrationError({
-    required this.message,
+class OtpVerified extends AuthState {
+  final AuthResponse authResponse;
+
+  const OtpVerified({
+    required this.authResponse,
   });
   
   @override
-  List<Object> get props => [message];
+  List<Object> get props => [authResponse];
 }
 
-class ProfileUpdateError extends AuthState {
-  final String message;
-  final User? currentUser;
-  
-  const ProfileUpdateError({
-    required this.message,
-    this.currentUser,
-  });
-  
-  @override
-  List<Object?> get props => [message, currentUser];
-}
 
-class PasswordChangeError extends AuthState {
+class ErrorWhileOtpVerification extends AuthState {
   final String message;
+  final String? email;
+  final String? phone;
   
-  const PasswordChangeError({
+  const ErrorWhileOtpVerification({
     required this.message,
+    this.email,
+    this.phone,
   });
   
   @override
-  List<Object> get props => [message];
-}
-
-class NetworkError extends AuthState {
-  final String message;
-  
-  const NetworkError({
-    required this.message,
-  });
-  
-  @override
-  List<Object> get props => [message];
-}
-
-class ValidationError extends AuthState {
-  final String message;
-  final Map<String, List<String>>? fieldErrors;
-  
-  const ValidationError({
-    required this.message,
-    this.fieldErrors,
-  });
-  
-  @override
-  List<Object?> get props => [message, fieldErrors];
-}
-
-class UnauthorizedError extends AuthState {
-  final String message;
-  
-  const UnauthorizedError({
-    required this.message,
-  });
-  
-  @override
-  List<Object> get props => [message];
+  List<Object?> get props => [message, email, phone];
 }

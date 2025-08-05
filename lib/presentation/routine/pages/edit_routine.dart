@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme.dart';
 import 'package:nepika/core/widgets/back_button.dart';
+import 'package:nepika/domain/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_event.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_state.dart';
@@ -16,7 +17,7 @@ class EditRoutine extends StatelessWidget {
     final String token = '';
     return BlocProvider(
       create: (context) => DashboardBloc(
-        DashboardRepository(
+        DashboardRepositoryImpl(
           ApiBase(),
         ),
       )..add(FetchTodaysRoutine(token, 'edit')),
@@ -25,7 +26,7 @@ class EditRoutine extends StatelessWidget {
           List<dynamic> routineSteps = [];
           bool loading = state is TodaysRoutineLoading;
           if (state is TodaysRoutineLoaded) {
-            routineSteps = state.routineSteps;
+            routineSteps = state.routineSteps.routines;
           }
           return Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,

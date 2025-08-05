@@ -24,7 +24,7 @@ class _ProductsPageState extends State<ProductsPage> {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) =>
-          DashboardBloc(DashboardRepository(ApiBase()))
+          DashboardBloc(DashboardRepositoryImpl(ApiBase()))
             ..add(FetchMyProducts(token)),
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
@@ -32,7 +32,7 @@ class _ProductsPageState extends State<ProductsPage> {
 
           List<Map<String, dynamic>> myProducts = [];
           if (state is MyProductsLoaded) {
-            myProducts = state.myProducts;
+            myProducts = state.myProducts.products;
           }
 
           final theme = Theme.of(context);

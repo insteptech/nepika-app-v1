@@ -97,4 +97,30 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   Future<bool> getOnboardingStatus() async {
     return sharedPreferences.getBool(AppConstants.onboardingKey) ?? false;
   }
+
+  @override
+  Future<void> storeToken(String token) async {
+    await sharedPreferences.setString(AppConstants.accessTokenKey, token);
+  }
+
+  @override
+  Future<void> storeRefreshToken(String refreshToken) async {
+    await sharedPreferences.setString(AppConstants.refreshTokenKey, refreshToken);
+  }
+
+  @override
+  Future<String?> getToken() async {
+    return sharedPreferences.getString(AppConstants.accessTokenKey);
+  }
+
+  @override
+  Future<String?> getRefreshToken() async {
+    return sharedPreferences.getString(AppConstants.refreshTokenKey);
+  }
+
+  @override
+  Future<void> clearTokens() async {
+    await sharedPreferences.remove(AppConstants.accessTokenKey);
+    await sharedPreferences.remove(AppConstants.refreshTokenKey);
+  }
 }

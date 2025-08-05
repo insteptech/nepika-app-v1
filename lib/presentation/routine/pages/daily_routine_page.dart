@@ -3,30 +3,51 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme.dart';
 import 'package:nepika/core/widgets/back_button.dart';
-import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
-import 'package:nepika/presentation/bloc/dashboard/dashboard_event.dart';
-import 'package:nepika/presentation/bloc/dashboard/dashboard_state.dart';
+import '../bloc/routine_bloc.dart';
+import '../bloc/routine_event.dart';
+import '../bloc/routine_state.dart';
+import '../../../domain/routine/usecases/get_todays_routine.dart';
+import '../../../domain/routine/usecases/update_routine_step.dart';
+import '../../../data/routine/repositories/routine_repository_impl.dart';
+import '../../../data/routine/datasources/routine_remote_data_source.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 
 class TodaysRoutine extends StatelessWidget {
   const TodaysRoutine({super.key});
+  @override
   Widget build(BuildContext context) {
     // TODO: Get token from provider or context
     final String token = '';
     return BlocProvider(
-      create: (context) => DashboardBloc(
-        DashboardRepository(
-          ApiBase(),
+      create: (context) => RoutineBloc(
+        getTodaysRoutine: GetTodaysRoutine(
+          RoutineRepositoryImpl(
+            remoteDataSource: RoutineRemoteDataSourceImpl(),
+            apiBase: ApiBase(),
+          ),
         ),
-      )..add(FetchTodaysRoutine(token, 'today')),
-      child: BlocBuilder<DashboardBloc, DashboardState>(
+        updateRoutineStep: UpdateRoutineStep(
+          RoutineRepositoryImpl(
+            remoteDataSource: RoutineRemoteDataSourceImpl(),
+            apiBase: ApiBase(),
+          ),
+        ),
+      )..add(GetTodaysRoutineEvent(token: token, type: 'today')),
+      child: BlocBuilder<RoutineBloc, RoutineState>(
         builder: (context, state) {
+          bool loading = state is RoutineLoading;
           List<dynamic> routineSteps = [];
           int completedCount = 0;
-          bool loading = state is TodaysRoutineLoading;
-          if (state is TodaysRoutineLoaded) {
-            routineSteps = state.routineSteps;
+          
+          if (state is RoutineLoaded) {
+            // Convert Routine entities to the expected format
+            routineSteps = state.routines.map((routine) => {
+              'id': routine.id,
+              'name': routine.name,
+              'timing': routine.timing,
+              'isCompleted': routine.isCompleted,
+              'description': routine.description,
+            }).toList();
             completedCount = routineSteps
                 .where((s) => s['isCompleted'] == true)
                 .length;
@@ -44,12 +65,12 @@ class TodaysRoutine extends StatelessWidget {
                     const SizedBox(height: 32),
                     Text(
                       "Today's Routine",
-                      style: Theme.of(context).textTheme.displaySmall
+                      style: Theme.of(context).textTheme.displaySmall,
                     ),
                     const SizedBox(height: 8),
                     Text(
                       'Stay consistent. Mark each step as you complete it.',
-                      style: Theme.of(context).textTheme.headlineMedium!.secondary(context)
+                      style: Theme.of(context).textTheme.headlineMedium!.secondary(context),
                     ),
                     const SizedBox(height: 45),
                     Row(
@@ -57,11 +78,11 @@ class TodaysRoutine extends StatelessWidget {
                       children: [
                         Text(
                           'Steps',
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context).textTheme.headlineMedium,
                         ),
                         Text(
                           'Completed: $completedCount/${routineSteps.length}',
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context).textTheme.headlineMedium,
                         ),
                       ],
                     ),
@@ -86,48 +107,44 @@ class TodaysRoutine extends StatelessWidget {
                                   margin: const EdgeInsets.only(bottom: 14),
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 20,
-                                  ), // Add padding if needed
+                                  ),
                                   decoration: BoxDecoration(
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.4), width: 1),
-
+                                    border: Border.all(
+                                      color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                                      width: 1,
+                                    ),
                                   ),
                                   child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
+                                    crossAxisAlignment: CrossAxisAlignment.center,
                                     children: [
                                       Container(
                                         width: 44,
                                         height: 44,
                                         decoration: BoxDecoration(
                                           color: color,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
+                                          borderRadius: BorderRadius.circular(12),
                                         ),
                                         child: Icon(
-                                          Icons.ac_unit,
-                                          color: step['timing'] == 'morning'
-                                              ? colorScheme.primary
-                                              : colorScheme.surface,
+                                          Icons.check_circle_outline,
                                           size: 30,
+                                          color: isCompleted ? Colors.green : Colors.grey,
                                         ),
                                       ),
                                       const SizedBox(width: 12),
                                       Expanded(
                                         child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              step['title'] ?? 'No Title',
-                                              style: Theme.of(context).textTheme.headlineMedium
+                                              step['name'] ?? 'Step',
+                                              style: Theme.of(context).textTheme.bodyLarge,
                                             ),
+                                            const SizedBox(height: 4),
                                             Text(
                                               timing,
-                                              style: Theme.of(context).textTheme.bodyLarge!.secondary(context)
+                                              style: Theme.of(context).textTheme.bodySmall,
                                             ),
                                           ],
                                         ),
@@ -135,39 +152,28 @@ class TodaysRoutine extends StatelessWidget {
                                       const SizedBox(width: 12),
                                       isCompleted
                                           ? Row(
-                                              mainAxisSize: MainAxisSize.min,
                                               children: [
-                                                Icon(
-                                                  Icons.check,
-                                                  color: colorScheme.primary,
-                                                  size: 20,
-                                                ),
+                                                Icon(Icons.check, color: Colors.green, size: 24),
                                                 const SizedBox(width: 4),
                                                 Text(
-                                                  'Completed',
-                                                  style: Theme.of(context).textTheme.bodyLarge
+                                                  'Done',
+                                                  style: Theme.of(context).textTheme.bodyLarge!.hint(context),
                                                 ),
                                               ],
                                             )
                                           : OutlinedButton(
                                               onPressed: () {
+                                                // TODO: Mark as done logic
                                               },
                                               style: OutlinedButton.styleFrom(
-                                                side: BorderSide(
-                                                  color: colorScheme.primary.withOpacity(0.4),
-                                                ),
                                                 shape: RoundedRectangleBorder(
-                                                  borderRadius:
-                                                      BorderRadius.circular(10),
+                                                  borderRadius: BorderRadius.circular(8),
                                                 ),
-                                                padding:
-                                                    const EdgeInsets.symmetric(
-                                                      horizontal: 12,
-                                                    ),
+                                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                                               ),
                                               child: Text(
                                                 'Mark as Done',
-                                                style: Theme.of(context).textTheme.bodyLarge!.hint(context)
+                                                style: Theme.of(context).textTheme.bodyLarge!.hint(context),
                                               ),
                                             ),
                                     ],
@@ -191,12 +197,12 @@ class TodaysRoutine extends StatelessWidget {
                             'assets/icons/edit_icon.png',
                             width: 20,
                             height: 20,
-                          color: Theme.of(context).colorScheme.primary,
+                            color: Theme.of(context).colorScheme.primary,
                           ),
                           const SizedBox(width: 6),
                           Text(
                             'Edit Routine',
-                            style: Theme.of(context).textTheme.headlineMedium!.hint(context)
+                            style: Theme.of(context).textTheme.headlineMedium!.hint(context),
                           ),
                         ],
                       ),

@@ -1,26 +1,31 @@
+
 import 'package:nepika/core/api_base.dart';
+import 'package:nepika/domain/dashboard/repositories/dashboard_repository.dart';
+import 'package:nepika/domain/dashboard/entities/dashboard_entities.dart';
 import '../../../core/constants/api_endpoints.dart';
 
 
 
-class DashboardRepository {
+class DashboardRepositoryImpl implements DashboardRepository {
   final ApiBase apiBase;
-  DashboardRepository(this.apiBase);
+  DashboardRepositoryImpl(this.apiBase);
 
-  Future<Map<String, dynamic>> fetchDashboardData({required String token}) async {
+  @override
+  Future<DashboardDataEntity> fetchDashboardData({required String token}) async {
     final response = await apiBase.request(
       path: ApiEndpoints.dashboard,
       method: 'GET',
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
-      return Map<String, dynamic>.from(response.data['data']);
+      return DashboardDataEntity(data: Map<String, dynamic>.from(response.data['data']));
     } else {
       throw Exception(response.data['message'] ?? 'Failed to fetch dashboard data');
     }
   }
 
-  Future<List<dynamic>> fetchTodaysRoutine({required String token, required String type}) async {
+  @override
+  Future<RoutineEntity> fetchTodaysRoutine({required String token, required String type}) async {
     final response = await apiBase.request(
       path: ApiEndpoints.userDailyRoutine,
       method: 'GET',
@@ -28,26 +33,28 @@ class DashboardRepository {
       query: {'type': type},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
-      return List<dynamic>.from(response.data['data']);
+      return RoutineEntity(routines: List<dynamic>.from(response.data['data']));
     } else {
       throw Exception(response.data['message'] ?? 'Failed to fetch today\'s routine');
     }
   }
 
-  Future<List<Map<String, dynamic>>> fetchMyProducts({required String token}) async {
+  @override
+  Future<ProductEntity> fetchMyProducts({required String token}) async {
     final response = await apiBase.request(
       path: ApiEndpoints.userMyProducts,
       method: 'GET',
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
-      return List<Map<String, dynamic>>.from(response.data['data']);
+      return ProductEntity(products: List<Map<String, dynamic>>.from(response.data['data']));
     } else {
       throw Exception(response.data['message'] ?? 'Failed to fetch products');
     }
   }
 
-  Future<Map<String, dynamic>> fetchProductInfo({required String token, required String productId}) async {
+  @override
+  Future<ProductInfoEntity> fetchProductInfo({required String token, required String productId}) async {
     if (productId.isEmpty) {
       throw Exception('Product ID cannot be empty');
     }
@@ -57,7 +64,7 @@ class DashboardRepository {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
-      return Map<String, dynamic>.from(response.data['data']);
+      return ProductInfoEntity(info: Map<String, dynamic>.from(response.data['data']));
     } else {
       throw Exception(response.data['message'] ?? 'Failed to fetch products');
     }

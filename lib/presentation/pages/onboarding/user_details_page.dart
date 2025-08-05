@@ -164,6 +164,7 @@ class _UserDetailsPageState extends State<UserDetailsPage> {
             .map((opt) => DropdownMenuItem(
                   value: opt,
                   child: Text(label(opt)),
+                  
                 ))
             .toList(),
         style: Theme.of(context).textTheme.headlineMedium!.secondary(context),

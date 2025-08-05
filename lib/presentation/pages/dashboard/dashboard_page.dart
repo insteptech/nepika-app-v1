@@ -3,7 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/daily_routine.dart';
+import 'package:nepika/presentation/routine/widgets/daily_routine.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/face_scan_card.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/greeting_section.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/image_gallery.dart';
@@ -31,7 +31,7 @@ class DashboardPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocProvider(
       create: (context) => DashboardBloc(
-        DashboardRepository(
+        DashboardRepositoryImpl(
           ApiBase(),
         ),
       )..add(DashboardRequested(token)),
@@ -51,7 +51,7 @@ class DashboardPage extends StatelessWidget {
           bool isError = state is DashboardError;
 
           if (state is DashboardLoaded) {
-            final dashboardData = state.dashboardData;
+            final dashboardData = state.dashboardData.data;
             user = dashboardData['user'] ?? {};
             faceScan = dashboardData['faceScan'] ?? {};
             skinScore = dashboardData['skinScore'] ?? {};

@@ -15,6 +15,8 @@ import 'core/constants/routes.dart';
 import 'data/auth/datasources/auth_remote_data_source_impl.dart';
 import 'data/auth/datasources/auth_local_data_source_impl.dart';
 import 'data/auth/repositories/auth_repository_impl.dart';
+import 'domain/auth/usecases/send_otp.dart';
+import 'domain/auth/usecases/verify_otp.dart';
 import 'core/api_base.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/pages/splash/splash_screen.dart';
@@ -22,6 +24,11 @@ import 'presentation/pages/welcome/welcome_screen.dart';
 import 'presentation/pages/auth/phone_entry_page.dart';
 import 'presentation/pages/auth/otp_verification_page.dart';
 import 'presentation/pages/onboarding/user_info_page.dart';
+import 'presentation/pages/onboarding/user_details_page.dart';
+import 'presentation/pages/onboarding/lifestyle_questionnaire_page.dart';
+import 'presentation/pages/onboarding/skin_type_selection_page.dart';
+import 'presentation/pages/onboarding/menstrual_cycle_tracking_page.dart';
+import 'presentation/pages/onboarding/skin_goals_page.dart';
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -54,7 +61,15 @@ class MyApp extends StatelessWidget {
       remoteDataSource,
       localDataSource,
     );
-    final authBloc = AuthBloc(authRepository: authRepository);
+    
+    // Create use cases
+    final sendOtpUseCase = SendOtp(authRepository);
+    final verifyOtpUseCase = VerifyOtp(authRepository);
+    
+    final authBloc = AuthBloc(
+      sendOtpUseCase: sendOtpUseCase,
+      verifyOtpUseCase: verifyOtpUseCase,
+    );
 
     return MultiBlocProvider(
       providers: [BlocProvider(create: (context) => authBloc)],
@@ -82,6 +97,23 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.userInfo:
               return MaterialPageRoute(builder: (_) => const UserInfoPage());
+            case '/onboarding/user-info':
+              return MaterialPageRoute(builder: (_) => const UserInfoPage());
+            case '/onboarding/user-detail':
+              return MaterialPageRoute(builder: (_) => const UserDetailsPage());
+            case '/onboarding/lifestyle':
+              return MaterialPageRoute(builder: (_) => const LifestyleQuestionnairePage());
+            case '/onboarding/skin-type':
+              return MaterialPageRoute(builder: (_) => const SkinTypeSelectionPage());
+            case '/onboarding/cycle-detail':
+            case '/onboarding/cycle-info':
+              return MaterialPageRoute(builder: (_) => const MenstrualCycleTrackingPage());
+            case '/onboarding/menopause-status':
+              return MaterialPageRoute(builder: (_) => const MenstrualCycleTrackingPage());
+            case '/onboarding/skin-goal':
+              return MaterialPageRoute(builder: (_) => const SkinGoalsPage());
+            case '/onboarding/natural-rhythm':
+              return MaterialPageRoute(builder: (_) => const MenstrualCycleTrackingPage());
             case AppRoutes.cameraScanGuidence:
               return MaterialPageRoute(
                 builder: (_) => const ScanGuidenceScreen(),

@@ -265,6 +265,7 @@ void _handleSkipForNow() {
   Widget _buildAssetBasedScanPreview() {
     final screenHeight = MediaQuery.of(context).size.height;
     return Container(
+      height: screenHeight * 0.6,
       alignment: Alignment.bottomCenter,
       child: Stack(
         alignment: Alignment.bottomCenter,
@@ -276,18 +277,19 @@ void _handleSkipForNow() {
             right: 0,
             child: Image.asset(
               'assets/images/face_scan_girl_image.png',
-              fit: BoxFit.contain,
-              height: screenHeight * 0.6,
+              fit: BoxFit.fill,
+              height: screenHeight * 0.58,
+              // height: screenHeight * 0.6,
             ),
           ),
 
           // Mobile phone image (overlapping the girl image)
           Positioned(
-            bottom: 15,
+            bottom: 10,
             child: Image.asset(
               'assets/images/mobile_phone_image.png',
               fit: BoxFit.contain,
-              height: screenHeight * 0.57,
+              height: screenHeight * 0.55,
             ),
           ),
 

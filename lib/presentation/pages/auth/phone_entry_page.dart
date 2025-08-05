@@ -221,7 +221,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
             AppRoutes.otpVerification,
             arguments: {'phoneNumber': _selectedCountryCode + _phoneNumber},
           );
-        } else if (state is AuthError) {
+        } else if (state is ErrorWhileSendingOtp) {
           setState(() {
             _isResponseLoading = false;
           });
@@ -237,7 +237,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
         body: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.all(24.0),
+            padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: Form(
               key: _formKey,
               child: Column(
@@ -343,6 +343,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                   ),
                   const SizedBox(height: 24),
                   // Terms and privacy
+                  
                   Center(
                     child: RichText(
                       textAlign: TextAlign.center,

@@ -1,8 +1,13 @@
+
+import '../../../domain/dashboard/entities/dashboard_entities.dart';
+
 abstract class DashboardState {}
 
+
 class DashboardLoading extends DashboardState {}
+
 class DashboardLoaded extends DashboardState {
-  final Map<String, dynamic> dashboardData;
+  final DashboardDataEntity dashboardData;
   DashboardLoaded(this.dashboardData);
 }
 class DashboardError extends DashboardState {
@@ -12,7 +17,7 @@ class DashboardError extends DashboardState {
 
 class TodaysRoutineLoading extends DashboardState {}
 class TodaysRoutineLoaded extends DashboardState {
-  final List<dynamic> routineSteps;
+  final RoutineEntity routineSteps;
   TodaysRoutineLoaded(this.routineSteps);
 }
 class TodaysRoutineError extends DashboardState {
@@ -22,7 +27,7 @@ class TodaysRoutineError extends DashboardState {
 
 class MyProductsLoading extends DashboardState {}
 class MyProductsLoaded extends DashboardState {
-  final List<Map<String, dynamic>> myProducts;
+  final ProductEntity myProducts;
   MyProductsLoaded({required this.myProducts});
 }
 class MyProductsError extends DashboardState {
@@ -32,7 +37,7 @@ class MyProductsError extends DashboardState {
 
 class ProductInfoLoading extends DashboardState {}
 class ProductInfoLoaded extends DashboardState {
-  final Map<String, dynamic> productInfo;
+  final ProductInfoEntity productInfo;
   ProductInfoLoaded({required this.productInfo});
 }
 class ProductInfoError extends DashboardState {

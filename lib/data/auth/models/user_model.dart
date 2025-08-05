@@ -7,7 +7,7 @@ import '../../../domain/auth/entities/user.dart';
 class UserModel extends User {
   const UserModel({
     required super.id,
-    required super.email,
+    super.email,
     super.phone,
     super.firstName,
     super.lastName,
@@ -18,15 +18,16 @@ class UserModel extends User {
     super.weight,
     super.isEmailVerified,
     super.isPhoneVerified,
-    super.isOnboardingCompleted,
-    required super.createdAt,
-    required super.updatedAt,
+    required super.onboardingCompleted,
+    required super.activeStep,
+    super.createdAt,
+    super.updatedAt,
   });
   
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
       id: json['id'] as String,
-      email: json['email'] as String,
+      email: json['email'] as String?,
       phone: json['phone'] as String?,
       firstName: json['first_name'] as String?,
       lastName: json['last_name'] as String?,
@@ -43,12 +44,18 @@ class UserModel extends User {
           : null,
       isEmailVerified: json['is_email_verified'] as bool? ?? false,
       isPhoneVerified: json['is_phone_verified'] as bool? ?? false,
-      isOnboardingCompleted: json['is_onboarding_completed'] as bool? ?? false,
-      createdAt: DateTime.parse(json['created_at'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
+      activeStep: json['active_step'] as String? ?? 'user_info',
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.parse(json['updated_at'] as String)
+          : null,
     );
   }
   
+  @override
   Map<String, dynamic> toJson() {
     return {
       'id': id,
@@ -63,9 +70,10 @@ class UserModel extends User {
       'weight': weight,
       'is_email_verified': isEmailVerified,
       'is_phone_verified': isPhoneVerified,
-      'is_onboarding_completed': isOnboardingCompleted,
-      'created_at': createdAt.toIso8601String(),
-      'updated_at': updatedAt.toIso8601String(),
+      'onboarding_completed': onboardingCompleted,
+      'active_step': activeStep,
+      'created_at': createdAt?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
     };
   }
   
@@ -83,7 +91,8 @@ class UserModel extends User {
       weight: user.weight,
       isEmailVerified: user.isEmailVerified,
       isPhoneVerified: user.isPhoneVerified,
-      isOnboardingCompleted: user.isOnboardingCompleted,
+      onboardingCompleted: user.onboardingCompleted,
+      activeStep: user.activeStep,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     );
@@ -103,7 +112,8 @@ class UserModel extends User {
       weight: weight,
       isEmailVerified: isEmailVerified,
       isPhoneVerified: isPhoneVerified,
-      isOnboardingCompleted: isOnboardingCompleted,
+      onboardingCompleted: onboardingCompleted,
+      activeStep: activeStep,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -122,7 +132,8 @@ class UserModel extends User {
     double? weight,
     bool? isEmailVerified,
     bool? isPhoneVerified,
-    bool? isOnboardingCompleted,
+    bool? onboardingCompleted,
+    String? activeStep,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -139,7 +150,8 @@ class UserModel extends User {
       weight: weight ?? this.weight,
       isEmailVerified: isEmailVerified ?? this.isEmailVerified,
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
-      isOnboardingCompleted: isOnboardingCompleted ?? this.isOnboardingCompleted,
+      onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
+      activeStep: activeStep ?? this.activeStep,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

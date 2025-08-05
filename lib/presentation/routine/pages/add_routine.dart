@@ -4,7 +4,7 @@ import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
+import 'package:nepika/data/dashboard/repositories/dashboard_repository_impl.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_event.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_state.dart';
@@ -17,16 +17,14 @@ class AddRoutine extends StatelessWidget {
     final String token = '';
     return BlocProvider(
       create: (context) => DashboardBloc(
-        DashboardRepository(
-          ApiBase(),
-        ),
+        DashboardRepositoryImpl(ApiBase()),
       )..add(FetchTodaysRoutine(token, 'add')),
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
           List<dynamic> routineSteps = [];
           bool loading = state is TodaysRoutineLoading;
           if (state is TodaysRoutineLoaded) {
-            routineSteps = state.routineSteps;
+            routineSteps = state.routineSteps.routines;
           }
           return Scaffold(
             backgroundColor: theme.scaffoldBackgroundColor,

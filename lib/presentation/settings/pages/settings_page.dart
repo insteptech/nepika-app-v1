@@ -1,16 +1,54 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/constants/routes.dart';
 import 'package:nepika/core/constants/theme.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/community_and_engagement_page.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/help_and_support_page.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/notifications_and_settings_page.dart';
-import 'package:nepika/presentation/pages/dashboard/products_page.dart';
-import 'package:nepika/presentation/pages/dashboard/widgets/setting_header.dart';
+import 'package:nepika/core/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+// import 'package:nepika/presentation/pages/dashboard/products_page.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
-import 'widgets/settings_option_tile.dart';
+import 'package:nepika/presentation/settings/pages/components/community_and_engagement_page.dart';
+import 'package:nepika/presentation/settings/pages/components/help_and_support_page.dart';
+import 'package:nepika/presentation/settings/pages/components/notifications_and_settings_page.dart';
+import 'package:nepika/presentation/settings/widgets/setting_header.dart';
+import 'package:nepika/presentation/settings/widgets/settings_option_tile.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
+
+  Future<void> _logout(BuildContext context) async {
+    try {
+      final sharedPrefs = await SharedPreferences.getInstance();
+      
+      // Clear all authentication data
+      await sharedPrefs.remove(AppConstants.accessTokenKey);
+      await sharedPrefs.remove(AppConstants.refreshTokenKey);
+      await sharedPrefs.remove(AppConstants.userTokenKey);
+      await sharedPrefs.remove(AppConstants.userDataKey);
+      await sharedPrefs.remove(AppConstants.onboardingKey);
+      
+      // Navigate to welcome screen and clear navigation stack
+      if (context.mounted) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pushNamedAndRemoveUntil(
+          AppRoutes.welcome,
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      print('Error during logout: $e');
+      // Even if there's an error, still navigate to welcome screen
+      if (context.mounted) {
+        Navigator.of(
+          context,
+          rootNavigator: true,
+        ).pushNamedAndRemoveUntil(
+          AppRoutes.welcome,
+          (route) => false,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -149,13 +187,8 @@ class SettingsPage extends StatelessWidget {
                                       Expanded(
                                         child: OutlinedButton(
                                           onPressed: () {
-                                            Navigator.of(
-                                              context,
-                                              rootNavigator: true,
-                                            ).pushNamedAndRemoveUntil(
-                                              AppRoutes.welcome,
-                                              (route) => false,
-                                            );
+                                            Navigator.of(context).pop();
+                                            _logout(context);
                                           },
                                           style: OutlinedButton.styleFrom(
                                             padding: const EdgeInsets.symmetric(
@@ -191,7 +224,7 @@ class SettingsPage extends StatelessWidget {
                                               vertical: 16,
                                             ),
                                             side: BorderSide(
-                                              color: colorScheme.primary,
+                                              color: Colors.transparent,
                                             ),
                                             shape: RoundedRectangleBorder(
                                               borderRadius:

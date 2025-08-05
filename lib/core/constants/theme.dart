@@ -214,8 +214,8 @@ extension TextStyleColorShortcut on TextStyle {
   TextStyle secondary(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final color = isDark
-        ? AppTheme.textTertiaryLight
-        : AppTheme.textTertiaryDark;
+        ? AppTheme.textSecondaryDark
+        : AppTheme.textSecondaryLight;
     return copyWith(color: color);
   }
 

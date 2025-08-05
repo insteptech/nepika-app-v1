@@ -1,7 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dashboard_event.dart';
 import 'dashboard_state.dart';
-import '../../../data/dashboard/repositories/dashboard_repository.dart';
+import '../../../domain/dashboard/repositories/dashboard_repository.dart';
 
 class DashboardBloc extends Bloc<DashboardEvent, DashboardState> {
   final DashboardRepository repository;

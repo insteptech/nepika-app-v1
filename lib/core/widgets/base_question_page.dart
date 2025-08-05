@@ -205,7 +205,7 @@ class BaseQuestionPage extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0.0),
                 child: QuestionHeader(
                   currentStep: currentStep,
                   totalSteps: totalSteps,
@@ -243,7 +243,7 @@ class BaseQuestionPage extends StatelessWidget {
 
               // Bottom button
               Padding(
-                padding: const EdgeInsets.all(20.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
                 child: SizedBox(
                   width: double.infinity,
                   child: CustomButton(

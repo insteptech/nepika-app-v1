@@ -28,4 +28,11 @@ abstract class AuthLocalDataSource {
   
   /// Get onboarding completion status
   Future<bool> getOnboardingStatus();
+
+  /// Store tokens securely
+  Future<void> storeToken(String token);
+  Future<void> storeRefreshToken(String refreshToken);
+  Future<String?> getToken();
+  Future<String?> getRefreshToken();
+  Future<void> clearTokens();
 }

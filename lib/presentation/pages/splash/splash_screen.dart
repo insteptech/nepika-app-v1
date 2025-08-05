@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import '../../../core/constants/theme.dart';
 import '../../../core/constants/routes.dart';
 import '../../../core/constants/assets.dart';
+import '../../../core/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -43,12 +46,35 @@ class _SplashScreenState extends State<SplashScreen>
     
     _animationController.forward();
     
-    // Navigate to onboarding after 3 seconds
+    // Check authentication status and navigate accordingly after splash animation
     Timer(const Duration(seconds: 3), () {
+      _navigateBasedOnAuthStatus();
+    });
+  }
+
+  Future<void> _navigateBasedOnAuthStatus() async {
+    if (!mounted) return;
+
+    try {
+      final sharedPrefs = await SharedPreferences.getInstance();
+      final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
+      
+      if (!mounted) return;
+
+      if (accessToken != null && accessToken.isNotEmpty) {
+        // User is authenticated - go to dashboard
+        Navigator.of(context).pushReplacementNamed(AppRoutes.dashboardHome);
+      } else {
+        // User is not authenticated - go to welcome/login
+        Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
+      }
+    } catch (e) {
+      // If there's any error, default to welcome screen
+      print('Error checking auth status: $e');
       if (mounted) {
         Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
       }
-    });
+    }
   }
   
   @override
@@ -61,13 +87,13 @@ class _SplashScreenState extends State<SplashScreen>
   Widget build(BuildContext context) {
     return Scaffold(
       body: Container(
-        decoration: BoxDecoration(
+        decoration: const BoxDecoration(
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-               Theme.of(context).colorScheme.onPrimary,
-               Theme.of(context).colorScheme.onPrimary,
+              AppTheme.primaryColor,
+              Color(0xFF5BA3F5),
             ],
           ),
         ),

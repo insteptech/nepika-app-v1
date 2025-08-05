@@ -12,6 +12,8 @@ class AppConstants {
   static const String userDataKey = 'user_data';
   static const String themeKey = 'theme_mode';
   static const String onboardingKey = 'onboarding_completed';
+  static const String accessTokenKey = 'access_token';
+  static const String refreshTokenKey = 'refresh_token';
   
   // Animation Durations
   static const Duration defaultAnimationDuration = Duration(milliseconds: 300);

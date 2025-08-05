@@ -119,7 +119,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
 
     return BlocProvider(
       create: (context) =>
-          DashboardBloc(DashboardRepository(ApiBase()))
+          DashboardBloc(DashboardRepositoryImpl(ApiBase()))
             ..add(FetchProductInfo(token, productId)),
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
@@ -127,7 +127,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
 
           Map<String, dynamic> productInfo = {};
           if (state is ProductInfoLoaded) {
-            productInfo = state.productInfo;
+            productInfo = state.productInfo.info;
           }
           print('Product Info: ${productInfo['imageUrl']}');
 

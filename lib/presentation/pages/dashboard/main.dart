@@ -1,19 +1,22 @@
+
+import 'package:nepika/presentation/settings/pages/components/community_and_engagement_page.dart';
+
+import 'package:nepika/presentation/settings/pages/components/help_and_support_page.dart';
+import 'package:nepika/presentation/settings/pages/components/notifications_and_settings_page.dart';
+import 'package:nepika/presentation/settings/pages/components/setup_notifications_page.dart';
+// import 'package:nepika/presentation/settings/pages/settings_page.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/community_and_engagement_page.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/help_and_support_page.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/notifications_and_settings_page.dart';
-import 'package:nepika/presentation/pages/dashboard/components/settings/setup_notifications_page.dart';
 import 'package:nepika/presentation/pages/dashboard/set_reminder_page.dart';
-import 'package:nepika/presentation/pages/dashboard/settings_page.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
-import 'package:nepika/presentation/pages/dashboard/add_routine.dart';
+import 'package:nepika/presentation/routine/pages/add_routine.dart';
 import 'package:nepika/presentation/pages/dashboard/dashboard_page.dart';
-import 'package:nepika/presentation/pages/dashboard/edit_routine.dart';
+import 'package:nepika/presentation/routine/pages/edit_routine.dart';
 import 'package:nepika/presentation/pages/dashboard/product_info.dart';
 import 'package:nepika/presentation/pages/dashboard/products_page.dart';
-import 'package:nepika/presentation/pages/dashboard/daily_routine_page.dart';
+import 'package:nepika/presentation/routine/pages/daily_routine_page.dart';
+import 'package:nepika/presentation/settings/pages/settings_page.dart';
 // import 'package:nepika/presentation/pages/first_scan/camera_scan_screen.dart';
 import 'widgets/dashboard_navbar.dart';
 

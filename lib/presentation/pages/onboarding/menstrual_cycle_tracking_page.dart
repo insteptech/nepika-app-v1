@@ -524,9 +524,11 @@ class _MenstrualCycleTrackingPageState
         // Start Date
         Text('Start Date', style: Theme.of(context).textTheme.headlineMedium),
         const SizedBox(height: 3),
-        GestureDetector(
-          onTap: () => _selectDate(_startDateController, 'Start Date'),
-          child: UnderlinedTextField(
+        // GestureDetector(
+        //   onTap: () => _selectDate(_startDateController, 'Start Date'),
+        //   child: 
+        // ),
+        UnderlinedTextField(
             controller: _startDateController,
             hint: 'Enter date',
             readOnly: true,
@@ -552,7 +554,6 @@ class _MenstrualCycleTrackingPageState
               return null;
             },
           ),
-        ),
 
         const SizedBox(height: 32),
 
@@ -845,7 +846,7 @@ class _MenstrualCycleTrackingPageState
       showBackButton: true,
       onBack: _handleBack,
       isFormValid: _isFormValid,
-      onNext: _handleNext, // This is still used for optional tracking
+      onNext: _handleNext,
       content: Form(
         key: _formKey,
         child: SingleChildScrollView(

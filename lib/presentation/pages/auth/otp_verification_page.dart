@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/constants/theme.dart';
 import 'dart:async';
-import '../../../core/constants/routes.dart';
+import '../../../core/utils/navigation_helper.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/back_button.dart';
 import '../../../core/widgets/otp_input_field.dart';
@@ -91,41 +91,32 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.all(24.0),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0,vertical: 10),
           child: BlocListener<AuthBloc, AuthState>(
             listener: (context, state) {
-              // Handle OtpSent to get phone number
               if (state is OtpSent) {
                 setState(() {
                   _phoneNumber = state.phone;
                 });
               } 
-              // Handle successful authentication
               else if (state is OtpVerified) {
                 setState(() {
                   _isResponseLoading = false;
                 });
-                
-                print('Authentication successful, navigating to: ${AppRoutes.userInfo}');
-                print('User data: ${state.user}');
-                
-                Navigator.pushNamedAndRemoveUntil(
-                  context,
-                  AppRoutes.userInfo,
-                  (route) => false,
-                ).then((_) {
-                  print('Navigation completed successfully');
-                }).catchError((error) {
-                  print('Navigation error: $error');
-                });
+                // Navigate based on onboarding completion status
+                NavigationHelper.navigateAfterOtpVerification(
+                  context, 
+                  state.authResponse,
+                );
               } 
-              // Handle OTP verification errors
-              else if (state is OtpError) {
+
+              else if (state is ErrorWhileOtpVerification) {
                 setState(() {
                   _isResponseLoading = false;
                 });
@@ -136,34 +127,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                   ),
                 );
               }
-              // Handle any other auth errors
-              // else if (state is AuthError) {
-              //   setState(() {
-              //     _isResponseLoading = false;
-              //   });
-              //   ScaffoldMessenger.of(context).showSnackBar(
-              //     SnackBar(
-              //       content: Text(state.message),
-              //       backgroundColor: Theme.of(context).colorScheme.error,
-              //     ),
-              //   );
-              // }
-              // // Handle loading states
-              // else if (state is VerifyingOtp) {
-              //   setState(() {
-              //     _isResponseLoading = true;
-              //   });
-              // }
-              // else if (state is SendingOtp) {
-              //   // Show loading state for resend OTP
-              //   setState(() {
-              //     _isResponseLoading = true;
-              //   });
-              // }
             },
             child: BlocBuilder<AuthBloc, AuthState>(
-              builder: (context, state) {
-                // Get phone number from current state if available
+              builder: (context, state) { 
                 if (state is OtpSent && _phoneNumber.isEmpty) {
                   _phoneNumber = state.phone;
                 }
