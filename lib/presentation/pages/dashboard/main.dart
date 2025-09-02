@@ -7,7 +7,7 @@ import 'package:nepika/presentation/settings/pages/components/setup_notification
 // import 'package:nepika/presentation/settings/pages/settings_page.dart';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/routes.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/presentation/pages/dashboard/set_reminder_page.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
 import 'package:nepika/presentation/routine/pages/add_routine.dart';

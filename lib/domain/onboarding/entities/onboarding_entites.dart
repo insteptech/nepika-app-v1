@@ -1,112 +1,100 @@
-class UserBasicsEntity {
-  final String fullName;
-  final String email;
+class OnboardingOptionEntity {
+  final String id;
+  final String text;
+  final String? description;
+  final String value;
+  final int? sortOrder;
+  final bool isSelected;
 
-  UserBasicsEntity({required this.fullName, required this.email});
+  OnboardingOptionEntity({
+    required this.id,
+    required this.text,
+    this.description = '',
+    required this.value,
+    this.sortOrder,
+    this.isSelected = false,
+  });
+
+  OnboardingOptionEntity copyWith({bool? isSelected}) {
+    return OnboardingOptionEntity(
+      id: id,
+      text: text,
+      description: description,
+      value: value,
+      sortOrder: sortOrder,
+      isSelected: isSelected ?? this.isSelected,
+    );
+  }
 }
 
-class UserDetailsEntity {
-  final String gender;
-  final String dateOfBirth;
-  final String heightUnit;
-  final double? heightCm;
-  final double? heightFeet;
-  final double? heightInches;
-  final String weightUnit;
-  final double weightValue;
-  final String waistUnit;
-  final double waistValue;
+class OnboardingQuestionEntity {
+  final String id;
+  final String slug;
+  final String questionText;
+  final String targetField;
+  final String targetTable;
+  final String? keyboardType;
+  final String? prefillValue;
+  final String inputType;
+  final String inputPlaceholder;
+  final bool isRequired;
+  final int displayOrder;
+  final List<OnboardingOptionEntity> options;
 
-  UserDetailsEntity({
-    required this.gender,
-    required this.dateOfBirth,
-    required this.heightUnit,
-    this.heightCm,
-    this.heightFeet,
-    this.heightInches,
-    required this.weightUnit,
-    required this.weightValue,
-    required this.waistUnit,
-    required this.waistValue,
+  OnboardingQuestionEntity({
+    required this.id,
+    required this.slug,
+    required this.questionText,
+    required this.targetField,
+    required this.targetTable,
+    required this.inputType,
+    this.keyboardType,
+    this.prefillValue,
+    this.inputPlaceholder = '',
+    required this.isRequired,
+    required this.displayOrder,
+    required this.options,
+
   });
 }
 
-class LifestyleEntity {
-  final String jobType;
-  final String workEnvironment;
-  final String stressLevel;
-  final String physicalActivityLevel;
-  final String hydrationEntry;
+class OnboardingScreenDataEntity {
+  final String screenId;
+  final String title;
+  final String? description;
+  final String slug;
+  final String? buttonText;
+  final int? totalSteps;
+  final Map<String, dynamic>? user;
+  final List<OnboardingQuestionEntity> questions;
 
-  LifestyleEntity({
-    required this.jobType,
-    required this.workEnvironment,
-    required this.stressLevel,
-    required this.physicalActivityLevel,
-    required this.hydrationEntry,
+  OnboardingScreenDataEntity({
+    required this.screenId,
+    required this.title,
+    this.description,
+    required this.slug,
+    this.totalSteps,
+    this.buttonText,
+    this.user,
+    required this.questions,
   });
 }
 
-class SkinTypeEntity {
-  final String skinType;
 
-  SkinTypeEntity({required this.skinType});
-}
+class OnboardingStepEntity {
+  final String screenId; // numeric string (server id)
+  final String slug;
+  final String title;
+  final String? subtitle;
+  final int? totalSteps;
+  final String? buttonText;
 
-class NaturalRhythmEntity {
-  final bool doYouMenstruate;
-
-  NaturalRhythmEntity({required this.doYouMenstruate});
-}
-
-class MenstrualCycleOverviewEntity {
-  final String currentPhase;
-  final String cycleRegularity;
-  final List<String> pmsSymptoms;
-
-  MenstrualCycleOverviewEntity({
-    required this.currentPhase,
-    required this.cycleRegularity,
-    required this.pmsSymptoms,
-  });
-}
-
-class CycleDetailsEntity {
-  final String cycleStartDate;
-  final int cycleLengthDays;
-  final int currentDayInCycle;
-
-  CycleDetailsEntity({
-    required this.cycleStartDate,
-    required this.cycleLengthDays,
-    required this.currentDayInCycle,
-  });
-}
-
-class MenopauseEntity {
-  final String menopauseStatus;
-  final String? lastPeriodDate;
-  final List<String> commonSymptoms;
-  final bool usingHrtSupplements;
-
-  MenopauseEntity({
-    required this.menopauseStatus,
-    this.lastPeriodDate,
-    required this.commonSymptoms,
-    required this.usingHrtSupplements,
-  });
-}
-
-class SkinGoalsEntity {
-  final List<String> acneBlemishGoals;
-  final List<String> glowRadianceGoals;
-  final List<String> hydrationTextureGoals;
-  final bool notSureYet;
-
-  SkinGoalsEntity({
-    required this.acneBlemishGoals,
-    required this.glowRadianceGoals,
-    required this.hydrationTextureGoals,
-    required this.notSureYet,
+  OnboardingStepEntity({
+    required this.screenId,
+    required this.slug,
+    required this.title,
+    this.totalSteps,
+    this.subtitle,
+    this.buttonText,
   });
 }

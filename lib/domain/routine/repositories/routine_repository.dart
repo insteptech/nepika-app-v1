@@ -1,9 +1,11 @@
+// lib/domain/routine/repositories/routine_repository.dart
 import '../../../core/utils/either.dart';
+import '../../../core/error/failures.dart';
 import '../entities/routine.dart';
 
 abstract class RoutineRepository {
-  Future<Result<List<Routine>>> getTodaysRoutine({required String token, required String type});
-  Future<Result<void>> updateRoutineStep({required String token, required String stepId, required bool isCompleted});
-  Future<Result<void>> addRoutineStep({required String token, required Routine routine});
-  Future<Result<void>> deleteRoutineStep({required String token, required String stepId});
+  Future<Result<List<Routine>>> getTodaysRoutine(String token, String type);
+  Future<Result<void>> updateRoutineStep(String token, String routineId, bool isCompleted);
+  Future<Result<void>> deleteRoutineStep(String token, String routineId);
+  Future<Result<void>> addRoutineStep(String token, String masterRoutineId);
 }

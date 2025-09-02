@@ -14,6 +14,7 @@ class VerifyOtp extends UseCase<AuthResponse, VerifyOtpParams> {
     return await repository.verifyOtp(
       phone: params.phone,
       otp: params.otp,
+      otpId: params.otpId,
     );
   }
 }
@@ -21,9 +22,10 @@ class VerifyOtp extends UseCase<AuthResponse, VerifyOtpParams> {
 class VerifyOtpParams extends Equatable {
   final String? phone;
   final String otp;
+  final String otpId;
 
-  const VerifyOtpParams({this.phone, required this.otp});
+  const VerifyOtpParams({this.phone, required this.otp, required this.otpId});
 
   @override
-  List<Object?> get props => [phone, otp];
+  List<Object?> get props => [phone, otp, otpId];
 }

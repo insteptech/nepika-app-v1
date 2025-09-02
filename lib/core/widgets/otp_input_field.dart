@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class OtpInputField extends StatefulWidget {
   final int length;

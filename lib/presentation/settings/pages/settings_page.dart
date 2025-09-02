@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme.dart';
-import 'package:nepika/core/constants/app_constants.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:nepika/presentation/pages/dashboard/products_page.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
@@ -36,8 +36,6 @@ class SettingsPage extends StatelessWidget {
         );
       }
     } catch (e) {
-      print('Error during logout: $e');
-      // Even if there's an error, still navigate to welcome screen
       if (context.mounted) {
         Navigator.of(
           context,

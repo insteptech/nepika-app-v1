@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../core/constants/theme.dart'; // adjust import path as per your structure
+import '../config/constants/theme.dart'; // adjust import path as per your structure
 
 class ToggleSwitch extends StatefulWidget {
   final bool value;
@@ -45,7 +45,7 @@ class _ToggleSwitchState extends State<ToggleSwitch> {
 
    final Color backgroundColor = isOn
     ? Theme.of(context).colorScheme.primary
-    :  isDark ? Colors.grey.withOpacity(0.4) : Colors.grey.withOpacity(0.7);
+    :  isDark ? Colors.grey.withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.7);
 
 
 

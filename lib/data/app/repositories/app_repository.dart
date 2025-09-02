@@ -1,7 +1,7 @@
 
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/config/env.dart';
-import 'package:nepika/core/constants/api_endpoints.dart';
+import 'package:nepika/core/config/constants/api_endpoints.dart';
 
 abstract class AppRepository {
   final ApiBase apiBase;

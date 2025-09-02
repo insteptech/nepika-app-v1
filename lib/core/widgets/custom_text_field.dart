@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class CustomTextField extends StatefulWidget {
   final String? label;
@@ -118,7 +118,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
             filled: true,
             fillColor: widget.enabled
                 ? Theme.of(context).inputDecorationTheme.fillColor ?? Theme.of(context).colorScheme.surface
-                : Theme.of(context).disabledColor.withOpacity(0.08),
+                : Theme.of(context).disabledColor.withValues(alpha: 0.08),
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: BorderSide(

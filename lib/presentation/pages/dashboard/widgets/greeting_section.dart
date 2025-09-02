@@ -1,6 +1,6 @@
 
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class GreetingSection extends StatelessWidget {
   final Map<String, dynamic> user;

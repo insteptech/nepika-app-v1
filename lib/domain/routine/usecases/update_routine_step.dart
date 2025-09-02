@@ -1,34 +1,15 @@
-import 'package:equatable/equatable.dart';
-import '../../../core/usecases/usecase.dart';
+// lib/domain/routine/usecases/update_routine_step.dart
 import '../../../core/utils/either.dart';
+import '../../../core/utils/logger.dart';
 import '../repositories/routine_repository.dart';
 
-class UpdateRoutineStep extends UseCase<void, UpdateRoutineStepParams> {
+class UpdateRoutineStep {
   final RoutineRepository repository;
 
   UpdateRoutineStep(this.repository);
 
-  @override
-  Future<Result<void>> call(UpdateRoutineStepParams params) async {
-    return await repository.updateRoutineStep(
-      token: params.token,
-      stepId: params.stepId,
-      isCompleted: params.isCompleted,
-    );
+  Future<Result<void>> call(String token, String routineId, bool isCompleted) async {
+    Logger.useCase('Updating routine step: $routineId to completed: $isCompleted');
+    return await repository.updateRoutineStep(token, routineId, isCompleted);
   }
-}
-
-class UpdateRoutineStepParams extends Equatable {
-  final String token;
-  final String stepId;
-  final bool isCompleted;
-
-  const UpdateRoutineStepParams({
-    required this.token,
-    required this.stepId,
-    required this.isCompleted,
-  });
-
-  @override
-  List<Object> get props => [token, stepId, isCompleted];
 }

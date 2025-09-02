@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/data/app/repositories/app_repository.dart';
 import 'package:nepika/presentation/bloc/app/app_bloc.dart';
@@ -113,7 +113,7 @@ class _PricingPageState extends State<PricingPage> {
                               height: 45,
                               decoration: BoxDecoration(
                                 shape: BoxShape.circle,
-                                color: theme.colorScheme.primary.withOpacity(0.08),
+                                color: theme.colorScheme.primary.withValues(alpha: 0.08),
                               ),
                               child: Center(
                                 child: Image.asset(

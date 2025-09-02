@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/widgets/custom_button.dart';
 import 'scan_guidence_page.dart';

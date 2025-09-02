@@ -1,68 +1,86 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/config/env.dart';
 
 class ImageGallerySection extends StatelessWidget {
   final List<Map<String, dynamic>> imageGallery;
+  final bool isLoading;
 
   const ImageGallerySection({
     Key? key,
     required this.imageGallery,
+    this.isLoading = false, // default not loading
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final displayImages = imageGallery.isNotEmpty
-        ? imageGallery
-        : [
-            {
-              "id": "img_1",
-              "timestamp": "2025-06-10T10:00:00Z"
-            },
-            {
-              "id": "img_2",
-              "timestamp": "2025-06-15T10:00:00Z"
-            },
-            {
-              "id": "img_3",
-              "timestamp": "2025-06-15T10:00:00Z"
-            },
-            {
-              "id": "img_4",
-              "timestamp": "2025-06-20T10:00:00Z"
-            }
-          ];
+    if (isLoading) {
+      // 🔄 Show skeleton loaders while fetching
+      return SizedBox(
+        height: 135,
+        child: ListView.separated(
+          scrollDirection: Axis.horizontal,
+          itemCount: 4,
+          separatorBuilder: (_, __) => const SizedBox(width: 12),
+          itemBuilder: (context, index) => ClipRRect(
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 125,
+              height: 130,
+              color: Colors.grey.shade300,
+            ),
+          ),
+        ),
+      );
+    }
 
+    if (imageGallery.isEmpty) {
+      // ❌ No images found
+      return SizedBox(
+        height: 135,
+        child: Center(
+          child: Text(
+            "No images found",
+            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey,
+                ),
+          ),
+        ),
+      );
+    }
+
+    // ✅ Show images
     return SizedBox(
       height: 135,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: displayImages.length,
+        itemCount: imageGallery.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final img = displayImages[index];
+          final img = imageGallery[index];
           final imageUrl = img['url'];
-
+          print(imageUrl);
           return ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            child: imageUrl != null
-                ? Image.network(
-                    imageUrl,
-                    width: 125,
-                    height: 130,
-                    fit: BoxFit.cover,
-                    errorBuilder: (_, __, ___) => Image.asset(
-                      'assets/images/image_placeholder.png',
-                      width: 125,
-                      height: 130,
-                      fit: BoxFit.cover,
-                    ),
-                  )
-                : Image.asset(
-                    'assets/images/image_placeholder.png',
-                    width: 125,
-                    height: 130,
-                    fit: BoxFit.cover,
-                    color: Theme.of(context).colorScheme.onTertiary,
-                  ),
+            child: Image.network(
+              imageUrl,
+              width: 125,
+              height: 130,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, progress) {
+                if (progress == null) return child;
+                return Container(
+                  width: 125,
+                  height: 130,
+                  color: Colors.grey.shade300,
+                );
+              },
+              errorBuilder: (_, __, ___) => Image.asset(
+                'assets/images/image_placeholder.png',
+                width: 125,
+                height: 130,
+                fit: BoxFit.cover,
+              ),
+            ),
           );
         },
       ),

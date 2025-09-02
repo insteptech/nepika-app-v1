@@ -1,5 +1,5 @@
 import 'package:nepika/core/api_base.dart';
-import '../../../core/constants/api_endpoints.dart';
+import '../../../core/config/constants/api_endpoints.dart';
 import '../../../domain/dashboard/entities/dashboard_entities.dart';
 import '../../../domain/dashboard/repositories/dashboard_repository.dart';
 
@@ -17,17 +17,25 @@ class DashboardRepositoryImpl implements DashboardRepository {
     if (response.statusCode == 200 && response.data['success'] == true) {
       return DashboardDataEntity(data: Map<String, dynamic>.from(response.data['data']));
     } else {
-      throw Exception(response.data['message'] ?? 'Failed to fetch dashboard data');
+      if (response.statusCode == 401) {
+        throw Exception('Unauthorized: Invalid or expired token');
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to fetch dashboard data');
+      }
     }
   }
 
   @override
   Future<RoutineEntity> fetchTodaysRoutine({required String token, required String type}) async {
+    final path = '${ApiEndpoints.userDailyRoutine}/all';
+    print('\n\n\n\n\n');
+    print(path);
+    print('\n\n\n\n\n');
     final response = await apiBase.request(
-      path: ApiEndpoints.userDailyRoutine,
+      path: path,
       method: 'GET',
       headers: {'Authorization': 'Bearer $token'},
-      query: {'type': type},
+      // query: {'type': type},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
       return RoutineEntity(routines: List<dynamic>.from(response.data['data']));

@@ -1,5 +1,5 @@
 import '../../../core/api_base.dart';
-import '../../../core/constants/api_endpoints.dart';
+import '../../../core/config/constants/api_endpoints.dart';
 import '../models/product_model.dart';
 import 'products_remote_datasource.dart';
 

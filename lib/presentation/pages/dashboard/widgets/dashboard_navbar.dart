@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 const double kNavBarIconSize = 24.0;
 const double kScanIconSize = 28.0;
@@ -37,7 +37,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
 
   static const _navRoutes = [
     AppRoutes.dashboardHome,
-    AppRoutes.dashboardExplore,
+    AppRoutes.communityHome,
     AppRoutes.cameraScanGuidence,
     AppRoutes.dashboardAllProducts,
     AppRoutes.dashboardSettings,
@@ -53,8 +53,15 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
 
   void _onTabTapped(int index) {
     if (widget.selectedIndex == index && _navRoutes[index] != AppRoutes.cameraScanGuidence) {
-      return; // avoid re-navigating except for scan
+      return;
     }
+    
+    
+    if (index == 1) { 
+      Navigator.of(context, rootNavigator: true).pushNamed(_navRoutes[index]);
+      return;
+    }
+    
     widget.onNavBarTap(index, _navRoutes[index]);
   }
 

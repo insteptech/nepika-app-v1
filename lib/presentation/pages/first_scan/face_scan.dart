@@ -1,13 +1,20 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:typed_data';
+import 'dart:convert';
+import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:nepika/core/config/env.dart';
+import 'package:nepika/core/utils/secure_storage.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:dio/dio.dart';
 
 class FaceScanResultPage extends StatefulWidget {
   final CameraController? cameraController;
   final List<CameraDescription>? availableCameras;
-  
+
   const FaceScanResultPage({
     super.key,
     this.cameraController,
@@ -33,12 +40,44 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
   int _countdown = 5;
   Timer? _timer;
   XFile? _capturedImage;
+  Dio _dio = Dio();
+
+  // API state - Updated for complete analysis
+  bool _isProcessingAPI = false;
+  Uint8List? _apiResponseImageBytes;
+  Map<String, dynamic>? _analysisResults;
+  String? _apiError;
+
+  // Updated API endpoint to use the combined analysis
+  static const String _apiEndpoint =
+      '${Env.baseUrl}/model/face-scan/analyze_face_complete';
 
   @override
   void initState() {
     super.initState();
+    _initializeDio();
     _initializeFaceDetector();
     _initializeCamera();
+  }
+
+  void _initializeDio() {
+    _dio = Dio(
+      BaseOptions(
+        connectTimeout: const Duration(seconds: 30),
+        receiveTimeout: const Duration(seconds: 30),
+        sendTimeout: const Duration(seconds: 30),
+        headers: {'Content-Type': 'multipart/form-data'},
+        responseType: ResponseType.json,
+      ),
+    );
+
+    _dio.interceptors.add(
+      LogInterceptor(
+        requestBody: false,
+        responseBody: false,
+        logPrint: (object) => debugPrint(object.toString()),
+      ),
+    );
   }
 
   void _initializeFaceDetector() {
@@ -53,37 +92,64 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
     } catch (e) {
       debugPrint('Face detector initialization error: $e');
       if (mounted) {
-        setState(() => _errorMessage = 'Failed to initialize face detector: $e');
+        setState(
+          () => _errorMessage = 'Failed to initialize face detector: $e',
+        );
       }
     }
   }
 
-  // Reset alignment and countdown
   void _resetAlignment() {
     _isAligned = false;
     _cancelTimer();
     _countdown = 5;
   }
 
+  void _resetToDefaultState() {
+    if (mounted) {
+      setState(() {
+        _isAligned = false;
+        _countdown = 5;
+      });
+    }
+    _cancelTimer();
+  }
+
+  Future<bool> _checkCameraPermission() async {
+    try {
+      final status = await Permission.camera.status;
+      if (status.isDenied) {
+        final result = await Permission.camera.request();
+        return result.isGranted;
+      }
+      return status.isGranted;
+    } catch (e) {
+      debugPrint('Permission check error: $e');
+      return false;
+    }
+  }
+
   Future<void> _initializeCamera() async {
     if (!mounted || _isInitializing) return;
-    
+
     setState(() {
       _isInitializing = true;
       _isInitialized = false;
       _errorMessage = null;
       _capturedImage = null;
+      _apiResponseImageBytes = null;
+      _analysisResults = null;
+      _apiError = null;
       _resetAlignment();
     });
 
     try {
-      await _disposeController();
-
-      if (widget.cameraController != null && 
-          widget.cameraController!.value.isInitialized) {
+      // If pre-initialized camera is available, use it directly
+      if (widget.cameraController != null && widget.cameraController!.value.isInitialized) {
+        debugPrint('Using pre-initialized camera controller');
         _controller = widget.cameraController;
         _cameras = widget.availableCameras;
-        
+
         if (mounted) {
           setState(() {
             _isInitialized = true;
@@ -92,6 +158,16 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
           await _startImageStream();
           return;
         }
+      }
+
+      // Fallback: Initialize camera ourselves (shouldn't happen often now)
+      debugPrint('Fallback: Initializing camera on FaceScanResult page');
+      
+      await _disposeController();
+
+      final hasPermission = await _checkCameraPermission();
+      if (!hasPermission) {
+        throw Exception('Camera permission denied.');
       }
 
       if (widget.availableCameras != null) {
@@ -110,16 +186,15 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
       );
 
       await _createController(selectedCamera);
-      
+
       if (!mounted) return;
-      
+
       setState(() {
         _isInitialized = true;
         _isInitializing = false;
       });
-      
-      await _startImageStream();
 
+      await _startImageStream();
     } catch (e) {
       debugPrint('Camera initialization error: $e');
       if (mounted) {
@@ -135,23 +210,20 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
   Future<List<CameraDescription>> _getCamerasWithRetry() async {
     int retryCount = 0;
     const maxRetries = 3;
-    
+
     while (retryCount < maxRetries) {
       try {
         final cameras = await availableCameras().timeout(
-          const Duration(seconds: 8),
-          onTimeout: () => throw TimeoutException('Camera fetch timed out', const Duration(seconds: 8)),
+          const Duration(seconds: 5),
         );
         return cameras;
       } catch (e) {
         retryCount++;
         if (retryCount >= maxRetries) rethrow;
-        
-        debugPrint('Camera fetch attempt $retryCount failed: $e');
-        await Future.delayed(Duration(milliseconds: 500 * retryCount));
+        await Future.delayed(Duration(milliseconds: 300 * retryCount));
       }
     }
-    
+
     throw Exception('Failed to get cameras after $maxRetries attempts');
   }
 
@@ -165,20 +237,19 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
           : ImageFormatGroup.bgra8888,
     );
 
-    await _controller!.initialize().timeout(
-      const Duration(seconds: 15),
-      onTimeout: () => throw TimeoutException(
-        'Camera initialization timed out', 
-        const Duration(seconds: 15)
-      ),
-    );
+    await _controller!.initialize().timeout(const Duration(seconds: 10));
   }
 
   Future<void> _startImageStream() async {
-    if (_controller == null || !_controller!.value.isInitialized) return;
-    
+    if (_controller == null || !_controller!.value.isInitialized) {
+      debugPrint('Cannot start image stream: controller not ready');
+      return;
+    }
+
     try {
+      debugPrint('Starting image stream...');
       await _controller!.startImageStream(_processFrame);
+      debugPrint('Image stream started successfully');
     } catch (e) {
       debugPrint('Error starting image stream: $e');
       if (mounted) {
@@ -190,11 +261,11 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
   String _getReadableError(String error) {
     if (error.contains('timeout') || error.contains('timed out')) {
       return 'Camera is taking too long to respond. Please try again.';
-    } else if (error.contains('permission')) {
-      return 'Camera permission is required. Please grant permission and try again.';
+    } else if (error.contains('permission') || error.contains('denied')) {
+      return 'Camera permission is required. Please grant permission in Settings.';
     } else if (error.contains('No cameras available')) {
       return 'No cameras found on this device.';
-    } else if (error.contains('already in use')) {
+    } else if (error.contains('already in use') || error.contains('in use')) {
       return 'Camera is being used by another app. Please close other camera apps.';
     } else {
       return 'Failed to initialize camera. Please try again.';
@@ -203,14 +274,14 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
 
   Future<void> _disposeController() async {
     _cancelTimer();
-    
+
     if (_controller != null) {
       try {
+        // Only dispose if it's not the pre-initialized controller from guidance screen
         if (widget.cameraController == null) {
           if (_controller!.value.isStreamingImages) {
             await _controller!.stopImageStream();
           }
-          
           await _controller!.dispose().timeout(
             const Duration(seconds: 3),
             onTimeout: () => debugPrint('Camera disposal timed out'),
@@ -219,16 +290,21 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
       } catch (e) {
         debugPrint('Error disposing camera: $e');
       } finally {
-        _controller = null;
+        if (widget.cameraController == null) {
+          _controller = null;
+        }
       }
     }
   }
 
   void _processFrame(CameraImage image) async {
-    if (_isDetecting || !mounted || _controller == null || !_controller!.value.isInitialized) {
+    if (_isDetecting ||
+        !mounted ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
       return;
     }
-    
+
     _isDetecting = true;
 
     try {
@@ -237,7 +313,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
         final faces = await _faceDetector.processImage(input);
         if (mounted) {
           setState(() => _faces = faces);
-          if (_timer == null) _evaluateAlignment();
+          _evaluateAlignment();
         }
       }
     } catch (e) {
@@ -259,7 +335,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
       if (format == null) return null;
 
       final plane = image.planes.first;
-      
+
       final metadata = InputImageMetadata(
         size: Size(image.width.toDouble(), image.height.toDouble()),
         rotation: rotation,
@@ -267,10 +343,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
         bytesPerRow: plane.bytesPerRow,
       );
 
-      return InputImage.fromBytes(
-        bytes: plane.bytes,
-        metadata: metadata,
-      );
+      return InputImage.fromBytes(bytes: plane.bytes, metadata: metadata);
     } catch (e) {
       debugPrint('Error converting camera image: $e');
       return null;
@@ -279,7 +352,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
 
   InputImageRotation? _getImageRotation(CameraDescription camera) {
     final sensorOrientation = camera.sensorOrientation;
-    
+
     switch (sensorOrientation) {
       case 0:
         return InputImageRotation.rotation0deg;
@@ -294,44 +367,56 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
     }
   }
 
+
+
+
   void _evaluateAlignment() {
     if (_controller?.value.previewSize == null || !mounted) return;
 
-    if (_faces.isEmpty) {
-      _onMisaligned();
-      return;
+    bool newAlignmentState = false;
+
+    if (_faces.isNotEmpty) {
+      final face = _faces.first;
+      final rotY = face.headEulerAngleY ?? 0;
+      final rotZ = face.headEulerAngleZ ?? 0;
+      final lookingStraight = rotY.abs() < 10 && rotZ.abs() < 10;
+
+      final preview = _controller!.value.previewSize!;
+      final box = face.boundingBox;
+      final centerX = box.center.dx;
+      final centerY = box.center.dy;
+      final cx = preview.width / 2;
+      final cy = preview.height / 2;
+      final dx = (centerX - cx).abs();
+      final dy = (centerY - cy).abs();
+      final rx = preview.width * 0.4;
+      final ry = preview.height * 0.5;
+      final insideOval = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) < 1;
+
+      newAlignmentState = lookingStraight && insideOval;
     }
 
-    final face = _faces.first;
-    final rotY = face.headEulerAngleY ?? 0;
-    final rotZ = face.headEulerAngleZ ?? 0;
-    final lookingStraight = rotY.abs() < 10 && rotZ.abs() < 10;
-
-    final preview = _controller!.value.previewSize!;
-    final box = face.boundingBox;
-    final centerX = box.center.dx;
-    final centerY = box.center.dy;
-    final cx = preview.width / 2;
-    final cy = preview.height / 2;
-    final dx = (centerX - cx).abs();
-    final dy = (centerY - cy).abs();
-    final rx = preview.width * 0.4;
-    final ry = preview.height * 0.5;
-    final insideOval = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) < 1;
-
-    (lookingStraight && insideOval) ? _onAligned() : _onMisaligned();
+    // Handle state changes
+    if (newAlignmentState && !_isAligned) {
+      _onAligned();
+    } else if (!newAlignmentState && _isAligned) {
+      _onMisaligned();
+    }
   }
 
   void _onAligned() {
-    if (!_isAligned) {
+    if (!_isAligned && mounted) {
       setState(() => _isAligned = true);
       _startCountdown();
     }
   }
 
   void _onMisaligned() {
-    if (_isAligned || _timer != null) {
-      setState(() => _isAligned = false);
+    if (_isAligned && mounted) {
+      setState(() {
+        _isAligned = false;
+        _countdown = 5; // Reset countdown immediately when misaligned
+      });
       _cancelTimer();
     }
   }
@@ -344,10 +429,13 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
         return;
       }
       
+      // Check alignment before each countdown tick
       _evaluateAlignment();
       
+      // If face is no longer aligned, stop countdown and reset
       if (!_isAligned) {
         t.cancel();
+        _resetToDefaultState();
         return;
       }
       
@@ -370,12 +458,23 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
 
   Future<void> _capturePhoto() async {
     if (_controller == null || !_controller!.value.isInitialized) return;
-    
+    if (!_isAligned) {
+      _cancelTimer();
+      return;
+    }
     try {
       await _controller!.stopImageStream();
       final file = await _controller!.takePicture();
       if (mounted) {
-        setState(() => _capturedImage = file);
+        setState(() {
+          _capturedImage = file;
+          _apiResponseImageBytes = null;
+          _analysisResults = null;
+          _apiError = null;
+        });
+
+        // Automatically send to API after capture
+        await _sendImageToAPI(file);
       }
     } catch (e) {
       debugPrint('Capture error: $e');
@@ -385,11 +484,212 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
     }
   }
 
+  Future<void> _sendImageToAPI(XFile imageFile) async {
+    if (!mounted) return;
+
+    final secureStorage = SecureStorage();
+    final userId = await secureStorage.getUserId();
+    setState(() {
+      _isProcessingAPI = true;
+      _apiError = null;
+      _apiResponseImageBytes = null;
+      _analysisResults = null;
+    });
+
+    try {
+      // Create FormData for multipart upload
+      final formData = FormData.fromMap({
+        'file': await MultipartFile.fromFile(
+          imageFile.path,
+          filename: 'face_image.jpg',
+        ),
+        'include_annotated_image': 'true', // Request annotated image
+        'user_id': userId, // <-- added here
+      });
+
+      debugPrint('Sending image to API: $_apiEndpoint');
+
+      final response = await _dio.post(
+        _apiEndpoint,
+        data: formData,
+        options: Options(
+          contentType: 'multipart/form-data',
+          responseType: ResponseType.json, // Expect JSON response
+        ),
+      );
+
+      debugPrint('API Response Status: ${response.statusCode}');
+      debugPrint('API Response Data: ${response.data}');
+
+      if (response.statusCode == 200 && response.data != null) {
+        final responseData = response.data as Map<String, dynamic>;
+
+        if (responseData['success'] == true) {
+          // Extract analysis results
+          _analysisResults = responseData;
+
+          // Extract and decode annotated image if available
+          final analysis = responseData['analysis'] as Map<String, dynamic>?;
+          final skinAreas = analysis?['skin_areas'] as Map<String, dynamic>?;
+          final annotatedImageBase64 = skinAreas?['annotated_image'] as String?;
+
+          if (annotatedImageBase64 != null) {
+            // Remove data URL prefix if present
+            String base64String = annotatedImageBase64;
+            if (base64String.startsWith('data:image')) {
+              base64String = base64String.split(',')[1];
+            }
+
+            try {
+              final imageBytes = base64Decode(base64String);
+              _apiResponseImageBytes = imageBytes;
+            } catch (e) {
+              debugPrint('Error decoding base64 image: $e');
+            }
+          }
+
+          if (mounted) {
+            setState(() {
+              _isProcessingAPI = false;
+            });
+          }
+        } else {
+          throw Exception(responseData['error_message'] ?? 'Analysis failed');
+        }
+      } else {
+        throw Exception('API returned status code: ${response.statusCode}');
+      }
+    } on DioException catch (e) {
+      debugPrint('Dio Error: $e');
+      String errorMessage = 'Failed to analyze image';
+
+      if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage =
+            'Connection timeout. Please check your internet connection.';
+      } else if (e.type == DioExceptionType.sendTimeout) {
+        errorMessage = 'Request timeout. Please try again.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Response timeout. Please try again.';
+      } else if (e.type == DioExceptionType.badResponse) {
+        errorMessage =
+            'Server error (${e.response?.statusCode}): ${e.response?.statusMessage}';
+      } else if (e.type == DioExceptionType.connectionError) {
+        errorMessage =
+            'Connection error. Please check your internet connection.';
+      } else {
+        errorMessage = 'Network error: ${e.message}';
+      }
+
+      if (mounted) {
+        setState(() {
+          _apiError = errorMessage;
+          _isProcessingAPI = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('API Error: $e');
+      if (mounted) {
+        setState(() {
+          _apiError = 'Failed to analyze image: ${e.toString()}';
+          _isProcessingAPI = false;
+        });
+      }
+    }
+  }
+
   Future<void> _retryInitialization() async {
     setState(() {
       _errorMessage = null;
+      _apiResponseImageBytes = null;
+      _analysisResults = null;
+      _apiError = null;
     });
     await _initializeCamera();
+  }
+
+  Widget _buildImageWidget() {
+    // Always prioritize showing the API processed image
+    if (_apiResponseImageBytes != null) {
+      // Display the processed/annotated image
+      return Image.memory(
+        _apiResponseImageBytes!,
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Error displaying processed image: $error');
+          return const Center(
+            child: Text(
+              'Error loading processed image',
+              style: TextStyle(color: Colors.white),
+            ),
+          );
+        },
+      );
+    }
+    // Only show captured image while processing or if API failed
+    else if (_capturedImage != null &&
+        (_isProcessingAPI || _apiError != null)) {
+      // Display the original captured image as placeholder
+      return Image.file(
+        File(_capturedImage!.path),
+        fit: BoxFit.cover,
+        errorBuilder: (context, error, stackTrace) {
+          debugPrint('Error displaying captured image: $error');
+          return const Center(
+            child: Text(
+              'Error loading captured image',
+              style: TextStyle(color: Colors.white),
+            ),
+          );
+        },
+      );
+    }
+    return const SizedBox.shrink();
+  }
+
+  Widget _buildProcessingOverlay() {
+    if (!_isProcessingAPI && _apiError == null) return const SizedBox.shrink();
+
+    return Container(
+      color: Colors.black54,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (_isProcessingAPI) ...[
+              const CircularProgressIndicator(color: Colors.white),
+              const SizedBox(height: 16),
+              const Text(
+                'Analyzing your skin...',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'This may take a few seconds',
+                style: TextStyle(color: Colors.white70, fontSize: 14),
+              ),
+            ] else if (_apiError != null) ...[
+              const Icon(Icons.error, color: Colors.red, size: 48),
+              const SizedBox(height: 16),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  _apiError!,
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ),
+              const SizedBox(height: 16),
+              ElevatedButton(
+                onPressed: _capturedImage != null
+                    ? () => _sendImageToAPI(_capturedImage!)
+                    : null,
+                child: const Text('Retry Analysis'),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
   }
 
   @override
@@ -397,6 +697,27 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
     _faceDetector.close();
     _disposeController();
     super.dispose();
+  }
+
+  Widget _buildConditionChip(String label) {
+    // Capitalize each word
+    final capitalized = toBeginningOfSentenceCase(label.toLowerCase()) ?? label;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF2196F3), // blue
+        borderRadius: BorderRadius.circular(30),
+      ),
+      child: Text(
+        capitalized,
+        style: const TextStyle(
+          color: Colors.white,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
   }
 
   @override
@@ -412,7 +733,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (_capturedImage != null)
+                  if (_capturedImage != null || _apiResponseImageBytes != null)
                     IconButton(
                       icon: const Icon(
                         Icons.refresh,
@@ -424,8 +745,9 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
                   const SizedBox(width: 16),
                   GestureDetector(
                     onTap: () async {
+                      final navigator = Navigator.of(context);
                       await _disposeController();
-                      if (mounted) Navigator.of(context).pop();
+                      if (mounted) navigator.pop();
                     },
                     child: Transform.rotate(
                       angle: 45 * 3.1416 / 180,
@@ -464,13 +786,18 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
                                   size: 48,
                                 ),
                                 const SizedBox(height: 16),
-                                Text(
-                                  _errorMessage!,
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 20,
                                   ),
-                                  textAlign: TextAlign.center,
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 16,
+                                    ),
+                                    textAlign: TextAlign.center,
+                                  ),
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton(
@@ -482,7 +809,8 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
                           ),
                         ]
                         // Loading state
-                        else if (_isInitializing || (!_isInitialized && _controller == null)) ...[
+                        else if (_isInitializing ||
+                            (!_isInitialized && _controller == null)) ...[
                           const Center(
                             child: Column(
                               mainAxisSize: MainAxisSize.min,
@@ -500,15 +828,48 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
                             ),
                           ),
                         ]
-                        // Captured image state
+                        // Captured/Processed image state
                         else if (_capturedImage != null) ...[
-                          Image.file(
-                            File(_capturedImage!.path),
-                            fit: BoxFit.cover,
+                          _buildImageWidget(),
+                          _buildProcessingOverlay(),
+                          // Status indicator in top-right
+                          Positioned(
+                            top: 16,
+                            right: 16,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 12,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
+                                color: _analysisResults != null
+                                    ? Colors.green.withOpacity(0.8)
+                                    : _apiError != null
+                                    ? Colors.red.withOpacity(0.8)
+                                    : Colors.orange.withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _analysisResults != null
+                                    ? 'Analysis Complete'
+                                    : _apiError != null
+                                    ? 'Analysis Failed'
+                                    : _isProcessingAPI
+                                    ? 'Analyzing...'
+                                    : 'Captured',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
                           ),
                         ]
                         // Camera preview state
-                        else if (_isInitialized && _controller != null && _controller!.value.isInitialized) ...[
+                        else if (_isInitialized &&
+                            _controller != null &&
+                            _controller!.value.isInitialized) ...[
                           CameraPreview(_controller!),
                           CustomPaint(
                             painter: _OvalPainter(
@@ -548,11 +909,38 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
                         ]
                         // Fallback loading state
                         else ...[
-                          const Center(child: CircularProgressIndicator(color: Colors.white)),
+                          const Center(
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                            ),
+                          ),
                         ],
                       ],
                     ),
                   ),
+                ),
+              ),
+              const SizedBox(height: 30),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    if (_analysisResults != null)
+                      ...(_analysisResults!['analysis']?['skin_condition']?['all_predictions']
+                              as Map<String, dynamic>)
+                          .entries
+                          .map(
+                            (entry) => Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 4,
+                              ),
+                              child: _buildConditionChip(
+                                "${entry.key} ${(entry.value as num).toStringAsFixed(0)}%",
+                              ),
+                            ),
+                          ),
+                  ],
                 ),
               ),
             ],
@@ -571,7 +959,7 @@ class _OvalPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = color.withOpacity(0.5)
+      ..color = color.withValues(alpha: 0.5)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 4;
     final rect = Rect.fromLTWH(

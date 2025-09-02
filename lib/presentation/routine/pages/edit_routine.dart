@@ -1,183 +1,240 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/back_button.dart';
-import 'package:nepika/domain/dashboard/repositories/dashboard_repository.dart';
-import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
-import 'package:nepika/presentation/bloc/dashboard/dashboard_event.dart';
-import 'package:nepika/presentation/bloc/dashboard/dashboard_state.dart';
-import 'package:nepika/core/api_base.dart';
-import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
+import 'package:nepika/features/routine/routine_feature.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class EditRoutine extends StatelessWidget {
   const EditRoutine({super.key});
+
+  @override
   Widget build(BuildContext context) {
-    // TODO: Get token from provider or context
-    final String token = '';
-    return BlocProvider(
-      create: (context) => DashboardBloc(
-        DashboardRepositoryImpl(
-          ApiBase(),
-        ),
-      )..add(FetchTodaysRoutine(token, 'edit')),
-      child: BlocBuilder<DashboardBloc, DashboardState>(
-        builder: (context, state) {
-          List<dynamic> routineSteps = [];
-          bool loading = state is TodaysRoutineLoading;
-          if (state is TodaysRoutineLoaded) {
-            routineSteps = state.routineSteps.routines;
-          }
-          return Scaffold(
-            backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    const CustomBackButton(),
-                    const SizedBox(height: 32),
-                    Text(
-                      "Edit Routine",
-                      style: Theme.of(context).textTheme.displaySmall
-                    ),
-                    const SizedBox(height: 45),
-                
-                    Expanded(
-                      child: loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : ListView.builder(
-                              itemCount: routineSteps.length,
-                              itemBuilder: (context, index) {
-                                final step = routineSteps[index];
-                                final timing = step['timing'] == 'morning'
-                                    ? 'Morning Routine'
-                                    : 'Night Routine';
-                                  final colorScheme = Theme.of(context).colorScheme;
-                                final color = step['timing'] == 'morning'
-                                    ? colorScheme.onSecondary
-                                    : colorScheme.primary;
-                                return Container(
-                                  height: 85,
-                                  margin: const EdgeInsets.only(bottom: 14),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                  ), // Add padding if needed
-                                  decoration: BoxDecoration(
-                                    borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: Theme.of(context).colorScheme.primary.withOpacity(0.4), width: 1),
+    return RoutineBlocProvider(
+      child: const _EditRoutineView(),
+    );
+  }
+}
 
-                                  ),
-                                  child: Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.center,
-                                    children: [
-                                      Container(
-                                        width: 44,
-                                        height: 44,
-                                        decoration: BoxDecoration(
-                                          color: color,
-                                          borderRadius: BorderRadius.circular(
-                                            12,
-                                          ),
-                                        ),
-                                        child: Icon(
-                                          Icons.ac_unit,
-                                           color: step['timing'] == 'morning'
-                                              ? colorScheme.primary
-                                              : colorScheme.surface,
-                                          size: 30,
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.center,
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              step['title'] ?? 'No Title',
-                                              style: Theme.of(context).textTheme.headlineMedium
+class _EditRoutineView extends StatefulWidget {
+  const _EditRoutineView();
 
-                                            ),
-                                            Text(
-                                              timing,
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyLarge!
-                                                  .secondary(context),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      GestureDetector(
-                                        onTap: () {
-                                      
-                                        },
-                                        child: Container(
-                                          width: 44,
-                                          height: 44,
-                                          decoration: BoxDecoration(
-                                            color: colorScheme.error.withValues(alpha: 0.2),
-                                            borderRadius: BorderRadius.circular(50),
-                                          ),
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(10),
-                                            child: Image.asset(
-                                              'assets/icons/delete_icon.png',
-                                              width: 22,
-                                              height: 22,
-                                              color: colorScheme.error,
-                                            ),
-                                          ),
-                                        ),
-                                      )
+  @override
+  State<_EditRoutineView> createState() => _EditRoutineViewState();
+}
 
-                                      ],
-                                  ),
-                                );
-                              },
-                            ),
-                    ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
-                      onTap: () {
-                        Navigator.pushNamed(
-                          context,
-                          AppRoutes.dashboardAddRoutine,
-                        );
-                      },
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Image.asset(
-                            'assets/icons/add_icon.png',
-                            width: 20,
-                            height: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                          ),
-                          const SizedBox(width: 6),
-                          Text(
-                            'Add new step',
-                            style: Theme.of(context).textTheme.headlineMedium!.hint(context)
+class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingObserver {
+  String? _token;
+  bool _isLoading = true;
+  bool _isInitialized = false;
 
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _loadTokenAndInitialize();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed && _isInitialized) {
+      _refreshRoutines();
+    }
+  }
+
+  void _refreshRoutines() {
+    if (_token != null && _isInitialized) {
+      context.read<RoutineBloc>().add(LoadTodaysRoutineEvent(token: _token!, type: 'get-user-routines'));
+    }
+  }
+
+  Future<void> _loadTokenAndInitialize() async {
+    final sharedPrefs = await SharedPreferences.getInstance();
+    final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
+
+    if (accessToken == null || accessToken.isEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pop(context);
+      });
+      return;
+    }
+
+    setState(() {
+      _token = accessToken;
+      _isLoading = false;
+      _isInitialized = true;
+    });
+
+    // Load today's user routines using BLoC provided by RoutineBlocProvider
+    if (mounted) {
+      context.read<RoutineBloc>().add(LoadTodaysRoutineEvent(token: _token!, type: 'get-user-routines'));
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  void _onDeleteRoutine(String routineId) {
+    context.read<RoutineBloc>().add(DeleteRoutineStepEvent(
+      token: _token!,
+      routineId: routineId,
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading || _token == null) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    return BlocConsumer<RoutineBloc, RoutineState>(
+      listener: (context, state) {
+        if (state is RoutineError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.failure.message),
+              backgroundColor: Colors.red,
+              action: SnackBarAction(
+                label: 'Retry',
+                onPressed: () {
+                  context.read<RoutineBloc>().add(
+                    LoadTodaysRoutineEvent(token: _token!, type: 'get-user-routines'),
+                  );
+                },
               ),
             ),
           );
-        },
-      ),
+        } else if (state is RoutineOperationSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(state.message),
+              backgroundColor: Colors.green,
+            ),
+          );
+        }
+      },
+      builder: (context, state) {
+        bool loading = state is RoutineLoading;
+        List<Routine> routines = [];
+        String? errorMessage;
+        String? loadingRoutineId;
+
+        if (state is RoutineLoaded) {
+          routines = state.routines;
+        } else if (state is RoutineOperationLoading) {
+          routines = state.currentRoutines;
+          loadingRoutineId = state.operationId;
+        } else if (state is RoutineOperationSuccess) {
+          routines = state.routines;
+        } else if (state is RoutineError) {
+          errorMessage = state.failure.message;
+        }
+
+        return Scaffold(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          body: SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 16),
+                  const CustomBackButton(),
+                  const SizedBox(height: 32),
+                  Text(
+                    "Edit routine",
+                    style: Theme.of(context).textTheme.displaySmall,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Remove routine steps from your daily routine',
+                    style: Theme.of(context)
+                        .textTheme
+                        .headlineMedium!
+                        .secondary(context),
+                  ),
+                  const SizedBox(height: 45),
+                  Expanded(
+                    child: RefreshIndicator(
+                      onRefresh: () async {
+                        _refreshRoutines();
+                        // Wait a bit for the refresh to complete
+                        await Future.delayed(const Duration(milliseconds: 500));
+                      },
+                      child: loading
+                          ? const Center(child: CircularProgressIndicator())
+                          : errorMessage != null
+                              ? RoutineErrorWidget(
+                                  message: errorMessage,
+                                  onRetry: () {
+                                    context.read<RoutineBloc>().add(
+                                          LoadTodaysRoutineEvent(token: _token!, type: 'get-user-routines'),
+                                        );
+                                  },
+                                )
+                            : routines.isEmpty
+                                ? NoRoutinesFound(
+                                    onAddRoutines: () async {
+                                      await Navigator.pushNamed(
+                                        context,
+                                        AppRoutes.dashboardAddRoutine,
+                                      );
+                                      // Refresh the routines when coming back from add routine screen
+                                      _refreshRoutines();
+                                    },
+                                  )
+                                : RoutineList(
+                                    routines: routines,
+                                    tileType: RoutineTileType.editable,
+                                    loadingRoutineId: loadingRoutineId,
+                                    onDeleteRoutine: _onDeleteRoutine,
+                                  ),
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  GestureDetector(
+                    onTap: () async {
+                      await Navigator.pushNamed(
+                        context,
+                        AppRoutes.dashboardAddRoutine,
+                      );
+                      // Refresh the routines when coming back from add routine screen
+                      _refreshRoutines();
+                    },
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Image.asset(
+                          'assets/icons/add_icon.png',
+                          width: 20,
+                          height: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          'Add more routines',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium!
+                              .hint(context),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 24),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

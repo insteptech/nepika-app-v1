@@ -3,16 +3,17 @@ import '../../../core/usecases/usecase.dart';
 import '../../../core/utils/either.dart';
 import '../repositories/auth_repository.dart';
 
-class SendOtp extends UseCase<void, SendOtpParams> {
+class SendOtp extends UseCase<Map<String, dynamic>, SendOtpParams> {
   final AuthRepository repository;
 
   SendOtp(this.repository);
 
   @override
-  Future<Result<void>> call(SendOtpParams params) async {
+  Future<Result<Map<String, dynamic>>> call(SendOtpParams params) async {
     return await repository.sendOtp(
       phone: params.phone,
       email: params.email,
+      otpId: params.otpId,
     );
   }
 }
@@ -20,9 +21,27 @@ class SendOtp extends UseCase<void, SendOtpParams> {
 class SendOtpParams extends Equatable {
   final String? phone;
   final String? email;
+  final String? otpId;
 
-  const SendOtpParams({this.phone, this.email});
+  const SendOtpParams({this.phone, this.email, this.otpId});
 
   @override
-  List<Object?> get props => [phone, email];
+  List<Object?> get props => [phone, email, otpId];
+}
+
+class ResendOtp extends UseCase<Map<String, dynamic>, ResendOtpParams> {
+  final AuthRepository repository;
+  ResendOtp(this.repository);
+  @override
+  Future<Result<Map<String, dynamic>>> call(ResendOtpParams params) async {
+    return await repository.resendOtp(phone: params.phone, otpId: params.otpId);
+  }
+}
+
+class ResendOtpParams extends Equatable {
+  final String phone;
+  final String otpId;
+  const ResendOtpParams({required this.phone, required this.otpId});
+  @override
+  List<Object?> get props => [phone, otpId];
 }

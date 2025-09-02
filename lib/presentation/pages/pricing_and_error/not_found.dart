@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
 import 'package:nepika/core/widgets/back_button.dart';
-import 'package:nepika/core/constants/routes.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 
 class NotFound extends StatelessWidget {
   const NotFound({super.key});

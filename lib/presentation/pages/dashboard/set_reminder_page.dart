@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/core/widgets/custom_text_field.dart';
 import 'package:nepika/core/widgets/selection_button.dart';

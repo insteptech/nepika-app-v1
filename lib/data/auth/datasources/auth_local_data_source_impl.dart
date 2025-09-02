@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import '../../core/constants/app_constants.dart';
-import '../../../core/constants/app_constants.dart';
+import '../../../core/config/constants/app_constants.dart';
 import '../models/auth_token_model.dart';
 import '../models/user_model.dart';
 import 'auth_local_data_source.dart';

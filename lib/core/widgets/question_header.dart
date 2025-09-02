@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'back_button.dart';
 import '../../presentation/pages/first_scan/scan_onboarding_page.dart';
 
@@ -64,7 +64,7 @@ class QuestionHeader extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 16),
+          const SizedBox(height: 26),
 
           /// Progress Bar
           Row(
@@ -89,6 +89,7 @@ class QuestionHeader extends StatelessWidget {
               );
             }),
           ),
+          SizedBox(height: 10)
         ],
       ),
     );

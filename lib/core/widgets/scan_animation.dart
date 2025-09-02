@@ -71,9 +71,9 @@ class ScannerLinePainter extends CustomPainter {
     // Create the gradient for the scanning bar
     final gradient = LinearGradient(
       colors: [
-        barColor.withOpacity(0.5), // Transparent at edges
+        barColor.withValues(alpha: 0.5), // Transparent at edges
         barColor,                  // Solid green in the center
-        barColor.withOpacity(0.5), // Transparent at edges
+        barColor.withValues(alpha: 0.5), // Transparent at edges
       ],
       begin: Alignment.topCenter,
       end: Alignment.bottomCenter,
@@ -86,7 +86,7 @@ class ScannerLinePainter extends CustomPainter {
       ..style = PaintingStyle.fill;
 
     final shadowPaint = Paint()
-      ..color = Color(0xFF4EFFC6).withOpacity(0.8) // Semi-transparent shadow
+      ..color = Color(0xFF4EFFC6).withValues(alpha: 0.8) // Semi-transparent shadow
       ..maskFilter = MaskFilter.blur(BlurStyle.normal, 4);
 
     // Draw shadow dynamically above or below based on movement direction

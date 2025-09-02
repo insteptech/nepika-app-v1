@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
-import '../../../core/constants/routes.dart';
-import '../../../core/constants/assets.dart';
+import 'package:nepika/core/config/constants/theme.dart';
+import '../../../core/config/constants/routes.dart';
+import '../../../core/config/constants/assets.dart';
 import '../../../core/widgets/custom_button.dart';
 
 class WelcomeScreen extends StatefulWidget {

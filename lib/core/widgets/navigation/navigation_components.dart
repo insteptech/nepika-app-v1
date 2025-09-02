@@ -55,7 +55,7 @@ class QuestionnaireNavigation extends StatelessWidget
         color: getBackgroundColor(context),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.1),
+            color: Colors.black.withValues(alpha: 0.1),
             blurRadius: 4,
             offset: const Offset(0, -2),
           ),
@@ -178,7 +178,7 @@ class CustomDrawer extends StatelessWidget with ThemeAwareBehavior {
                     ),
                   ),
                   selected: isSelected,
-                  selectedTileColor: getPrimaryColor(context).withOpacity(0.1),
+                  selectedTileColor: getPrimaryColor(context).withValues(alpha: 0.1),
                   onTap: () => onItemTap?.call(index),
                 );
               },

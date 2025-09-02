@@ -2,7 +2,7 @@
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/domain/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/domain/dashboard/entities/dashboard_entities.dart';
-import '../../../core/constants/api_endpoints.dart';
+import '../../../core/config/constants/api_endpoints.dart';
 
 
 

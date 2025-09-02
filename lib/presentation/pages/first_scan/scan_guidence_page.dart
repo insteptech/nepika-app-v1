@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
+import 'dart:async';
+import 'dart:io';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/presentation/pages/first_scan/face_scan.dart';
 import '../../../core/widgets/custom_button.dart';
@@ -14,72 +16,177 @@ class ScanGuidenceScreen extends StatefulWidget {
 class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
+  bool _isInitializingCamera = false;
+  List<CameraDescription>? _cameras;
+  String? _cameraError;
   int _currentStep = 1;
   final int _totalSteps = 3;
+
+  late PageController _pageController = PageController(initialPage: 0);
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+    _pageController = PageController(initialPage: _currentStep - 1);
+    // Start camera initialization immediately when guidance screen loads
+    _initializeCameraEarly();
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _initializeCameraEarly() async {
+    if (_isInitializingCamera) return;
+    
+    setState(() {
+      _isInitializingCamera = true;
+      _cameraError = null;
+    });
+
     try {
-      final cameras = await availableCameras();
-      if (cameras.isNotEmpty) {
-        final frontCamera = cameras.firstWhere(
-          (camera) => camera.lensDirection == CameraLensDirection.front,
-          orElse: () => cameras.first,
-        );
+      // Get available cameras with retry logic
+      _cameras = await _getCamerasWithRetry();
+      
+      if (_cameras == null || _cameras!.isEmpty) {
+        throw Exception('No cameras available');
+      }
 
-        _cameraController = CameraController(
-          frontCamera,
-          ResolutionPreset.high,
-          enableAudio: false,
-        );
+      // Find front camera or use first available
+      final frontCamera = _cameras!.firstWhere(
+        (camera) => camera.lensDirection == CameraLensDirection.front,
+        orElse: () => _cameras!.first,
+      );
 
-        await _cameraController!.initialize();
+      // Create and initialize controller
+      _cameraController = CameraController(
+        frontCamera,
+        ResolutionPreset.high,
+        enableAudio: false,
+        imageFormatGroup: Platform.isAndroid
+            ? ImageFormatGroup.nv21
+            : ImageFormatGroup.bgra8888,
+      );
 
-        if (mounted) {
-          setState(() {
-            _isCameraInitialized = true;
-          });
-        }
+      await _cameraController!.initialize();
+
+      if (mounted) {
+        setState(() {
+          _isCameraInitialized = true;
+          _isInitializingCamera = false;
+        });
       }
     } catch (e) {
-      print('Camera initialization error: $e');
+      debugPrint('Camera initialization error: $e');
+      if (mounted) {
+        setState(() {
+          _cameraError = _getReadableError(e.toString());
+          _isInitializingCamera = false;
+          _isCameraInitialized = false;
+        });
+      }
+    }
+  }
+
+  Future<List<CameraDescription>> _getCamerasWithRetry() async {
+    int retryCount = 0;
+    const maxRetries = 3;
+
+    while (retryCount < maxRetries) {
+      try {
+        final cameras = await availableCameras().timeout(
+          const Duration(seconds: 5),
+          onTimeout: () => throw TimeoutException(
+            'Camera fetch timed out',
+            const Duration(seconds: 5),
+          ),
+        );
+        return cameras;
+      } catch (e) {
+        retryCount++;
+        if (retryCount >= maxRetries) rethrow;
+        await Future.delayed(Duration(milliseconds: 300 * retryCount));
+      }
+    }
+    throw Exception('Failed to get cameras after $maxRetries attempts');
+  }
+
+  String _getReadableError(String error) {
+    if (error.contains('timeout') || error.contains('timed out')) {
+      return 'Camera initialization timed out. Please try again.';
+    } else if (error.contains('permission') || error.contains('denied')) {
+      return 'Camera permission required. Check settings and restart.';
+    } else if (error.contains('No cameras available')) {
+      return 'No cameras found on this device.';
+    } else if (error.contains('already in use') || error.contains('in use')) {
+      return 'Camera in use by another app. Close other camera apps.';
+    } else {
+      return 'Camera initialization failed. Please try again.';
     }
   }
 
   @override
   void dispose() {
-    _cameraController?.dispose();
+    _pageController.dispose();
+    // Don't dispose camera here - pass it to next screen
     super.dispose();
   }
 
   void _handleNext() {
     if (_currentStep < _totalSteps) {
-      setState(() {
-        _currentStep++;
-      });
-    } else {
-      // Navigate to result page after scan
-      Navigator.of(context).pushReplacement(
-        MaterialPageRoute(
-          builder: (context) => const FaceScanResultPage(),
-        ),
+      _pageController.animateToPage(
+        _currentStep,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
       );
+    } else {
+      // On step 3, check camera status before navigating
+      if (!_isCameraInitialized && !_isInitializingCamera && _cameraError != null) {
+        // Retry camera initialization
+        _retryCameraInit();
+        return;
+      }
+      
+      if (_isInitializingCamera) {
+        // Still initializing, wait a bit more
+        return;
+      }
+
+      // Navigate to scan screen
+      if (_isCameraInitialized && _cameraController != null) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => FaceScanResultPage(
+              cameraController: _cameraController,
+              availableCameras: _cameras,
+            ),
+          ),
+        );
+      } else {
+        // Fallback: go without pre-initialized camera
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(
+            builder: (context) => const FaceScanResultPage(),
+          ),
+        );
+      }
     }
   }
 
   void _handleBack() {
     if (_currentStep > 1) {
-      setState(() {
-        _currentStep--;
-      });
+      _pageController.animateToPage(
+        _currentStep - 2,
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
     } else {
+      // Dispose camera when going back to previous screen
+      _cameraController?.dispose();
       Navigator.of(context).pop();
     }
+  }
+
+  void _retryCameraInit() {
+    _cameraController?.dispose();
+    _cameraController = null;
+    _initializeCameraEarly();
   }
 
   String get _instructionText {
@@ -102,7 +209,7 @@ class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
       case 2:
         return 'Next';
       case 3:
-        return 'Start Scan';
+        return _isCameraInitialized ? 'Start Scan' : 'Initializing...';
       default:
         return 'Next';
     }
@@ -121,138 +228,243 @@ class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
     }
   }
 
- @override
-Widget build(BuildContext context) {
-return Scaffold(
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-  body: SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Column(
-        children: [
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.start,
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20),
+          child: Column(
             children: [
-              CustomBackButton(onPressed: _handleBack, label: 'Back'),
-            ],
-          ),
-          const SizedBox(height: 40),
-          Expanded(
-            child: Column(
-              children: [
-                LayoutBuilder(
-                  builder: (context, constraints) {
-                    final squareSize = constraints.maxWidth;
-                    return Container(
-                      width: squareSize,
-                      height: squareSize,
-                      child: ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade100,
-                            borderRadius: BorderRadius.circular(20),
-                          ),
-                          child: Image.asset(
-                            _referenceImagePath,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return Stack(
-                                children: [
-                                  if (_isCameraInitialized &&
-                                      _cameraController != null)
-                                    Positioned.fill(
-                                      child:
-                                          CameraPreview(_cameraController!),
-                                    )
-                                  else
-                                    Container(
-                                      color: Colors.grey.shade200,
-                                      child: const Center(
-                                        child: CircularProgressIndicator(),
-                                      ),
-                                    ),
-                                  if (_currentStep == 3)
-                                    Positioned.fill(
-                                      child: CustomPaint(
-                                        painter: FaceOverlayPainter(),
-                                      ),
-                                    ),
-                                ],
-                              );
-                            },
-                          ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: [
+                  CustomBackButton(onPressed: _handleBack, label: 'Back'),
+                ],
+              ),
+              const SizedBox(height: 40),
+              Expanded(
+                child: PageView.builder(
+                  controller: _pageController,
+                  physics: const PageScrollPhysics(),
+                  onPageChanged: (index) {
+                    setState(() {
+                      _currentStep = index + 1;
+                    });
+                  },
+                  itemCount: _totalSteps,
+                  itemBuilder: (context, index) {
+                    return Column(
+                      children: [
+                        LayoutBuilder(
+                          builder: (context, constraints) {
+                            final squareSize = constraints.maxWidth;
+                            return Container(
+                              width: squareSize,
+                              height: squareSize,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey.shade100,
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: _buildStepContent(),
+                                ),
+                              ),
+                            );
+                          },
                         ),
-                      ),
+                        const SizedBox(height: 40),
+                        Text(
+                          _instructionText,
+                          style: Theme.of(context).textTheme.displayLarge?.copyWith(
+                                fontSize: 28,
+                              ),
+                          textAlign: TextAlign.center,
+                        ),
+                        const Spacer(),
+                      ],
                     );
                   },
                 ),
-                const SizedBox(height: 40),
-                Text(
-                  _instructionText,
-                  style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                    fontSize: 28,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const Spacer(), // Now works properly
-              ],
-            ),
-          ),
-          // Progress bar, button and footer
-          Container(
-            margin: const EdgeInsets.symmetric(horizontal: 70),
-            child: Row(
-              children: List.generate(_totalSteps, (index) {
-                return Expanded(
-                  child: Container(
-                    height: 4,
-                    margin: EdgeInsets.only(
-                      right: index < _totalSteps - 1 ? 8 : 0,
-                    ),
-                    decoration: BoxDecoration(
-                      color: index < _currentStep
-                          ? Theme.of(context).colorScheme.primary
-                          : const Color(0x3898EDFF),
-                      borderRadius: BorderRadius.circular(2),
-                    ),
-                  ),
-                );
-              }),
-            ),
-          ),
-          const SizedBox(height: 60),
-          SizedBox(
-            width: double.infinity,
-            child: CustomButton(
-              text: _buttonText,
-              onPressed: _handleNext,
-              icon: const Icon(Icons.arrow_forward, color: Colors.white,),
-              iconOnLeft: false,
-            ),
-          ),
-          const SizedBox(height: 20),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(Icons.security, color: Colors.grey.shade600, size: 16),
-              const SizedBox(width: 8),
-              Text(
-                'Secure Photo | Privacy Protected',
-                style: Theme.of(context).textTheme.bodySmall,
               ),
+              
+              // Camera status indicator
+              if (_currentStep == 3) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: _isCameraInitialized 
+                        ? Colors.green.withOpacity(0.1)
+                        : _cameraError != null 
+                            ? Colors.red.withOpacity(0.1)
+                            : Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: _isCameraInitialized 
+                          ? Colors.green
+                          : _cameraError != null 
+                              ? Colors.red
+                              : Colors.orange,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      if (_isInitializingCamera)
+                        const SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      else
+                        Icon(
+                          _isCameraInitialized 
+                              ? Icons.check_circle 
+                              : _cameraError != null
+                                  ? Icons.error
+                                  : Icons.camera_alt,
+                          size: 16,
+                          color: _isCameraInitialized 
+                              ? Colors.green
+                              : _cameraError != null 
+                                  ? Colors.red
+                                  : Colors.orange,
+                        ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _isCameraInitialized 
+                            ? 'Camera Ready'
+                            : _cameraError != null 
+                                ? 'Camera Error'
+                                : 'Preparing Camera...',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _isCameraInitialized 
+                              ? Colors.green
+                              : _cameraError != null 
+                                  ? Colors.red
+                                  : Colors.orange,
+                        ),
+                      ),
+                      if (_cameraError != null) ...[
+                        const SizedBox(width: 8),
+                        GestureDetector(
+                          onTap: _retryCameraInit,
+                          child: const Icon(
+                            Icons.refresh,
+                            size: 16,
+                            color: Colors.red,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Progress bar
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 70),
+                child: Row(
+                  children: List.generate(_totalSteps, (index) {
+                    return Expanded(
+                      child: Container(
+                        height: 4,
+                        margin: EdgeInsets.only(
+                          right: index < _totalSteps - 1 ? 8 : 0,
+                        ),
+                        decoration: BoxDecoration(
+                          color: index < _currentStep
+                              ? Theme.of(context).colorScheme.primary
+                              : const Color(0x3898EDFF),
+                          borderRadius: BorderRadius.circular(2),
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              ),
+              const SizedBox(height: 60),
+              SizedBox(
+                width: double.infinity,
+                child: CustomButton(
+                  text: _buttonText,
+                  onPressed: (_currentStep == 3 && !_isCameraInitialized && _cameraError == null) 
+                      ? null 
+                      : _handleNext,
+                  icon: const Icon(Icons.arrow_forward, color: Colors.white),
+                  iconOnLeft: false,
+                ),
+              ),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.security, color: Colors.grey.shade600, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Secure Photo | Privacy Protected',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 24),
             ],
           ),
-          const SizedBox(height: 24),
-        ],
+        ),
       ),
-    ),
-  ),
-);
+    );
+  }
 
-}
+  Widget _buildStepContent() {
+    // Always show reference image for all steps, including step 3
+    // Don't show camera preview on guidance screen
+    
+    // Show error state for step 3 if camera failed
+    if (_currentStep == 3 && _cameraError != null && !_isInitializingCamera) {
+      return Container(
+        color: Colors.grey.shade200,
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.camera_alt, size: 48, color: Colors.grey),
+            const SizedBox(height: 16),
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                _cameraError!,
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: _retryCameraInit,
+              child: const Text('Retry'),
+            ),
+          ],
+        ),
+      );
+    }
 
+    // Always show reference image (including step 3)
+    return Image.asset(
+      _referenceImagePath,
+      fit: BoxFit.cover,
+      errorBuilder: (context, error, stackTrace) {
+        return Container(
+          color: Colors.grey.shade200,
+          child: const Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+    );
+  }
 }
 
 // Custom painter for face detection overlay (only used for step 3)

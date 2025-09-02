@@ -161,7 +161,7 @@ class ChipSelectorState<T> extends BaseSelectorState<T, ChipSelector<T>>
               selected: isSelected,
               onSelected: (_) => _toggleSelection(value),
               backgroundColor: Colors.grey.shade100,
-              selectedColor: getPrimaryColor(context).withOpacity(0.2),
+              selectedColor: getPrimaryColor(context).withValues(alpha: 0.2),
               checkmarkColor: getPrimaryColor(context),
               side: BorderSide(
                 color: isSelected 

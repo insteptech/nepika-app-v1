@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'question_header.dart';
 import 'custom_button.dart';
 
@@ -158,21 +158,21 @@ class BaseQuestionPage extends StatelessWidget {
   final Widget content;
   final String buttonText;
   final bool isFormValid;
-  final VoidCallback? onNext;
+  final VoidCallback onNext;
   final VoidCallback? onBack;
   final VoidCallback? onSkip;
   final bool showBackButton;
   final bool showSkipButton;
 
   // Universal list of question routes (update as needed)
-  static final List<String> questionRoutes = [
-    '/userDetails',
-    '/userInfo',
-    '/skinGoals',
-    '/skinType',
-    '/menstrualCycle',
-    '/faceScan',
-  ];
+  // static final List<String> questionRoutes = [
+  //   '/userDetails',
+  //   '/userInfo',
+  //   '/skinGoals',
+  //   '/skinType',
+  //   '/menstrualCycle',
+  //   '/faceScan',
+  // ];
 
   const BaseQuestionPage({
     super.key,
@@ -183,18 +183,18 @@ class BaseQuestionPage extends StatelessWidget {
     required this.content,
     required this.buttonText,
     required this.isFormValid,
-    this.onNext,
+    required this.onNext,
     this.onBack,
     this.onSkip,
     this.showBackButton = true,
     this.showSkipButton = true,
   });
 
-  void _defaultNavigate(BuildContext context) {
-    if (currentStep < questionRoutes.length - 1) {
-      Navigator.of(context).pushNamed(questionRoutes[currentStep + 1]);
-    }
-  }
+  // void _defaultNavigate(BuildContext context) {
+  //   if (currentStep < questionRoutes.length - 1) {
+  //     Navigator.of(context).pushNamed(questionRoutes[currentStep + 1]);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -205,7 +205,7 @@ class BaseQuestionPage extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 0.0),
+                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
                 child: QuestionHeader(
                   currentStep: currentStep,
                   totalSteps: totalSteps,
@@ -235,7 +235,7 @@ class BaseQuestionPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 40),
                       content,
-                      const SizedBox(height: 80),
+                      const SizedBox(height: 20),
                     ],
                   ),
                 ),
@@ -249,7 +249,7 @@ class BaseQuestionPage extends StatelessWidget {
                   child: CustomButton(
                     text: buttonText,
                     onPressed: isFormValid
-                        ? (onNext ?? () => _defaultNavigate(context))
+                        ? onNext
                         : null,
                     isDisabled: !isFormValid,
                   ),

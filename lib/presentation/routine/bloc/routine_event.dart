@@ -1,36 +1,96 @@
-import '../../../domain/routine/entities/routine.dart';
+// lib/presentation/routine/bloc/routine_event.dart
+import 'package:equatable/equatable.dart';
 
-abstract class RoutineEvent {}
+abstract class RoutineEvent extends Equatable {
+  const RoutineEvent();
+  
+  @override
+  List<Object?> get props => [];
+}
 
-class GetTodaysRoutineEvent extends RoutineEvent {
+// Load routines events
+class LoadTodaysRoutineEvent extends RoutineEvent {
   final String token;
   final String type;
 
-  GetTodaysRoutineEvent({required this.token, required this.type});
+  const LoadTodaysRoutineEvent({
+    required this.token, 
+    required this.type,
+  });
+
+  @override
+  List<Object?> get props => [token, type];
 }
 
+class LoadAllRoutinesEvent extends RoutineEvent {
+  final String token;
+
+  const LoadAllRoutinesEvent({required this.token});
+
+  @override
+  List<Object?> get props => [token];
+}
+
+class RefreshRoutinesEvent extends RoutineEvent {
+  final String token;
+  final String type;
+
+  const RefreshRoutinesEvent({
+    required this.token,
+    required this.type,
+  });
+
+  @override
+  List<Object?> get props => [token, type];
+}
+
+// CRUD operations
 class UpdateRoutineStepEvent extends RoutineEvent {
   final String token;
-  final String stepId;
+  final String routineId;
   final bool isCompleted;
 
-  UpdateRoutineStepEvent({
+  const UpdateRoutineStepEvent({
     required this.token,
-    required this.stepId,
+    required this.routineId,
     required this.isCompleted,
   });
-}
 
-class AddRoutineStepEvent extends RoutineEvent {
-  final String token;
-  final Routine routine;
-
-  AddRoutineStepEvent({required this.token, required this.routine});
+  @override
+  List<Object?> get props => [token, routineId, isCompleted];
 }
 
 class DeleteRoutineStepEvent extends RoutineEvent {
   final String token;
-  final String stepId;
+  final String routineId;
 
-  DeleteRoutineStepEvent({required this.token, required this.stepId});
+  const DeleteRoutineStepEvent({
+    required this.token,
+    required this.routineId,
+  });
+
+  @override
+  List<Object?> get props => [token, routineId];
+}
+
+class AddRoutineStepEvent extends RoutineEvent {
+  final String token;
+  final String masterRoutineId;
+
+  const AddRoutineStepEvent({
+    required this.token,
+    required this.masterRoutineId,
+  });
+
+  @override
+  List<Object?> get props => [token, masterRoutineId];
+}
+
+// State management events
+class ResetRoutineErrorEvent extends RoutineEvent {
+  const ResetRoutineErrorEvent();
+}
+
+class ClearRoutineStateEvent extends RoutineEvent {
+  const ClearRoutineStateEvent();
 }

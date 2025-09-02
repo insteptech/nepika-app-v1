@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class CustomBackButton extends StatelessWidget {
   final VoidCallback? onPressed;

@@ -1,90 +1,41 @@
-abstract class OnboardingState {}
+import 'package:nepika/domain/onboarding/entities/onboarding_entites.dart';
 
-class OnboardingInitial extends OnboardingState {}
+class OnboardingState {
+  final int currentStepIndex;
+  final List<OnboardingStepEntity> steps;
+  final List<OnboardingQuestionEntity> questions;
+  final Map<String, dynamic> answers;
+  final bool isFormValid;
+  final bool loading;
+  final String? error;
 
-class OnboardingLoading extends OnboardingState {}
+  OnboardingState({
+    this.currentStepIndex = 0,
+    this.steps = const [],
+    this.questions = const [],
+    this.answers = const {},
+    this.isFormValid = false,
+    this.loading = false,
+    this.error,
+  });
 
-class OnboardingFailure extends OnboardingState {
-  final String error;
-  OnboardingFailure(this.error);
-}
-
-// USER INFO
-class UserInfoFetchSuccess extends OnboardingState {
-  final dynamic data;
-  UserInfoFetchSuccess(this.data);
-}
-class UserInfoSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  UserInfoSubmitSuccess(this.response);
-}
-
-// USER DETAIL
-class UserDetailFetchSuccess extends OnboardingState {
-  final dynamic data;
-  UserDetailFetchSuccess(this.data);
-}
-class UserDetailSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  UserDetailSubmitSuccess(this.response);
-}
-
-// LIFESTYLE
-class LifestyleFetchSuccess extends OnboardingState {
-  final dynamic data;
-  LifestyleFetchSuccess(this.data);
-}
-class LifestyleSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  LifestyleSubmitSuccess(this.response);
-}
-
-// SKIN TYPE
-class SkinTypeFetchSuccess extends OnboardingState {
-  final dynamic data;
-  SkinTypeFetchSuccess(this.data);
-}
-class SkinTypeSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  SkinTypeSubmitSuccess(this.response);
-}
-
-// CYCLE DETAIL
-class CycleDetailFetchSuccess extends OnboardingState {
-  final dynamic data;
-  CycleDetailFetchSuccess(this.data);
-}
-class CycleDetailSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  CycleDetailSubmitSuccess(this.response);
-}
-
-// CYCLE INFO
-class CycleInfoFetchSuccess extends OnboardingState {
-  final dynamic data;
-  CycleInfoFetchSuccess(this.data);
-}
-class CycleInfoSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  CycleInfoSubmitSuccess(this.response);
-}
-
-// MENOPAUSE STATUS
-class MenopauseStatusFetchSuccess extends OnboardingState {
-  final dynamic data;
-  MenopauseStatusFetchSuccess(this.data);
-}
-class MenopauseStatusSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  MenopauseStatusSubmitSuccess(this.response);
-}
-
-// SKIN GOAL
-class SkinGoalFetchSuccess extends OnboardingState {
-  final dynamic data;
-  SkinGoalFetchSuccess(this.data);
-}
-class SkinGoalSubmitSuccess extends OnboardingState {
-  final dynamic response;
-  SkinGoalSubmitSuccess(this.response);
+  OnboardingState copyWith({
+    int? currentStepIndex,
+    List<OnboardingStepEntity>? steps,
+    List<OnboardingQuestionEntity>? questions,
+    Map<String, dynamic>? answers,
+    bool? isFormValid,
+    bool? loading,
+    String? error,
+  }) {
+    return OnboardingState(
+      currentStepIndex: currentStepIndex ?? this.currentStepIndex,
+      steps: steps ?? this.steps,
+      questions: questions ?? this.questions,
+      answers: answers ?? this.answers,
+      isFormValid: isFormValid ?? this.isFormValid,
+      loading: loading ?? this.loading,
+      error: error,
+    );
+  }
 }

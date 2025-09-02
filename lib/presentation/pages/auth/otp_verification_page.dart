@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'dart:async';
 import '../../../core/utils/navigation_helper.dart';
 import '../../../core/widgets/custom_button.dart';
@@ -20,6 +21,7 @@ class OtpVerificationPage extends StatefulWidget {
 class _OtpVerificationPageState extends State<OtpVerificationPage> {
   String _otp = '';
   String _phoneNumber = '';
+  String? _otpId;
   Timer? _timer;
   int _resendTimer = 60;
   bool _canResend = false;
@@ -32,23 +34,42 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
   }
 
   @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final args = ModalRoute.of(context)?.settings.arguments as Map?;
+    if (args != null) {
+      _phoneNumber = args['phone'] ?? '';
+      _otpId = args['otpId'];
+    }
+  }
+
+  @override
   void dispose() {
     _timer?.cancel();
     super.dispose();
   }
 
   void _startResendTimer() {
-    _canResend = false;
-    _resendTimer = 60;
+    setState(() {
+      _canResend = false;
+      _resendTimer = 60;
+    });
+    
+    _timer?.cancel(); // Cancel existing timer if any
+    
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
-      setState(() {
-        if (_resendTimer > 0) {
-          _resendTimer--;
-        } else {
-          _canResend = true;
-          timer.cancel();
-        }
-      });
+      if (mounted) {
+        setState(() {
+          if (_resendTimer > 0) {
+            _resendTimer--;
+          } else {
+            _canResend = true;
+            timer.cancel();
+          }
+        });
+      } else {
+        timer.cancel();
+      }
     });
   }
 
@@ -56,82 +77,130 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
     setState(() {
       _otp = otp;
     });
+    // Auto-verify when OTP is complete
+    if (otp.length == 6) {
+      _verifyOtp();
+    }
   }
 
   void _verifyOtp() {
-    if (_otp.length == 6 && _phoneNumber.isNotEmpty) {
+    if (_otp.length == 6 && _phoneNumber.isNotEmpty && _otpId != null) {
       setState(() {
         _isResponseLoading = true;
       });
       BlocProvider.of<AuthBloc>(context).add(
-        VerifyOtpRequested(phone: _phoneNumber, otp: _otp)
+        VerifyOtpRequested(phone: _phoneNumber, otp: _otp, otpId: _otpId!)
       );
-    }
-  }
-
-  void _resendOtp() {
-    if (_canResend && _phoneNumber.isNotEmpty) {
-      setState(() {
-        _canResend = false;
-      });
-
-      // Send OTP again using the same phone number
-      BlocProvider.of<AuthBloc>(context).add(
-        SendOtpRequested(phone: _phoneNumber, email: null)
-      );
-
-      _startResendTimer();
-
+    } else {
+      // Show error if required fields are missing
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('OTP sent again'),
-          backgroundColor: Theme.of(context).colorScheme.secondary,
+          content: Text(_otp.length != 6 
+              ? 'Please enter complete 6-digit OTP' 
+              : 'Missing phone number or OTP ID'),
+          backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );
     }
   }
 
+  void _resendOtp() {
+    if (_canResend && _phoneNumber.isNotEmpty && _otpId != null) {
+      BlocProvider.of<AuthBloc>(context).add(
+        ResendOtpRequested(phone: _phoneNumber, otpId: _otpId!)
+      );
+      _startResendTimer();
+      // Show success message with proper color
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('OTP sent again'),
+          backgroundColor: Colors.green, // Changed to green for success
+        ),
+      );
+    } else if (!_canResend) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Please wait ${_resendTimer}s before resending'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Missing phone number or OTP ID'),
+          backgroundColor: Theme.of(context).colorScheme.error,
+        ),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0,vertical: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
           child: BlocListener<AuthBloc, AuthState>(
             listener: (context, state) {
               if (state is OtpSent) {
                 setState(() {
                   _phoneNumber = state.phone;
+                  if (state.otpId != null) {
+                    _otpId = state.otpId;
+                  }
                 });
               } 
               else if (state is OtpVerified) {
                 setState(() {
                   _isResponseLoading = false;
                 });
-                // Navigate based on onboarding completion status
-                NavigationHelper.navigateAfterOtpVerification(
-                  context, 
-                  state.authResponse,
+                // Show success message in green
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: const Text('OTP verified successfully!'),
+                    backgroundColor: Colors.green,
+                    duration: const Duration(seconds: 2),
+                  ),
                 );
+                if (mounted) {
+                  Navigator.of(context).pushNamed(
+                    AppRoutes.userInfo
+                  );
+                  // NavigationHelper.navigateAfterOtpVerification(
+                  //   context,
+                  //   state.authResponse,
+                  // );
+                }
               } 
-
               else if (state is ErrorWhileOtpVerification) {
                 setState(() {
                   _isResponseLoading = false;
                 });
+                // Show error message in red
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(state.message),
-                    backgroundColor: Theme.of(context).colorScheme.error,
+                    backgroundColor: Colors.red,
                   ),
                 );
+              }
+              // Handle resend OTP response
+              else if (state is OtpResent) {
+                setState(() {
+                  if (state.otpId != null) {
+                    _otpId = state.otpId;
+                  }
+                });
               }
             },
             child: BlocBuilder<AuthBloc, AuthState>(
               builder: (context, state) { 
+                // Only update phone number and otpId if they're empty
                 if (state is OtpSent && _phoneNumber.isEmpty) {
                   _phoneNumber = state.phone;
+                  if (state.otpId != null) {
+                    _otpId = state.otpId;
+                  }
                 }
 
                 return Column(
@@ -184,12 +253,17 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                         GestureDetector(
-                          onTap: _canResend ? _resendOtp : null,
+                          onTap: _canResend ? _resendOtp : null, // Only allow tap when can resend
                           child: Text(
                             _canResend ? 'Send Again' : '00:${_resendTimer.toString().padLeft(2, '0')}s',
                             style: _canResend 
-                              ? Theme.of(context).textTheme.bodyLarge!.hint(context) 
-                              : Theme.of(context).textTheme.bodyLarge
+                              ? Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w600,
+                                )
+                              : Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                  color: Theme.of(context).colorScheme.outline,
+                                )
                           ),
                         ),
                       ],
@@ -202,7 +276,9 @@ class _OtpVerificationPageState extends State<OtpVerificationPage> {
                       width: double.infinity,
                       child: CustomButton(
                         text: 'Confirm',
-                        onPressed: _otp.length == 6 && _phoneNumber.isNotEmpty ? _verifyOtp : null,
+                        onPressed: _verifyOtp,
+                        // isDisabled: _otp.length != 6,
+                        isDisabled: true,
                         isLoading: _isResponseLoading,
                       ),
                     ),

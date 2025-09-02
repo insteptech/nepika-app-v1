@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/data/products/datasources/products_remote_datasource_impl.dart';
@@ -139,7 +139,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                                             color: Theme.of(context)
                                                 .colorScheme
                                                 .onSurface
-                                                .withOpacity(0.5),
+                                                .withValues(alpha: 0.5),
                                           );
                                         },
                                       )
@@ -149,7 +149,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withOpacity(0.5),
+                                            .withValues(alpha: 0.5),
                                       ),
                               ),
                             ),
@@ -180,7 +180,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                                 color: Theme.of(context)
                                     .colorScheme
                                     .primary
-                                    .withOpacity(0.1),
+                                    .withValues(alpha: 0.1),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               child: Text(
@@ -216,7 +216,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                                                 color: Theme.of(context)
                                                     .colorScheme
                                                     .primary
-                                                    .withOpacity(0.2),
+                                                    .withValues(alpha: 0.2),
                                               ),
                                             ),
                                             child: Column(
@@ -246,7 +246,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                                                                 ingredient[
                                                                         'riskLevel'] ??
                                                                     'low')
-                                                            .withOpacity(0.1),
+                                                            .withValues(alpha: 0.1),
                                                         borderRadius:
                                                             BorderRadius.circular(6),
                                                       ),

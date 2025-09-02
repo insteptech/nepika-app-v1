@@ -13,6 +13,7 @@ class User {
   final bool? isPhoneVerified;
   final bool onboardingCompleted;
   final String activeStep;
+  final bool isNewUser;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -28,9 +29,11 @@ class User {
     this.height,
     this.weight,
     this.isEmailVerified,
+    this.isNewUser = false,
     this.isPhoneVerified,
     required this.onboardingCompleted,
     required this.activeStep,
+
     this.createdAt,
     this.updatedAt,
   });
@@ -122,7 +125,8 @@ class AuthResponse {
         email: data['email'] as String?,
         phone: data['phone'] as String?,
         onboardingCompleted: data['onboarding_completed'] as bool? ?? false,
-        activeStep: data['active_step'] as String? ?? 'user_info',
+        activeStep: data['active_step'] ?? 0,
+        isNewUser: data['is_new_user'] ?? false,
       );
     }
     

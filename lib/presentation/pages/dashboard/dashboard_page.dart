@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/constants/routes.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/presentation/routine/widgets/daily_routine.dart';
@@ -11,30 +12,61 @@ import 'package:nepika/presentation/pages/dashboard/widgets/progress_summary_cha
 import 'package:nepika/presentation/pages/dashboard/widgets/recomended_products.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/skin_score_card.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/section_header.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../bloc/dashboard/dashboard_bloc.dart';
 import '../../bloc/dashboard/dashboard_event.dart';
 import '../../bloc/dashboard/dashboard_state.dart';
 
-class DashboardPage extends StatelessWidget {
-  final String token;
+class DashboardPage extends StatefulWidget {
+  final String? token;
   final VoidCallback? onFaceScanTap;
   final void Function(String route)? onNavigate;
 
   const DashboardPage({
     Key? key,
-    required this.token,
+    this.token,
     this.onFaceScanTap,
     this.onNavigate,
   }) : super(key: key);
 
   @override
+  State<DashboardPage> createState() => _DashboardPageState();
+}
+
+class _DashboardPageState extends State<DashboardPage> {
+  late DashboardBloc _dashboardBloc;
+  String? _token;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardBloc = DashboardBloc(DashboardRepositoryImpl(ApiBase()));
+    _loadTokenAndFetch();
+  }
+
+  Future<void> _loadTokenAndFetch() async {
+    final sharedPrefs = await SharedPreferences.getInstance();
+    final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
+
+    setState(() {
+      _token = accessToken ?? widget.token;
+    });
+
+    if (_token != null) {
+      _dashboardBloc.add(DashboardRequested(_token!));
+    }
+  }
+
+  @override
+  void dispose() {
+    _dashboardBloc.close();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => DashboardBloc(
-        DashboardRepositoryImpl(
-          ApiBase(),
-        ),
-      )..add(DashboardRequested(token)),
+    return BlocProvider.value(
+      value: _dashboardBloc,
       child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
           // Default values
@@ -45,7 +77,6 @@ class DashboardPage extends StatelessWidget {
           Map<String, dynamic> dailyRoutine = {};
           List<Map<String, dynamic>> imageGallery = [];
           List<Map<String, dynamic>> recommendedProducts = [];
-          // List<Map<String, dynamic>> navigation = [];
 
           bool isLoading = state is DashboardLoading;
           bool isError = state is DashboardError;
@@ -66,131 +97,132 @@ class DashboardPage extends StatelessWidget {
           }
 
           return PopScope(
-            canPop: false, // Block back navigation
+            canPop: false,
             child: Scaffold(
               backgroundColor: Theme.of(context).scaffoldBackgroundColor,
               body: SafeArea(
-                child: RefreshIndicator(
-                  onRefresh: () async {
-                    context.read<DashboardBloc>().add(
-                      DashboardRequested(token),
-                    );
-                  },
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 8,
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-                        
-                        GreetingSection(user: user),
-
-
-
-                        if (isError || isLoading) 
-                          Center(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Text(
-                                isLoading ? 'Loading...' : 'Failed to load dashboard data',
-                                style: Theme.of(context).textTheme.labelSmall
-                              ),
-                            ),
+                child: _token == null
+                    ? const Center(child: Text("No token found"))
+                    : RefreshIndicator(
+                        onRefresh: () async {
+                          if (_token != null) {
+                            context
+                                .read<DashboardBloc>()
+                                .add(DashboardRequested(_token!));
+                          }
+                        },
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
                           ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const SizedBox(height: 10),
+                              GreetingSection(user: user),
 
-                        isError || isLoading
-                            ? const SizedBox(height: 10)
-                            : const SizedBox(height: 30),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                height: 170,
-                                child: FaceScanCard(
-                                  faceScan: faceScan,
-                                  onTap: onFaceScanTap,
+                              if (isError || isLoading)
+                                Center(
+                                  child: Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Text(
+                                      isLoading
+                                          ? 'Loading...'
+                                          : 'Failed to load dashboard data',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .labelSmall,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Container(
-                                height: 170,
-                                child: SkinScoreCard(skinScore: skinScore),
-                              ),
-                            ),
-                          ],
-                        ),
 
-                        SectionHeader(
-                          heading: 'Progress Summary',
-                          showButton: false,
-                        ),
+                              isError || isLoading
+                                  ? const SizedBox(height: 10)
+                                  : const SizedBox(height: 30),
 
-                        ProgressSummaryChart(
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 170,
+                                      child: FaceScanCard(
+                                        faceScan: faceScan,
+                                        onTap: widget.onFaceScanTap,
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 16),
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 170,
+                                      child: SkinScoreCard(skinScore: skinScore),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              SectionHeader(
+                                heading: 'Progress Summary',
+                                showButton: false,
+                              ),
+
+                              ProgressSummaryChart(
                                 progressSummary: progressSummary,
                                 height: 280,
                               ),
 
-                        SectionHeader(
-                          heading: 'Daily Routine',
-                          showButton: true,
-                          buttonText: 'View all',
-                          onButtonPressed: () {
-                            Navigator.of(
-                              context,
-                            ).pushNamed(AppRoutes.dashboardTodaysRoutine);
-                          },
-                          buttonLoading: isLoading,
+                              RepaintBoundary(
+                                child: SectionHeader(
+                                  heading: 'Daily Routine',
+                                  showButton: true,
+                                  buttonText: 'View all',
+                                  onButtonPressed: () {
+                                    Navigator.of(
+                                      context,
+                                    ).pushNamed(AppRoutes.dashboardTodaysRoutine);
+                                  },
+                                  buttonLoading: isLoading,
+                                ),
+                              ),
+
+                              DailyRoutineSection(dailyRoutine: dailyRoutine),
+
+                              SectionHeader(
+                                heading: 'Image Gallery',
+                                showButton: true,
+                                buttonText: 'View all',
+                                onButtonPressed: () {
+                                  if (widget.onNavigate != null) {
+                                    widget.onNavigate!('/image_gallery');
+                                  }
+                                },
+                                buttonLoading: isLoading,
+                              ),
+
+                              ImageGallerySection(imageGallery: imageGallery),
+
+                              SectionHeader(
+                                heading: 'Recommend Products',
+                                showButton: true,
+                                buttonText: 'View all',
+                                onButtonPressed: () {
+                                  Navigator.of(
+                                    context,
+                                  ).pushNamed(AppRoutes.dashboardAllProducts);
+                                },
+                                buttonLoading: isLoading,
+                              ),
+
+                              RecommendedProductsSection(
+                                products: recommendedProducts,
+                                scrollDirection: Axis.horizontal,
+                                showTag: true,
+                              ),
+                            ],
+                          ),
                         ),
-
-
-                       DailyRoutineSection(dailyRoutine: dailyRoutine),
-
-                        
-                        SectionHeader(
-                          heading: 'Image Gallery',
-                          showButton: true,
-                          buttonText: 'View all',
-                          onButtonPressed: () {
-                            if (onNavigate != null) {
-                              onNavigate!('/image_gallery');
-                            }
-                          },
-                          buttonLoading: isLoading,
-                        ),
-
-                        
-                        ImageGallerySection(imageGallery: imageGallery),
-
-                        SectionHeader(
-                          heading: 'Recommend Products',
-                          showButton: true,
-                          buttonText: 'View all',
-                          onButtonPressed: () {
-                           Navigator.of(
-                              context,
-                            ).pushNamed(AppRoutes.dashboardAllProducts);
-                          },
-                          buttonLoading: isLoading,
-                        ),
-                        
-                        RecommendedProductsSection(
-                          products: recommendedProducts,
-                          scrollDirection: Axis.horizontal,
-                          showTag: true,
-                        ),
-                        
-
-
-                      ],
-                    ),
-                  ),
-                ),
+                      ),
               ),
             ),
           );

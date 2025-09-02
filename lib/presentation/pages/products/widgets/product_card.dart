@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class ProductCard extends StatelessWidget {
   final String? imageUrl;
@@ -50,7 +50,7 @@ class ProductCard extends StatelessWidget {
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(20),
               border: Border.all(
-                color: colorScheme.primary.withOpacity(0.4),
+                color: colorScheme.primary.withValues(alpha: 0.4),
                 width: 1,
               ),
             ),
@@ -76,7 +76,7 @@ class ProductCard extends StatelessWidget {
                                 color: colorScheme.surface,
                                 child: Icon(
                                   Icons.image_not_supported,
-                                  color: colorScheme.onSurface.withOpacity(0.5),
+                                  color: colorScheme.onSurface.withValues(alpha: 0.5),
                                   size: 30,
                                 ),
                               );
@@ -86,7 +86,7 @@ class ProductCard extends StatelessWidget {
                             color: colorScheme.surface,
                             child: Icon(
                               Icons.image,
-                              color: colorScheme.onSurface.withOpacity(0.5),
+                              color: colorScheme.onSurface.withValues(alpha: 0.5),
                               size: 30,
                             ),
                           ),
@@ -118,7 +118,7 @@ class ProductCard extends StatelessWidget {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: _getRatingColor(rating).withOpacity(0.1),
+                              color: _getRatingColor(rating).withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(

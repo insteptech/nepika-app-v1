@@ -1,32 +1,16 @@
-import 'package:equatable/equatable.dart';
-import '../../../core/usecases/usecase.dart';
+// lib/domain/routine/usecases/get_todays_routine.dart
 import '../../../core/utils/either.dart';
+import '../../../core/utils/logger.dart';
 import '../entities/routine.dart';
 import '../repositories/routine_repository.dart';
 
-class GetTodaysRoutine extends UseCase<List<Routine>, GetTodaysRoutineParams> {
+class GetTodaysRoutine {
   final RoutineRepository repository;
 
   GetTodaysRoutine(this.repository);
 
-  @override
-  Future<Result<List<Routine>>> call(GetTodaysRoutineParams params) async {
-    return await repository.getTodaysRoutine(
-      token: params.token,
-      type: params.type,
-    );
+  Future<Result<List<Routine>>> call(String token, String type) async {
+    Logger.useCase('Getting today\'s routine for type: $type');
+    return await repository.getTodaysRoutine(token, type);
   }
-}
-
-class GetTodaysRoutineParams extends Equatable {
-  final String token;
-  final String type;
-
-  const GetTodaysRoutineParams({
-    required this.token,
-    required this.type,
-  });
-
-  @override
-  List<Object> get props => [token, type];
 }

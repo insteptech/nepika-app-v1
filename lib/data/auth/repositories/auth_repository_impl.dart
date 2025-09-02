@@ -1,5 +1,6 @@
-
+import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
+import 'package:nepika/core/utils/secure_storage.dart';
 import '../../../core/utils/either.dart';
 import '../../../core/error/failures.dart';
 import '../../../domain/auth/entities/user.dart';
@@ -13,42 +14,126 @@ class AuthRepositoryImpl implements AuthRepository {
   final AuthRemoteDataSource remoteDataSource;
   final AuthLocalDataSource localDataSource;
 
-  const AuthRepositoryImpl(this.remoteDataSource, this.localDataSource);
+  // ✅ initialize normally (not const)
+  final SecureStorage secureStorage = SecureStorage();
+
+  AuthRepositoryImpl(this.remoteDataSource, this.localDataSource);
 
   @override
-  Future<Result<void>> sendOtp({String? phone, String? email}) async {
+  Future<Result<Map<String, dynamic>>> sendOtp({
+    String? phone,
+    String? email,
+    String? otpId,
+  }) async {
     try {
-      await remoteDataSource.sendOtp(phone: phone, email: email);
-      return success(null);
+      final response = await remoteDataSource.sendOtp(
+        phone: phone,
+        email: email,
+        otpId: otpId,
+      );
+      return success(response);
     } catch (e) {
-      return failure(ServerFailure(message: 'Failed to send OTP: ${e.toString()}'));
+      return failure(
+        ServerFailure(message: 'Failed to send OTP: ${e.toString()}'),
+      );
     }
   }
 
   @override
-  Future<Result<AuthResponse>> verifyOtp({String? phone, required String otp}) async {
+  Future<Result<Map<String, dynamic>>> resendOtp({
+    required String phone,
+    required String otpId,
+  }) async {
     try {
-      final result = await remoteDataSource.verifyOtp(phone: phone, otp: otp);
-      
-      // Debug logging to see the actual API response structure
-      print('Raw API Response in Repository: $result');
-      print('Response keys: ${result.keys.toList()}');
-      
-      final authResponse = AuthResponse.fromJson(result);
-      
-      // Store tokens securely
-      await localDataSource.storeToken(authResponse.token);
-      await localDataSource.storeRefreshToken(authResponse.refreshToken);
-      
-      // Store user data and onboarding status
-      final userModel = UserModel.fromEntity(authResponse.user);
-      await localDataSource.saveUser(userModel);
-      await localDataSource.saveOnboardingStatus(authResponse.user.onboardingCompleted);
-      
-      return success(authResponse);
+      final response = await remoteDataSource.resendOtp(
+        phone: phone,
+        otpId: otpId,
+      );
+      return success(response);
     } catch (e) {
-      print('Repository Error: $e');
-      return failure(AuthFailure(message: 'Failed to verify OTP: ${e.toString()}'));
+      String errorMessage = 'Failed to resend OTP';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] != null) {
+          errorMessage = data['detail'].toString();
+        } else if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else if (e.response?.statusCode == 404) {
+          errorMessage = 'Endpoint not found (404)';
+        } else {
+          errorMessage = e.message ?? errorMessage;
+        }
+      }
+      return failure(ServerFailure(message: errorMessage));
+    }
+  }
+
+  @override
+  Future<Result<AuthResponse>> verifyOtp({
+    String? phone,
+    required String otp,
+    required String otpId,
+  }) async {
+    try {
+      final result = await remoteDataSource.verifyOtp(
+        phone: phone,
+        otp: otp,
+        otpId: otpId,
+      );
+
+      Map<String, dynamic> wrappedResult;
+      if (result.containsKey('token')) {
+        wrappedResult = {'data': result};
+      } else {
+        wrappedResult = result;
+      }
+
+      if ((wrappedResult['data']?['token'] ?? wrappedResult['token']) != null) {
+        final authResponse = AuthResponse.fromJson(wrappedResult);
+
+        // ✅ Save tokens locally
+        await localDataSource.storeToken(authResponse.token);
+        await localDataSource.storeRefreshToken(authResponse.refreshToken);
+
+        // ✅ Convert to UserModel & save locally
+        final userModel = UserModel.fromEntity(authResponse.user);
+        await localDataSource.saveUser(userModel);
+        await localDataSource.saveOnboardingStatus(
+          authResponse.user.onboardingCompleted,
+        );
+
+        // ✅ Also save in SecureStorage
+        await secureStorage.saveUser(userModel);
+        if (authResponse.user.id.isNotEmpty) {
+          await secureStorage.saveUserId(authResponse.user.id);
+        }
+
+        return success(authResponse);
+      } else {
+        String errorMessage =
+            wrappedResult['data']?['message']?.toString() ??
+            wrappedResult['message']?.toString() ??
+            'OTP verification failed';
+        return failure(AuthFailure(message: errorMessage));
+      }
+    } catch (e) {
+      String errorMessage = 'Failed to verify OTP';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] != null) {
+          errorMessage = data['detail'].toString();
+        } else if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else {
+          errorMessage = e.message ?? errorMessage;
+        }
+      } else if (e is Exception) {
+        errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        }
+      }
+      return failure(AuthFailure(message: errorMessage));
     }
   }
 }

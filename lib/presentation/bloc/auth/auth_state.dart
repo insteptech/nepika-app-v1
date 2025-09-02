@@ -26,14 +26,32 @@ class SendingOtp extends AuthState {
 class OtpSent extends AuthState {
   final String? email;
   final String phone;
-  
+  final String? otpId;
+
   const OtpSent({
     this.email,
     required this.phone,
+    this.otpId,
   });
   
   @override
-  List<Object?> get props => [email, phone];
+  List<Object?> get props => [email, phone, otpId];
+}
+
+
+class OtpResent extends AuthState {
+  final String? email;
+  final String phone;
+  final String? otpId;
+
+  const OtpResent({
+    this.email,
+    required this.phone,
+    this.otpId,
+  });
+  
+  @override
+  List<Object?> get props => [email, phone, otpId];
 }
 
 class ErrorWhileSendingOtp extends AuthState {
@@ -50,6 +68,8 @@ class ErrorWhileSendingOtp extends AuthState {
   @override
   List<Object?> get props => [message, email, phone];
 }
+
+
 
 
 

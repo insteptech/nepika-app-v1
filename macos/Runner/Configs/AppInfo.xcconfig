@@ -8,7 +8,8 @@
 PRODUCT_NAME = nepika_app
 
 // The application's bundle identifier
-PRODUCT_BUNDLE_IDENTIFIER = com.example.nepikaApp
+PRODUCT_BUNDLE_IDENTIFIER = com.assisted.nepika
+ 
 
 // The copyright displayed in application information
 PRODUCT_COPYRIGHT = Copyright © 2025 com.example. All rights reserved.

@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/constants/theme.dart';
-import 'package:nepika/core/constants/theme_notifier.dart';
+import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme_notifier.dart';
+import 'package:nepika/core/utils/secure_storage.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
+import 'core/di/injection_container.dart' as di;
+import 'package:nepika/presentation/community/pages/authenticated_community_page.dart';
+import 'package:nepika/presentation/community/pages/user_profile.dart';
+import 'package:nepika/presentation/community/pages/user_search_page.dart';
+import 'package:nepika/presentation/pages/onboarding/main.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/privacy_policy_page.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
@@ -11,30 +17,26 @@ import 'package:nepika/presentation/pages/first_scan/face_scan.dart';
 import 'package:nepika/presentation/pages/dashboard/main.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/pricing_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'core/constants/routes.dart';
+import 'core/config/constants/routes.dart';
 import 'data/auth/datasources/auth_remote_data_source_impl.dart';
 import 'data/auth/datasources/auth_local_data_source_impl.dart';
 import 'data/auth/repositories/auth_repository_impl.dart';
 import 'domain/auth/usecases/send_otp.dart';
 import 'domain/auth/usecases/verify_otp.dart';
+import 'domain/auth/usecases/resend_otp.dart' as resend;
 import 'core/api_base.dart';
 import 'presentation/bloc/auth/auth_bloc.dart';
 import 'presentation/pages/splash/splash_screen.dart';
 import 'presentation/pages/welcome/welcome_screen.dart';
 import 'presentation/pages/auth/phone_entry_page.dart';
-import 'presentation/pages/auth/otp_verification_page.dart';
-import 'presentation/pages/onboarding/user_info_page.dart';
-import 'presentation/pages/onboarding/user_details_page.dart';
-import 'presentation/pages/onboarding/lifestyle_questionnaire_page.dart';
-import 'presentation/pages/onboarding/skin_type_selection_page.dart';
-import 'presentation/pages/onboarding/menstrual_cycle_tracking_page.dart';
-import 'presentation/pages/onboarding/skin_goals_page.dart';
+import 'presentation/pages/auth/otp_verification_page.dart'; 
 import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final sharedPreferences = await SharedPreferences.getInstance();
-  await SharedPrefsHelper.init(); // Initialize shared preferences helper
+  await SharedPrefsHelper.init();
+  await di.ServiceLocator.init();
 
   runApp(
     ChangeNotifierProvider(
@@ -65,10 +67,12 @@ class MyApp extends StatelessWidget {
     // Create use cases
     final sendOtpUseCase = SendOtp(authRepository);
     final verifyOtpUseCase = VerifyOtp(authRepository);
-    
+    final resendOtpUseCase = resend.ResendOtp(authRepository);
+
     final authBloc = AuthBloc(
       sendOtpUseCase: sendOtpUseCase,
       verifyOtpUseCase: verifyOtpUseCase,
+      resendOtpUseCase: resendOtpUseCase,
     );
 
     return MultiBlocProvider(
@@ -96,24 +100,9 @@ class MyApp extends StatelessWidget {
                 builder: (_) => const OtpVerificationPage(),
               );
             case AppRoutes.userInfo:
-              return MaterialPageRoute(builder: (_) => const UserInfoPage());
-            case '/onboarding/user-info':
-              return MaterialPageRoute(builder: (_) => const UserInfoPage());
-            case '/onboarding/user-detail':
-              return MaterialPageRoute(builder: (_) => const UserDetailsPage());
-            case '/onboarding/lifestyle':
-              return MaterialPageRoute(builder: (_) => const LifestyleQuestionnairePage());
-            case '/onboarding/skin-type':
-              return MaterialPageRoute(builder: (_) => const SkinTypeSelectionPage());
-            case '/onboarding/cycle-detail':
-            case '/onboarding/cycle-info':
-              return MaterialPageRoute(builder: (_) => const MenstrualCycleTrackingPage());
-            case '/onboarding/menopause-status':
-              return MaterialPageRoute(builder: (_) => const MenstrualCycleTrackingPage());
-            case '/onboarding/skin-goal':
-              return MaterialPageRoute(builder: (_) => const SkinGoalsPage());
-            case '/onboarding/natural-rhythm':
-              return MaterialPageRoute(builder: (_) => const MenstrualCycleTrackingPage());
+              return MaterialPageRoute(builder: (_) => const OnboardingMapper());
+            case AppRoutes.onboarding:
+              return MaterialPageRoute(builder: (_) => const OnboardingMapper());
             case AppRoutes.cameraScanGuidence:
               return MaterialPageRoute(
                 builder: (_) => const ScanGuidenceScreen(),
@@ -124,6 +113,19 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.dashboardHome:
               return MaterialPageRoute(builder: (_) => const Dashboard());
+            case AppRoutes.communityHome:
+              return MaterialPageRoute(
+                builder: (_) => const AuthenticatedCommunityPage(),
+              );
+            case AppRoutes.communitySearch:
+              return MaterialPageRoute(
+                builder: (_) => UserSearchPage(),
+              );
+            case AppRoutes.communityUserProfile:
+              return MaterialPageRoute(
+                builder: (_) => const UserProfilePage(),
+                settings: settings,
+              );
             case AppRoutes.subscription:
               return MaterialPageRoute(builder: (_) => const PricingPage());
             case AppRoutes.privacyPolicy:
@@ -134,8 +136,6 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(builder: (_) => const TermsOfUsePage());
             case AppRoutes.notFound:
               return MaterialPageRoute(builder: (_) => const NotFound());
-            // case AppRoutes.todaysRoutine:
-            //   return MaterialPageRoute(builder: (_) => const TodaysRoutine());
             default:
               return MaterialPageRoute(builder: (_) => const NotFound());
           }

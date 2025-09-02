@@ -1,3 +1,4 @@
+import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SharedPrefsHelper {
@@ -26,5 +27,17 @@ class SharedPrefsHelper {
     final normalized = key.trim().toLowerCase().replaceAll(' ', '-');
     final suffix = key.hashCode.abs().toString().substring(0, 4);
     return '$normalized-$suffix';
+  }
+
+  Future<void> saveAppLanguage(String languageCode) async {
+    await SharedPrefsHelper.init();
+    final key = AppConstants.appLanguageKey;
+    await _prefs?.setString(key, languageCode);
+  }
+
+  // Retrieve the app language
+  Future<String> getAppLanguage() async {
+    final key = AppConstants.appLanguageKey;
+    return _prefs?.getString(key) ?? 'en';
   }
 }

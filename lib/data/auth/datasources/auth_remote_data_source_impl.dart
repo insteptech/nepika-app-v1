@@ -1,6 +1,6 @@
 import 'package:injectable/injectable.dart';
 import 'package:nepika/core/api_base.dart';
-import '../../../core/constants/api_endpoints.dart';
+import '../../../core/config/constants/api_endpoints.dart';
 // import '../models/user_model.dart';
 import 'auth_remote_data_source.dart';
 
@@ -11,80 +11,87 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   const AuthRemoteDataSourceImpl(this.apiBase);
   
   @override
-  Future<void> sendOtp({
-    String? email,
+  Future<Map<String, dynamic>> sendOtp({
     String? phone,
+    String? otpId,
+    String? email,
   }) async {
-    final data = <String, dynamic>{};
-    
-    if (email != null) {
-      data['email'] = email;
-    }
-    
-    if (phone != null) {
-      data['phone'] = phone;
-    }
-    
-    await apiBase.request(
+    final data = <String, dynamic>{
+      'mobile_number': phone,
+    };
+    final result = await apiBase.request(
       path: ApiEndpoints.sendOtp,
       method: 'POST',
       body: data,
     );
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to send OTP');
+    }
+    return result.data['data'] as Map<String, dynamic>;
   }
-  
+
+  // For resend OTP, call sendOtp with otpId present
+  @override
+  Future<Map<String, dynamic>> resendOtp({
+    required String phone,
+    required String otpId,
+  }) async {
+    if (phone.isEmpty || otpId.isEmpty) {
+      throw Exception('Phone number and OTP ID must be provided');
+    }
+
+
+    final data = <String, dynamic>{
+      'mobile_number': phone,
+      'otp_id': otpId,
+    };
+
+    final result = await apiBase.request(
+      path: ApiEndpoints.resendOtp,
+      method: 'POST',
+      body: data,
+    );
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to resend OTP');
+    }
+    return result.data['data'] as Map<String, dynamic>;
+  }
+
   @override
   Future<Map<String, dynamic>> verifyOtp({
-    String? email,
     String? phone,
     required String otp,
+    required String otpId,
+    String? email,
   }) async {
     final data = <String, dynamic>{
-      'otp': otp,
-      'phoneNumber': phone ?? '',
+      'mobile_number': phone,
+      'otp_code': otp,
+      'otp_id': otpId,
     };
-    
-    if (email != null) {
-      data['email'] = email;
+    final response = await apiBase.request(
+      path: ApiEndpoints.verifyOtp,
+      method: 'POST',
+      body: data,
+    );
+    if (response.data == null) {
+      throw Exception('Server returned null response');
     }
-    
-    if (phone != null) {
-      data['phone'] = phone;
-    }
-    
-    try {
-      final response = await apiBase.request(
-        path: ApiEndpoints.verifyOtp,
-        method: 'POST',
-        body: data,
-      );
-      
-      // Debug logging
-      print('OTP Verification Response: ${response.data}');
-      print('Response type: ${response.data.runtimeType}');
-      
-      // Handle null response
-      if (response.data == null) {
-        throw Exception('Server returned null response');
-      }
-      
-      // Convert response.data to Map<String, dynamic> safely
-      final responseData = response.data is Map<String, dynamic> 
-          ? response.data as Map<String, dynamic>
-          : <String, dynamic>{};
-      
-      // Check for success in the response
-      final status = responseData['status'];
-      final success = responseData['success'] ?? responseData['sucsess']; // Handle typo in API
-      
-      if ((status == 200 || status == '200') && (success == true || success == 'true')) {
-        return responseData;
+    final responseData = response.data is Map<String, dynamic>
+        ? response.data as Map<String, dynamic>
+        : <String, dynamic>{};
+
+    final status = responseData['status_code'];
+    final success = responseData['success'] ?? responseData['sucsess'];
+    if ((status == 200 || status == '200') && (success == true || success == 'true')) {
+      if (responseData['data'] is Map<String, dynamic>) {
+        return responseData['data'] as Map<String, dynamic>;
       } else {
-        final errorMessage = responseData['message'] ?? 'OTP verification failed';
-        throw Exception(errorMessage);
+        return responseData;
       }
-    } catch (e) {
-      print('OTP Verification Error: $e');
-      rethrow;
+    } else {
+      final errorMessage = responseData['message'] ?? 'OTP verification failed';
+      throw Exception(errorMessage);
     }
   }
 }

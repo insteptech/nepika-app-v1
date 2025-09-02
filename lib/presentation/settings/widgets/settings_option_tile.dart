@@ -1,6 +1,6 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 // import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/core/widgets/toggle_switch.dart';

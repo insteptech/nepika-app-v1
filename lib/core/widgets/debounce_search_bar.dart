@@ -41,17 +41,17 @@ class _DebouncedSearchBarState extends State<DebouncedSearchBar> {
       decoration: BoxDecoration(
         color: theme.inputDecorationTheme.fillColor ?? theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: theme.dividerColor.withOpacity(0.12)),
+        border: Border.all(color: theme.dividerColor.withValues(alpha: 0.12)),
       ),
       child: Row(
         children: [
-          Icon(Icons.search, color: theme.iconTheme.color?.withOpacity(0.6)),
+          Icon(Icons.search, color: theme.iconTheme.color?.withValues(alpha: 0.6)),
           const SizedBox(width: 10),
           Expanded(
             child: TextField(
               controller: _controller,
               onChanged: _onSearchChanged,
-              cursorColor: theme.textTheme.bodyLarge?.color?.withOpacity(0.7),
+              cursorColor: theme.textTheme.bodyLarge?.color?.withValues(alpha: 0.7),
               decoration: InputDecoration(
                 hintText: 'Search',
                 border: InputBorder.none,

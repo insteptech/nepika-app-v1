@@ -45,7 +45,7 @@ class SelectionButton extends StatelessWidget {
                 color:
                     isSelected ? theme.colorScheme.primary : Colors.transparent,
                 border: Border.all(
-                  color: theme.colorScheme.primary.withOpacity(0.6),
+                  color: theme.colorScheme.primary.withValues(alpha: 0.6),
                   width: 1,
                 ),
                 borderRadius: BorderRadius.circular(50),

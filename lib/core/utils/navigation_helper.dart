@@ -34,8 +34,8 @@
 
 
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/onboarding_steps.dart';
-import 'package:nepika/core/constants/routes.dart';
+import 'package:nepika/core/config/constants/onboarding_steps.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/domain/auth/entities/user.dart';
 
 class NavigationHelper {

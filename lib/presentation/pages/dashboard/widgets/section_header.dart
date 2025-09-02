@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class SectionHeader extends StatelessWidget {
   final String heading;
@@ -20,27 +20,41 @@ class SectionHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
       children: [
         const SizedBox(height: 30),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              heading,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            if (showButton)
-              GestureDetector(
-                onTap: buttonLoading ? null : onButtonPressed,
-                child: Opacity(
-                  opacity: buttonLoading ? 0.7 : 1.0,
-                  child: Text(
-                    buttonText,
-                    style: Theme.of(context).textTheme.bodyLarge!.hint(context)
-                  ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 0.0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Flexible(
+                child: Text(
+                  heading,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
-          ],
+              if (showButton)
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: GestureDetector(
+                    onTap: buttonLoading ? null : onButtonPressed,
+                    child: Opacity(
+                      opacity: buttonLoading ? 0.7 : 1.0,
+                      child: Text(
+                        buttonText,
+                        style: Theme.of(context).textTheme.bodyLarge!.hint(context),
+                        maxLines: 1,
+                      ),
+                    ),
+                  ),
+                ),
+            ],
+          ),
         ),
         const SizedBox(height: 10),
       ],

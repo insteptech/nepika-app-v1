@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
-import 'package:nepika/core/constants/routes.dart';
-import 'package:nepika/core/constants/theme_notifier.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/delete_account_dialog.dart';
 import 'package:nepika/presentation/settings/widgets/setting_header.dart';
@@ -98,7 +98,6 @@ class _NotificationsAndSettingsState extends State<NotificationsAndSettings> {
                       future: SharedPrefsHelper().getBool(option.text),
                       builder: (context, snapshot) {
                         final toggleVal = snapshot.data ?? option.toggleValue;
-                        print('Toggle Value: $toggleVal');
                         return SettingsOptionTile(
                           text: option.text,
                           onTap: option.onTap,

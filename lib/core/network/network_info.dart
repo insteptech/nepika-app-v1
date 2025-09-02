@@ -1,31 +1,34 @@
 import 'package:connectivity_plus/connectivity_plus.dart';
-import 'package:injectable/injectable.dart';
 
 abstract class NetworkInfo {
   Future<bool> get isConnected;
   Stream<bool> get connectionStream;
 }
 
-@Singleton(as: NetworkInfo)
 class NetworkInfoImpl implements NetworkInfo {
-  final Connectivity _connectivity;
+  final Connectivity _connectivity = Connectivity();
 
-  NetworkInfoImpl(this._connectivity);
+  NetworkInfoImpl();
 
   @override
   Future<bool> get isConnected async {
-    final result = await _connectivity.checkConnectivity();
-    return result == ConnectivityResult.mobile ||
-           result == ConnectivityResult.wifi ||
-           result == ConnectivityResult.ethernet;
+    try {
+      final result = await _connectivity.checkConnectivity();
+      return _isConnected(result);
+    } catch (e) {
+      // If connectivity check fails, assume we're connected to avoid blocking
+      return true;
+    }
   }
 
   @override
   Stream<bool> get connectionStream {
-    return _connectivity.onConnectivityChanged.map(
-      (result) => result == ConnectivityResult.mobile ||
-                  result == ConnectivityResult.wifi ||
-                  result == ConnectivityResult.ethernet
-    );
+    return _connectivity.onConnectivityChanged.map(_isConnected);
+  }
+
+  bool _isConnected(ConnectivityResult result) {
+    return result == ConnectivityResult.mobile ||
+           result == ConnectivityResult.wifi ||
+           result == ConnectivityResult.ethernet;
   }
 }

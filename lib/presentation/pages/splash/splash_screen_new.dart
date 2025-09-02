@@ -89,7 +89,7 @@
 //         Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
 //       }
 //     }
-//   }
+//   }s
 
 //   @override
 //   void dispose() {

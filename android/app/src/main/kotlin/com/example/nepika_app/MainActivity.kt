@@ -1,4 +1,4 @@
-package com.example.nepika_app
+package com.assisted.nepika
 
 import io.flutter.embedding.android.FlutterActivity
 

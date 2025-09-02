@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/presentation/bloc/auth/auth_bloc.dart';
 import 'package:nepika/presentation/bloc/auth/auth_event.dart';
 import 'package:nepika/presentation/bloc/auth/auth_state.dart';
-import '../../../core/constants/routes.dart';
+import '../../../core/config/constants/routes.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/custom_text_field.dart';
 
@@ -203,7 +203,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
       debugPrint('Phone Number payload to send: $fullNumber');
       BlocProvider.of<AuthBloc>(
         context,
-      ).add(SendOtpRequested(phone: fullNumber, email: null));
+      ).add(SendOtpRequested(phone: fullNumber, email: null, otpId: 'not-initialized-yet'));
       // Do not check state here; BlocListener will handle navigation and errors.
     }
   }
@@ -216,10 +216,11 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
           setState(() {
             _isResponseLoading = false;
           });
+          print('OTP sent successfully: ${state}');
           Navigator.pushNamed(
             context,
             AppRoutes.otpVerification,
-            arguments: {'phoneNumber': _selectedCountryCode + _phoneNumber},
+            arguments: {'phoneNumber': _selectedCountryCode + _phoneNumber, 'otpId': state.otpId},
           );
         } else if (state is ErrorWhileSendingOtp) {
           setState(() {

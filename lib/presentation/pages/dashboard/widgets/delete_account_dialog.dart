@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/constants/routes.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 
 class DeleteAccountDialog extends StatefulWidget {
   final List<String> reasons;
@@ -53,7 +53,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
                         margin: const EdgeInsets.only(bottom: 8),
                         decoration: BoxDecoration(
                           color: isSelected
-                              ? theme.colorScheme.primary.withOpacity(0.4)
+                              ? theme.colorScheme.primary.withValues(alpha: 0.4)
                               : Colors.transparent,
                           borderRadius: BorderRadius.circular(12),
                         ),

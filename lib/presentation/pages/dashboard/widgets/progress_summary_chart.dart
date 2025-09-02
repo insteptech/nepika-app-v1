@@ -85,7 +85,7 @@ class ProgressChartPainter extends CustomPainter {
       ..strokeJoin = StrokeJoin.round;
 
     final fillPaint = Paint()
-      ..color = Theme.of(context).colorScheme.primary.withOpacity(0.2)
+      ..color = Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)
       ..style = PaintingStyle.fill;
 
     final gridPaint = Paint()
@@ -152,7 +152,12 @@ class ProgressChartPainter extends CustomPainter {
 
     for (int i = 0; i < data.length; i++) {
       final value = (data[i]['value'] ?? 0).toDouble();
-      final x = chartArea.left + (chartArea.width * i / (data.length - 1));
+      
+      // Handle single data point case
+      final x = data.length == 1 
+        ? chartArea.left + chartArea.width / 2  // Center the single point
+        : chartArea.left + (chartArea.width * i / (data.length - 1));
+        
       final y = chartArea.bottom - ((value - minValue) / (maxValue - minValue) * chartArea.height);
 
       final point = Offset(x, y);
@@ -162,7 +167,7 @@ class ProgressChartPainter extends CustomPainter {
 
     fillPoints.add(Offset(chartArea.right, chartArea.bottom));
 
-    // Draw filled area under the curve
+    // Draw filled area under the curve (gradient fill for line chart)
     if (fillPoints.length > 2) {
       final fillPath = Path();
       fillPath.moveTo(fillPoints.first.dx, fillPoints.first.dy);
@@ -173,17 +178,78 @@ class ProgressChartPainter extends CustomPainter {
       canvas.drawPath(fillPath, fillPaint);
     }
 
-    // Draw main line
+    // Draw main line with smooth curves
     if (points.length > 1) {
       final path = Path();
       path.moveTo(points.first.dx, points.first.dy);
+      
       for (int i = 1; i < points.length; i++) {
         final prev = points[i - 1];
         final curr = points[i];
-        final controlPoint = Offset((prev.dx + curr.dx) / 2, prev.dy);
-        path.quadraticBezierTo(controlPoint.dx, controlPoint.dy, curr.dx, curr.dy);
+        
+        // Calculate smooth cubic bezier control points
+        final tension = 0.3; // Adjust this value for smoother/tighter curves (0.1-0.5 works well)
+        final distance = (curr.dx - prev.dx).abs();
+        
+        // Control point 1 (from previous point)
+        final cp1x = prev.dx + distance * tension;
+        final cp1y = prev.dy;
+        
+        // Control point 2 (to current point)  
+        final cp2x = curr.dx - distance * tension;
+        final cp2y = curr.dy;
+        
+        path.cubicTo(cp1x, cp1y, cp2x, cp2y, curr.dx, curr.dy);
       }
       canvas.drawPath(path, paint);
+    } else if (points.length == 1) {
+      // For single data point, draw a small horizontal line to indicate the value
+      final point = points.first;
+      final lineLength = chartArea.width * 0.1;
+      canvas.drawLine(
+        Offset(point.dx - lineLength, point.dy),
+        Offset(point.dx + lineLength, point.dy),
+        paint,
+      );
+    }
+
+    // Draw data points as circles
+    final pointPaint = Paint()
+      ..color = Theme.of(context).colorScheme.primary
+      ..style = PaintingStyle.fill;
+      
+    final pointBorderPaint = Paint()
+      ..color = Theme.of(context).colorScheme.surface
+      ..style = PaintingStyle.fill;
+
+    for (int i = 0; i < points.length; i++) {
+      final point = points[i];
+      final value = (data[i]['value'] ?? 0).toDouble();
+      
+      // Draw point border (white/background)
+      canvas.drawCircle(point, 6.0, pointBorderPaint);
+      // Draw point fill
+      canvas.drawCircle(point, 4.0, pointPaint);
+      
+      // Draw value label above point
+      final valueLabelPainter = TextPainter(
+        text: TextSpan(
+          text: value.toInt().toString(),
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        textDirection: TextDirection.ltr,
+      );
+      valueLabelPainter.layout();
+      valueLabelPainter.paint(
+        canvas,
+        Offset(
+          point.dx - valueLabelPainter.width / 2,
+          point.dy - valueLabelPainter.height - 10,
+        ),
+      );
     }
 
     // Draw X-axis labels
@@ -191,7 +257,11 @@ class ProgressChartPainter extends CustomPainter {
     final labelBottomMargin = shouldRotateLabels ? 35.0 : 15.0;
 
     for (int i = 0; i < months.length; i++) {
-      final x = chartArea.left + (chartArea.width * i / (months.length - 1));
+      // Handle single data point case for x-axis labels
+      final x = months.length == 1 
+        ? chartArea.left + chartArea.width / 2  // Center the single label
+        : chartArea.left + (chartArea.width * i / (months.length - 1));
+        
       final labelPainter = TextPainter(
         text: TextSpan(text: months[i], style: textStyle),
         textDirection: TextDirection.ltr,

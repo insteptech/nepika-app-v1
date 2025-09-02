@@ -20,27 +20,29 @@ class ApiBase {
     Map<String, String>? headers,
     Map<String, dynamic>? query,
   }) async {
-    print('Requesting: $method $path');
+    print('🚀🚀  Requesting: $method ${Env.baseUrl}/$path 🚀🚀');
     final mergedHeaders = {
       ..._dio.options.headers,
       if (headers != null) ...headers,
     };
-
-    try {
-      return await _dio.request(
+    print('Headers: $mergedHeaders');
+    try { 
+      final response = await _dio.request(
         path,
         data: body,
-        queryParameters: query,
+        queryParameters: query, 
         options: Options(
           method: method.toUpperCase(),
           headers: mergedHeaders,
         ),
       );
+      print('✅✅ Response [${response.statusCode}]: ${response.data} ✅✅');
+      return response;
     } on DioException catch (e) {
-      print('Dio error: ${e.response?.statusCode} - ${e.message}');
+      print('❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌');
       rethrow;
     } catch (e) {
-      print('Unexpected error: $e');
+      print('❌❌ Unexpected error: $e ❌❌');
       rethrow;
     }
   }
