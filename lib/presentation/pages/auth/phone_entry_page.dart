@@ -216,7 +216,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
           setState(() {
             _isResponseLoading = false;
           });
-          print('OTP sent successfully: ${state}');
+          debugPrint('OTP sent successfully: ${state}');
           Navigator.pushNamed(
             context,
             AppRoutes.otpVerification,

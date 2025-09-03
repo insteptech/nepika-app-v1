@@ -230,6 +230,45 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
     }
   }
 
+  void _handleSkip() {
+    final totalSteps = _screen['totalSteps'] ?? 8;
+    debugPrint('🚀 Skip clicked - Current step: $_currentStep, Total steps: $totalSteps');
+    
+    if (_currentStep < totalSteps) {
+      debugPrint('🚀 Moving to next step: ${_currentStep + 1}');
+      
+      // Clear current form data first
+      _selected.clear();
+      _answers.clear();
+      _responses.clear();
+      _isFormValid = false;
+      
+      // Update current step
+      _currentStep++;
+      
+      // Trigger BLoC event to fetch new screen content
+      if (_bloc != null && token != null) {
+        _bloc.add(
+          FetchOnboardingQuestions(
+            userId: userId!,
+            screenSlug: _currentStep.toString(),
+            token: token!,
+          ),
+        );
+      }
+    } else {
+      debugPrint('🚀 On last step, completing onboarding');
+      // If on last step, go to dashboard
+      if (mounted) {
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.dashboardHome,
+          (route) => false,
+        );
+        Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
+      }
+    }
+  }
+
   void _handleBack() {
     if (_currentStep > 1) {
       setState(() {
@@ -298,46 +337,17 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
               if (prefilledValue == null && q.prefillValue != null) {
                 prefilledValue = q.prefillValue;
               }
+              
+              debugPrint('🔍 Question ${q.slug} (${q.inputType}): prefillValue = $prefilledValue');
+              if (q.inputType == "multi_choice") {
+                debugPrint('  Available options:');
+                for (var opt in q.options) {
+                  debugPrint('    ${opt.text} (id: ${opt.id}, value: ${opt.value}, isSelected: ${opt.isSelected})');
+                }
+              }
 
               if (prefilledValue != null) {
-                if (q.inputType == "multi_choice" || q.inputType == "checkbox") {
-                  _answers[qSlug] = <String>[];
-                  if (prefilledValue is List<dynamic>) {
-                    for (final val in prefilledValue) {
-                      final matchOpt = q.options.firstWhere(
-                        (o) =>
-                            o.text == val.toString() ||
-                            o.id == val.toString() ||
-                            o.value == val.toString(),
-                        orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
-                      );
-                      if (matchOpt.id.isNotEmpty) {
-                        (_answers[qSlug] as List<String>).add(matchOpt.id);
-                        _responses.add({
-                          "question_id": qId,
-                          "option_id": matchOpt.id,
-                          "value": matchOpt.text,
-                        });
-                      }
-                    }
-                  } else if (prefilledValue is String) {
-                    final matchOpt = q.options.firstWhere(
-                      (o) =>
-                          o.text == prefilledValue ||
-                          o.id == prefilledValue ||
-                          o.value == prefilledValue,
-                      orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
-                    );
-                    if (matchOpt.id.isNotEmpty) {
-                      (_answers[qSlug] as List<String>).add(matchOpt.id);
-                      _responses.add({
-                        "question_id": qId,
-                        "option_id": matchOpt.id,
-                        "value": matchOpt.text,
-                      });
-                    }
-                  }
-                } else if (q.inputType == "single_choice" || q.inputType == "dropdown") {
+                if (q.inputType == "single_choice" || q.inputType == "dropdown") {
                   final matchOpt = q.options.firstWhere(
                     (o) =>
                         o.text == prefilledValue.toString() ||
@@ -361,26 +371,31 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                     "value": prefilledValue.toString(),
                   });
                 }
-              } else {
-                if (q.inputType == "multi_choice" || q.inputType == "checkbox") {
+              }
+              
+              // Process is_selected flags from backend for multi-choice questions only
+              if (q.inputType == "multi_choice" || q.inputType == "checkbox") {
+                // Initialize as empty list if not already set, or reset if it's not a list
+                if (_answers[qSlug] == null || _answers[qSlug] is! List<String>) {
                   _answers[qSlug] = <String>[];
-                  final selectedOptions = q.options.where((o) => o.isSelected).toList();
-                  for (final opt in selectedOptions) {
-                    (_answers[qSlug] as List<String>).add(opt.id);
-                    _responses.add({
-                      "question_id": qId,
-                      "option_id": opt.id,
-                      "value": opt.text,
-                    });
+                }
+                
+                final selectedOptions = q.options.where((o) => o.isSelected).toList();
+                debugPrint('🔍 Processing is_selected for ${q.slug}: found ${selectedOptions.length} selected options');
+                
+                for (final opt in selectedOptions) {
+                  debugPrint('  Adding selected option: ${opt.text} (${opt.id})');
+                  final answersList = _answers[qSlug] as List<String>;
+                  
+                  // Only add if not already in the list
+                  if (!answersList.contains(opt.id)) {
+                    answersList.add(opt.id);
                   }
-                } else {
-                  final opt = q.options.firstWhere(
-                    (o) => o.isSelected,
-                    orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
-                  );
-                  if (opt.id.isNotEmpty) {
-                    _selected[qSlug] = opt.id;
-                    _answers[qSlug] = opt.id;
+                  
+                  // Only add to responses if not already present
+                  bool alreadyInResponses = _responses.any((r) => 
+                    r['question_id'] == qId && r['option_id'] == opt.id);
+                  if (!alreadyInResponses) {
                     _responses.add({
                       "question_id": qId,
                       "option_id": opt.id,
@@ -389,11 +404,33 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                   }
                 }
               }
+              
+              // For single choice, process is_selected only if not already set by prefill_value
+              if ((q.inputType == "single_choice" || q.inputType == "dropdown") && !_selected.containsKey(qSlug)) {
+                final opt = q.options.firstWhere(
+                  (o) => o.isSelected,
+                  orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
+                );
+                if (opt.id.isNotEmpty) {
+                  _selected[qSlug] = opt.id;
+                  _answers[qSlug] = opt.id;
+                  _responses.add({
+                    "question_id": qId,
+                    "option_id": opt.id,
+                    "value": opt.text,
+                  });
+                }
+              }
             }
 
             debugPrint("🎯 After processing prefills: ${_responses.length} responses for ${_questions.length} questions");
             for (var response in _responses) {
               debugPrint("Response: ${response['question_id']} -> ${response['value']}");
+            }
+            
+            debugPrint("📋 _answers map contents:");
+            for (var entry in _answers.entries) {
+              debugPrint("  ${entry.key}: ${entry.value} (${entry.value.runtimeType})");
             }
 
             setState(() {
@@ -449,17 +486,24 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
               spacing: 25,
               children: _questions.map((question) {
                 final options = question.options
-                    .map((o) => OptionItem(
-                          label: o.text,
-                          id: o.id,
-                          description: o.description?.toString(),
-                          value: o.value,
-                          isSelected: _answers[question.slug] is List<dynamic>
+                    .map((o) {
+                          final isSelected = _answers[question.slug] is List<dynamic>
                               ? (_answers[question.slug] as List<dynamic>).contains(o.id)
-                              : _answers[question.slug] == o.id,
-                        ))
+                              : _answers[question.slug] == o.id;
+                          
+                          debugPrint('🔍 Option ${o.text} (${o.id}): isSelected = $isSelected, _answers[${question.slug}] = ${_answers[question.slug]}, inputType = ${question.inputType}');
+                          
+                          return OptionItem(
+                            label: o.text,
+                            id: o.id,
+                            description: o.description?.toString(),
+                            value: o.value,
+                            isSelected: isSelected,
+                          );
+                        })
                     .toList();
                 debugPrint("🥶🥶🥶🥶🥶 Prefill Value: ${question.prefillValue} for ${question.slug} and keyboard type is ${question.keyboardType}");
+                debugPrint('✅ Current Step: $_currentStep, Question Type: ${question.inputType}, Options Per Row: ${_currentStep == 8 ? 2 : "default"}, Question: ${question.questionText}');
                 return QuestionInputWidget(
                   id: question.id,
                   slug: question.slug,
@@ -468,6 +512,7 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                   keyboardType: question.keyboardType,
                   prefillValue: _answers[question.slug] ?? question.prefillValue,
                   options: options,
+                  optionsPerRow: _currentStep == 7 ? 2 : null,
                   values: _answers,
                   onValueChanged: (slug, value) {
                     final question = _questions.firstWhere((q) => q.slug == slug);
@@ -494,7 +539,8 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
 
           return BaseQuestionPage(
             currentStep: _currentStep,
-            totalSteps: 8,
+            onSkip: _handleSkip,
+            totalSteps: 7,
             title: _screen['title'] ?? 'Tell us about your lifestyle',
             subtitle: _screen['subtitle'] ?? 'Your lifestyle helps us analyze your skin.',
             buttonText: _screen['buttonText'] ?? 'Next',

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:nepika/core/api_base.dart';
 import '../../../core/config/constants/api_endpoints.dart';
 import '../../../domain/dashboard/entities/dashboard_entities.dart';
@@ -28,9 +29,9 @@ class DashboardRepositoryImpl implements DashboardRepository {
   @override
   Future<RoutineEntity> fetchTodaysRoutine({required String token, required String type}) async {
     final path = '${ApiEndpoints.userDailyRoutine}/all';
-    print('\n\n\n\n\n');
-    print(path);
-    print('\n\n\n\n\n');
+    debugPrint('\n\n\n\n\n');
+    debugPrint(path);
+    debugPrint('\n\n\n\n\n');
     final response = await apiBase.request(
       path: path,
       method: 'GET',

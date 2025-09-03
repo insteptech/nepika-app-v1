@@ -78,6 +78,7 @@ class SelectionButton extends StatelessWidget {
                     text,
                     style: theme.textTheme.bodyLarge?.copyWith(
                       fontSize: 13,
+                      overflow: TextOverflow.ellipsis,
                       color: isSelected
                           ? theme.colorScheme.onSecondary
                           : theme.textTheme.bodyLarge?.color,

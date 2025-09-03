@@ -106,7 +106,7 @@ class _DeleteAccountDialogState extends State<DeleteAccountDialog> {
   }
 
   void _handleDelete(BuildContext context, String selectedReason) {
-    print('Account deleted for reason: $selectedReason');
+    debugPrint('Account deleted for reason: $selectedReason');
     Navigator.of(context).pushNamedAndRemoveUntil(
       AppRoutes.login,
       (route) => false,

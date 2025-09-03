@@ -84,7 +84,7 @@
 //       }
 //     } catch (e) {
 //       // If there's any error, default to welcome screen
-//       print('Error checking auth status: $e');
+//       debugPrint('Error checking auth status: $e');
 //       if (mounted) {
 //         Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
 //       }

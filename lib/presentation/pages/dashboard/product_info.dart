@@ -129,7 +129,7 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
           if (state is ProductInfoLoaded) {
             productInfo = state.productInfo.info;
           }
-          print('Product Info: ${productInfo['imageUrl']}');
+          debugPrint('Product Info: ${productInfo['imageUrl']}');
 
           return Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,

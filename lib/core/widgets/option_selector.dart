@@ -543,35 +543,114 @@ class _QuestionInputWidgetState extends State<QuestionInputWidget> {
   ) {
     return LayoutBuilder(
       builder: (context, innerConstraints) {
-        if (options.length <= optionsPerRow) {
-          final spacing = 10.0;
-          final totalSpacing = (options.length - 1) * spacing;
-          final itemWidth = (constraints.maxWidth - totalSpacing) / options.length;
-
-          return Row(
-            mainAxisAlignment: MainAxisAlignment.start,
-            children: options.asMap().entries.map((entry) {
-              final index = entry.key;
-              final option = entry.value;
-
-              return Container(
-                width: itemWidth,
-                margin: EdgeInsets.only(
-                  right: index < options.length - 1 ? spacing : 0,
+        final spacing = 10.0;
+        
+        // Check if optionsPerRow was explicitly passed (not null in original widget)
+        final bool hasExplicitOptionsPerRow = widget.optionsPerRow != null;
+        
+        if (hasExplicitOptionsPerRow) {
+          // When optionsPerRow is explicitly passed, use grid layout
+          List<Widget> rows = [];
+          for (int i = 0; i < options.length; i += optionsPerRow) {
+            List<Widget> rowChildren = [];
+            int itemsInThisRow = (i + optionsPerRow <= options.length) ? optionsPerRow : options.length - i;
+            final totalSpacing = (itemsInThisRow - 1) * spacing;
+            final itemWidth = (constraints.maxWidth - totalSpacing) / itemsInThisRow;
+            
+            for (int j = 0; j < optionsPerRow && (i + j) < options.length; j++) {
+              final option = options[i + j];
+              rowChildren.add(
+                Container(
+                  width: itemWidth,
+                  margin: EdgeInsets.only(
+                    right: j < itemsInThisRow - 1 ? spacing : 0,
+                  ),
+                  child: _buildOptionButton(option, isMultiChoice, selected),
                 ),
-                child: _buildOptionButton(option, isMultiChoice, selected),
               );
-            }).toList(),
+            }
+            
+            rows.add(
+              Row(
+                mainAxisAlignment: MainAxisAlignment.start,
+                children: rowChildren,
+              ),
+            );
+          }
+          
+          return Column(
+            children: rows.map((row) => Container(
+              margin: const EdgeInsets.only(bottom: 12),
+              child: row,
+            )).toList(),
           );
-        }
+        } else {
+          // When optionsPerRow is null (default behavior)
+          if (options.length <= 3) {
+            // Less than or equal to 3 options: give them equal width (max possible)
+            final totalSpacing = (options.length - 1) * spacing;
+            final itemWidth = (constraints.maxWidth - totalSpacing) / options.length;
 
-        return Wrap(
-          spacing: 10,
-          runSpacing: 12,
-          children: options
-              .map((option) => _buildOptionButton(option, isMultiChoice, selected))
-              .toList(),
-        );
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: options.asMap().entries.map((entry) {
+                final index = entry.key;
+                final option = entry.value;
+
+                return Container(
+                  width: itemWidth,
+                  margin: EdgeInsets.only(
+                    right: index < options.length - 1 ? spacing : 0,
+                  ),
+                  child: _buildOptionButton(option, isMultiChoice, selected),
+                );
+              }).toList(),
+            );
+          } else {
+            // More than 3 options: first 3 get equal width, rest wrap with content width
+            final first3Options = options.take(3).toList();
+            final remainingOptions = options.skip(3).toList();
+            
+            final totalSpacing = 2 * spacing; // spacing between 3 items
+            final itemWidth = (constraints.maxWidth - totalSpacing) / 3;
+            
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // First row with 3 equal-width options
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: first3Options.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final option = entry.value;
+
+                    return Container(
+                      width: itemWidth,
+                      margin: EdgeInsets.only(
+                        right: index < 2 ? spacing : 0,
+                      ),
+                      child: _buildOptionButton(option, isMultiChoice, selected),
+                    );
+                  }).toList(),
+                ),
+                
+                // Remaining options with content-based width
+                if (remainingOptions.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Wrap(
+                    spacing: spacing,
+                    runSpacing: 12,
+                    children: remainingOptions
+                        .map((option) => _buildOptionButton(option, isMultiChoice, selected))
+                        .toList(),
+                  ),
+                ],
+              ],
+            );
+          }
+        }
       },
     );
   }

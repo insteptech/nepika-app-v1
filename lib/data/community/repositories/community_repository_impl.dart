@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -84,15 +85,15 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String postId,
   }) async {
     try {
-      print('Repository: Fetching single post with ID: $postId');
+      debugPrint('Repository: Fetching single post with ID: $postId');
       final response = await apiBase.request(
         path: '${ApiEndpoints.getSinglePost}/$postId',
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
       );
       
-      print('Repository: Response status: ${response.statusCode}');
-      print('Repository: Response data: ${response.data}');
+      debugPrint('Repository: Response status: ${response.statusCode}');
+      debugPrint('Repository: Response data: ${response.data}');
       
       if (response.statusCode == 200) {
         // Handle both success wrapper and direct response formats
@@ -100,11 +101,11 @@ class CommunityRepositoryImpl implements CommunityRepository {
         if (data is Map<String, dynamic>) {
           // If wrapped in success response, extract data
           if (data.containsKey('data') && data['success'] == true) {
-            print('Repository: Using wrapped response format');
+            debugPrint('Repository: Using wrapped response format');
             return PostDetailEntity.fromJson(data['data']);
           }
           // Otherwise use direct response
-          print('Repository: Using direct response format');
+          debugPrint('Repository: Using direct response format');
           return PostDetailEntity.fromJson(data);
         }
         throw Exception('Invalid response format: ${data.runtimeType}');
@@ -115,8 +116,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         throw Exception('HTTP ${response.statusCode}: $errorMessage');
       }
     } catch (e, stackTrace) {
-      print('Repository: Error in fetchSinglePost: $e');
-      print('Repository: Stack trace: $stackTrace');
+      debugPrint('Repository: Error in fetchSinglePost: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -136,8 +137,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         userId = userMap['id'];
       }
       
-      print('Repository: Liking post with ID: $postId');
-      print('Repository: User ID: $userId');
+      debugPrint('Repository: Liking post with ID: $postId');
+      debugPrint('Repository: User ID: $userId');
       
       final response = await apiBase.request(
         path: '${ApiEndpoints.likePost}/$postId/like',
@@ -146,8 +147,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         body: {'user_id': userId}
       );
       
-      print('Repository: Like response status: ${response.statusCode}');
-      print('Repository: Like response data: ${response.data}');
+      debugPrint('Repository: Like response status: ${response.statusCode}');
+      debugPrint('Repository: Like response data: ${response.data}');
       
       if (response.statusCode == 200 || response.statusCode == 201) {
         return LikePostResponseEntity.fromJson(response.data);
@@ -158,8 +159,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         throw Exception('HTTP ${response.statusCode}: $errorMessage');
       }
     } catch (e, stackTrace) {
-      print('Repository: Error in likePost: $e');
-      print('Repository: Stack trace: $stackTrace');
+      debugPrint('Repository: Error in likePost: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -179,8 +180,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         userId = userMap['id'];
       }
       
-      print('Repository: Unliking post with ID: $postId');
-      print('Repository: User ID: $userId');
+      debugPrint('Repository: Unliking post with ID: $postId');
+      debugPrint('Repository: User ID: $userId');
       
       final response = await apiBase.request(
         path: '${ApiEndpoints.unlikePost}/$postId/unlike',
@@ -189,8 +190,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         body: {'user_id': userId}
       );
       
-      print('Repository: Unlike response status: ${response.statusCode}');
-      print('Repository: Unlike response data: ${response.data}');
+      debugPrint('Repository: Unlike response status: ${response.statusCode}');
+      debugPrint('Repository: Unlike response data: ${response.data}');
       
       if (response.statusCode == 200 || response.statusCode == 204) {
         return UnlikePostResponseEntity.fromJson(response.data ?? {});
@@ -201,8 +202,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         throw Exception('HTTP ${response.statusCode}: $errorMessage');
       }
     } catch (e, stackTrace) {
-      print('Repository: Error in unlikePost: $e');
-      print('Repository: Stack trace: $stackTrace');
+      debugPrint('Repository: Error in unlikePost: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
       rethrow;
     }
   }
@@ -213,26 +214,26 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String userId,
   }) async {
     try {
-      print('Repository: Fetching user profile with ID: $userId');
+      debugPrint('Repository: Fetching user profile with ID: $userId');
       final response = await apiBase.request(
         path: '${ApiEndpoints.userProfile}/$userId',
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
       );
       
-      print('Repository: Profile response status: ${response.statusCode}');
-      print('Repository: Profile response data: ${response.data}');
+      debugPrint('Repository: Profile response status: ${response.statusCode}');
+      debugPrint('Repository: Profile response data: ${response.data}');
       
       if (response.statusCode == 200) {
         final data = response.data;
         if (data is Map<String, dynamic>) {
           // If wrapped in success response, extract data
           if (data.containsKey('data') && data['success'] == true) {
-            print('Repository: Using wrapped response format');
+            debugPrint('Repository: Using wrapped response format');
             return UserProfileResponseEntity.fromJson(data['data']);
           }
           // Otherwise use direct response
-          print('Repository: Using direct response format');
+          debugPrint('Repository: Using direct response format');
           return UserProfileResponseEntity.fromJson(data);
         }
         throw Exception('Invalid response format: ${data.runtimeType}');
@@ -243,8 +244,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         throw Exception('HTTP ${response.statusCode}: $errorMessage');
       }
     } catch (e, stackTrace) {
-      print('Repository: Error in fetchUserProfile: $e');
-      print('Repository: Stack trace: $stackTrace');
+      debugPrint('Repository: Error in fetchUserProfile: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
       rethrow;
     }
   }

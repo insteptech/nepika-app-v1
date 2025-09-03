@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'question_header.dart';
 import 'custom_button.dart';
+import 'package:flutter/foundation.dart';
 
 class QuestionPageData {
   final String? name;
@@ -277,9 +279,9 @@ class QuestionnaireState extends ChangeNotifier {
     notifyListeners();
 
     // Print current payload for debugging
-    print('=== QUESTIONNAIRE PAYLOAD ===');
-    print(_data.toJson());
-    print('============================');
+    debugPrint('=== QUESTIONNAIRE PAYLOAD ===');
+    logJson(_data.toJson());
+    debugPrint('============================');
   }
 
   void reset() {
@@ -289,9 +291,9 @@ class QuestionnaireState extends ChangeNotifier {
 
   Map<String, dynamic> getFinalPayload() {
     final payload = _data.toJson();
-    print('=== FINAL PAYLOAD FOR BACKEND ===');
-    print(payload);
-    print('=================================');
+    debugPrint('=== FINAL PAYLOAD FOR BACKEND ===');
+    logJson(payload);
+    debugPrint('=================================');
     return payload;
   }
 }

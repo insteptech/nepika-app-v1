@@ -168,282 +168,305 @@ class _TodaysRoutineViewState extends State<_TodaysRoutineView>
 
           return Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-            body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    const CustomBackButton(),
-                    const SizedBox(height: 32),
-                    Text(
-                      "Today's Routine",
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Stay consistent. Mark each step as you complete it.',
-                      style: Theme.of(
-                        context,
-                      ).textTheme.headlineMedium!.secondary(context),
-                    ),
-                    const SizedBox(height: 45),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          body: SafeArea(
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Steps',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
-                        Text(
-                          'Completed: $completedCount/${routineSteps.length}',
-                          style: Theme.of(context).textTheme.headlineMedium,
-                        ),
+                        const SizedBox(height: 16),
+                        const CustomBackButton(),
+                        const SizedBox(height: 10),
                       ],
                     ),
-                    const SizedBox(height: 18),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () async {
-                          if (_token != null) {
-                            context.read<RoutineBloc>().add(
+                  ),
+                ),
+                Expanded(
+                  child: NestedScrollView(
+                    headerSliverBuilder: (context, innerBoxIsScrolled) {
+                      return [
+                        SliverToBoxAdapter(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 32),
+                                Text(
+                                  "Today's Routine",
+                                  style: Theme.of(context).textTheme.displaySmall,
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  'Stay consistent. Mark each step as you complete it.',
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.headlineMedium!.secondary(context),
+                                ),
+                                const SizedBox(height: 35),
+                              ],
+                            ),
+                          ),
+                        ),
+                        SliverAppBar(
+                          pinned: true,
+                          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+                          elevation: 0,
+                          toolbarHeight: 50,
+                          automaticallyImplyLeading: false,
+                          surfaceTintColor: Colors.transparent,
+                          scrolledUnderElevation: 0,
+                          title: Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 0),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(
+                                  'Steps',
+                                  style: Theme.of(context).textTheme.headlineMedium,
+                                ),
+                                Text(
+                                  'Completed: $completedCount/${routineSteps.length}',
+                                  style: Theme.of(context).textTheme.headlineMedium,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ];
+                    },
+                    body: RefreshIndicator(
+                      onRefresh: () async {
+                        if (_token != null) {
+                          context.read<RoutineBloc>().add(
                               RefreshRoutinesEvent(token: _token!, type: 'get-user-routines'),
                             );
                           }
                           await Future.delayed(const Duration(milliseconds: 500));
                         },
-                        child: loading
-                            ? const Center(child: CircularProgressIndicator())
-                            : errorMessage != null
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      'Error: $errorMessage',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyLarge!
-                                          .copyWith(color: Colors.red),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    ElevatedButton(
-                                      onPressed: () {
-                                        context.read<RoutineBloc>().add(
-                                          LoadTodaysRoutineEvent(
-                                            token: _token!,
-                                            type: 'get-user-routines',
-                                          ),
-                                        );
-                                      },
-                                      child: const Text('Retry'),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : routineSteps.isEmpty
-                            ? Center(
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Icon(
-                                      Icons.event_note,
-                                      size: 64,
-                                      color: Theme.of(context)
-                                          .colorScheme
-                                          .primary
-                                          .withValues(alpha: 0.5),
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      'No routines found',
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.headlineMedium,
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Please add routines to your daily schedule',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium!
-                                          .secondary(context),
-                                      textAlign: TextAlign.center,
-                                    ),
-                                    const SizedBox(height: 24),
-                                    GestureDetector(
-                                      onTap: () async {
-                                        await Navigator.pushNamed(
-                                          context,
-                                          AppRoutes.dashboardAddRoutine,
-                                        );
-                                        // Refresh the routines when coming back from add routine screen
-                                        _refreshRoutines();
-                                      },
-                                      child: Text(
-                                        'Add routines →',
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: Column(
+                          children: [
+                            const SizedBox(height: 18),
+                            loading
+                                ? const Center(child: CircularProgressIndicator())
+                                : errorMessage != null
+                                ? Column(
+                                    children: [
+                                      const SizedBox(height: 50),
+                                      Text(
+                                        'Error: $errorMessage',
                                         style: Theme.of(context)
                                             .textTheme
                                             .bodyLarge!
-                                            .copyWith(
-                                              color: Theme.of(
-                                                context,
-                                              ).colorScheme.primary,
-                                              // decoration:
-                                              //     TextDecoration.underline,
+                                            .copyWith(color: Colors.red),
+                                      ),
+                                      const SizedBox(height: 16),
+                                      ElevatedButton(
+                                        onPressed: () {
+                                          context.read<RoutineBloc>().add(
+                                            LoadTodaysRoutineEvent(
+                                              token: _token!,
+                                              type: 'get-user-routines',
                                             ),
+                                          );
+                                        },
+                                        child: const Text('Retry'),
                                       ),
-                                    ),
-                                  ],
-                                ),
-                              )
-                            : ListView.builder(
-                                itemCount: routineSteps.length,
-                                itemBuilder: (context, index) {
-                                  final step = routineSteps[index];
-                                  final isCompleted =
-                                      step['isCompleted'] == true;
-                                  final timing = step['timing'] == 'morning'
-                                      ? 'Morning Routine'
-                                      : 'Night Routine';
-                                  final colorScheme = Theme.of(
-                                    context,
-                                  ).colorScheme;
-                                  final color = step['timing'] == 'morning'
-                                      ? colorScheme.onSecondary
-                                      : colorScheme.primary;
-                                  return Container(
-                                    height: 85,
-                                    margin: const EdgeInsets.only(bottom: 14),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 20,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary
-                                            .withValues(alpha: 0.4),
-                                        width: 1,
-                                      ),
-                                    ),
-                                    child: Row(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.center,
-                                      children: [
-                                        SizedBox(
-                                          width: 44,
-                                          height: 44,
-                                          child: Image.network(
-                                            '${Env.baseUrl}${step['routineIcon']}',
-                                            fit: BoxFit.cover,
-                                            loadingBuilder:
-                                                (context, child, progress) {
-                                                  if (progress == null)
-                                                    return child;
-                                                  return Container(
-                                                    width: 125,
-                                                    height: 130,
-                                                    color: Colors.grey.shade300,
-                                                  );
-                                                },
-                                            errorBuilder: (_, __, ___) =>
-                                                Image.asset(
-                                                  'assets/images/image_placeholder.png',
-                                                  width: 125,
-                                                  height: 130,
-                                                  fit: BoxFit.cover,
-                                                ),
+                                    ],
+                                  )
+                                : routineSteps.isEmpty
+                                    ? Column(
+                                        children: [
+                                          const SizedBox(height: 50),
+                                          Icon(
+                                            Icons.event_note,
+                                            size: 64,
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary
+                                                .withValues(alpha: 0.5),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            mainAxisAlignment:
-                                                MainAxisAlignment.center,
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                step['name'] ?? 'Step',
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.headlineMedium,
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                timing,
-                                                style: Theme.of(
-                                                  context,
-                                                ).textTheme.bodyLarge?.secondary(context),
-                                              ),
-                                            ],
+                                          const SizedBox(height: 16),
+                                          Text(
+                                            'No routines found',
+                                            style: Theme.of(
+                                              context,
+                                            ).textTheme.headlineMedium,
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        isCompleted
-                                            ? Row(
-                                                children: [
-                                                  Icon(
-                                                    Icons.check,
-                                                    color: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge!.hint(context).color,
-                                                    size: 24,
+                                          const SizedBox(height: 8),
+                                          Text(
+                                            'Please add routines to your daily schedule',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyMedium!
+                                                .secondary(context),
+                                            textAlign: TextAlign.center,
+                                          ),
+                                          const SizedBox(height: 24),
+                                          GestureDetector(
+                                            onTap: () async {
+                                              await Navigator.pushNamed(
+                                                context,
+                                                AppRoutes.dashboardAddRoutine,
+                                              );
+                                              // Refresh the routines when coming back from add routine screen
+                                              _refreshRoutines();
+                                            },
+                                            child: Text(
+                                              'Add routines →',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .bodyLarge!
+                                                  .copyWith(
+                                                    color: Theme.of(
+                                                      context,
+                                                    ).colorScheme.primary,
+                                                    // decoration:
+                                                    //     TextDecoration.underline,
                                                   ),
-                                                  const SizedBox(width: 4),
-                                                  Text(
-                                                    'Completed',
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodyLarge
-                                                  ),
-                                                ],
-                                              )
-                                            : OutlinedButton(
-                                                onPressed: () {
-                                                  context
-                                                      .read<RoutineBloc>()
-                                                      .add(
-                                                        UpdateRoutineStepEvent(
-                                                          token: _token!,
-                                                          routineId: step['id'],
-                                                          isCompleted: true,
-                                                        ),
+                                            ),
+                                          ),
+                                        ],
+                                      )
+                                    : Column(
+                                        children: routineSteps.map((step) {
+                                          final isCompleted = step['isCompleted'] == true;
+                                          final timing = step['timing'] == 'morning'
+                                              ? 'Morning Routine'
+                                              : 'Night Routine';
+                                          final colorScheme = Theme.of(context).colorScheme;
+                                          final color = step['timing'] == 'morning'
+                                              ? colorScheme.onSecondary
+                                              : colorScheme.primary;
+                                          
+                                          return Container(
+                                            height: 85,
+                                            margin: const EdgeInsets.only(bottom: 14),
+                                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                                            decoration: BoxDecoration(
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .primary
+                                                    .withValues(alpha: 0.4),
+                                                width: 1,
+                                              ),
+                                            ),
+                                            child: Row(
+                                              crossAxisAlignment: CrossAxisAlignment.center,
+                                              children: [
+                                                SizedBox(
+                                                  width: 44,
+                                                  height: 44,
+                                                  child: Image.network(
+                                                    '${Env.baseUrl}${step['routineIcon']}',
+                                                    fit: BoxFit.cover,
+                                                    loadingBuilder: (context, child, progress) {
+                                                      if (progress == null) return child;
+                                                      return Container(
+                                                        width: 44,
+                                                        height: 44,
+                                                        color: Colors.grey.shade300,
                                                       );
-                                                },
-                                                style: OutlinedButton.styleFrom(
-                                                  shape: RoundedRectangleBorder(
-                                                    borderRadius:
-                                                        BorderRadius.circular(
-                                                          8,
-                                                        ),
+                                                    },
+                                                    errorBuilder: (_, __, ___) => Image.asset(
+                                                      'assets/images/image_placeholder.png',
+                                                      width: 44,
+                                                      height: 44,
+                                                      fit: BoxFit.cover,
+                                                    ),
                                                   ),
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
-                                                        horizontal: 16,
-                                                        vertical: 8,
+                                                ),
+                                                const SizedBox(width: 12),
+                                                Expanded(
+                                                  child: Column(
+                                                    mainAxisAlignment: MainAxisAlignment.center,
+                                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                                    children: [
+                                                      Text(
+                                                        step['name'] ?? 'Step',
+                                                        style: Theme.of(context).textTheme.headlineMedium,
                                                       ),
+                                                      const SizedBox(height: 4),
+                                                      Text(
+                                                        timing,
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .bodyLarge
+                                                            ?.secondary(context),
+                                                      ),
+                                                    ],
+                                                  ),
                                                 ),
-                                                child: Text(
-                                                  'Mark as Done',
-                                                  style: Theme.of(context)
-                                                      .textTheme
-                                                      .bodyLarge!
-                                                      .hint(context),
-                                                ),
-                                              ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
+                                                const SizedBox(width: 12),
+                                                isCompleted
+                                                    ? Row(
+                                                        children: [
+                                                          Icon(
+                                                            Icons.check,
+                                                            color: Theme.of(context)
+                                                                .textTheme
+                                                                .bodyLarge!
+                                                                .hint(context)
+                                                                .color,
+                                                            size: 24,
+                                                          ),
+                                                          const SizedBox(width: 4),
+                                                          Text(
+                                                            'Completed',
+                                                            style: Theme.of(context).textTheme.bodyLarge,
+                                                          ),
+                                                        ],
+                                                      )
+                                                    : OutlinedButton(
+                                                        onPressed: () {
+                                                          context.read<RoutineBloc>().add(
+                                                                UpdateRoutineStepEvent(
+                                                                  token: _token!,
+                                                                  routineId: step['id'],
+                                                                  isCompleted: true,
+                                                                ),
+                                                              );
+                                                        },
+                                                        style: OutlinedButton.styleFrom(
+                                                          shape: RoundedRectangleBorder(
+                                                            borderRadius: BorderRadius.circular(8),
+                                                          ),
+                                                          padding: const EdgeInsets.symmetric(
+                                                            horizontal: 16,
+                                                            vertical: 8,
+                                                          ),
+                                                        ),
+                                                        child: Text(
+                                                          'Mark as Done',
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .bodyLarge!
+                                                              .hint(context),
+                                                        ),
+                                                      ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                            const SizedBox(height: 100),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    GestureDetector(
+                  ),
+                ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    child: GestureDetector(
                       onTap: () async {
                         await Navigator.pushNamed(
                           context,
@@ -464,21 +487,19 @@ class _TodaysRoutineViewState extends State<_TodaysRoutineView>
                           const SizedBox(width: 6),
                           Text(
                             'Edit Routine',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.headlineMedium!.hint(context),
+                            style: Theme.of(context).textTheme.headlineMedium!.hint(context),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+                  // const SizedBox(height: 10),
+                ],
               ),
             ),
           );
         },
-      // ),
-    );
+      );
   }
 }
+

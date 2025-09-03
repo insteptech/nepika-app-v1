@@ -30,6 +30,7 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
   String? _token;
   bool _isInitialized = false;
   final Set<String> _addedRoutineIds = {};
+  final Set<String> _successfullyAddedRoutineIds = {};
 
   @override
   void initState() {
@@ -79,8 +80,8 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
   }
 
   void _onAddRoutine(String routineId) {
-    if (_addedRoutineIds.contains(routineId)) {
-      return; // Already added, do nothing
+    if (_addedRoutineIds.contains(routineId) || _successfullyAddedRoutineIds.contains(routineId)) {
+      return; // Already added or successfully added, do nothing
     }
 
     _addedRoutineIds.add(routineId);
@@ -111,13 +112,14 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
             ),
           );
         } else if (state is RoutineOperationSuccess) {
-          // Remove from added set if successful (so user can see the change)
+          // Move from loading to successfully added set
           if (state.operationId != null) {
             setState(() {
               _addedRoutineIds.remove(state.operationId);
+              _successfullyAddedRoutineIds.add(state.operationId!);
             });
           }
-          
+
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(state.message),
@@ -154,56 +156,83 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  const CustomBackButton(),
-                  const SizedBox(height: 32),
-                  Text(
-                    "Add new routine",
-                    style: Theme.of(context).textTheme.displaySmall,
+            child: Column(
+              children: [
+                 Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        const CustomBackButton(),
+                        const SizedBox(height: 10),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Select routine steps to add to your daily routine',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium!
-                        .secondary(context),
-                  ),
-                  const SizedBox(height: 45),
-                  Expanded(
-                    child: loading
-                        ? const Center(child: CircularProgressIndicator())
-                        : errorMessage != null
-                            ? RoutineErrorWidget(
-                                message: errorMessage,
-                                onRetry: () {
-                                  context.read<RoutineBloc>().add(
-                                        LoadAllRoutinesEvent(token: _token!),
-                                      );
-                                },
-                              )
-                            : routines.isEmpty
-                                ? NoRoutinesAvailable(
-                                    onRefresh: () {
+                ),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 32),
+                        Text(
+                          "Add new routine",
+                          style: Theme.of(context).textTheme.displaySmall,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Select routine steps to add to your daily routine',
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium!
+                              .secondary(context),
+                        ),
+                        const SizedBox(height: 45),
+                        loading
+                            ? const Center(child: CircularProgressIndicator())
+                            : errorMessage != null
+                                ? RoutineErrorWidget(
+                                    message: errorMessage,
+                                    onRetry: () {
                                       context.read<RoutineBloc>().add(
                                             LoadAllRoutinesEvent(token: _token!),
                                           );
                                     },
                                   )
-                                : RoutineList(
-                                    routines: routines,
-                                    tileType: RoutineTileType.selection,
-                                    loadingRoutineId: loadingRoutineId,
-                                    onAddRoutine: _onAddRoutine,
-                                  ),
+                                : routines.isEmpty
+                                    ? NoRoutinesAvailable(
+                                        onRefresh: () {
+                                          context.read<RoutineBloc>().add(
+                                                LoadAllRoutinesEvent(token: _token!),
+                                              );
+                                        },
+                                      )
+                                    : Column(
+                                        children: routines.map((routine) {
+                                          final isLoading = loadingRoutineId == routine.id;
+                                          final isSuccessfullyAdded = _successfullyAddedRoutineIds.contains(routine.id);
+                                          
+                                          return RoutineTile(
+                                            routine: routine,
+                                            type: RoutineTileType.selection,
+                                            isLoading: isLoading,
+                                            isSuccessfullyAdded: isSuccessfullyAdded,
+                                            onAdd: () => _onAddRoutine(routine.id),
+                                          );
+                                        }).toList(),
+                                      ),
+                        const SizedBox(height: 100),
+                      ],
+                    ),
                   ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  child: GestureDetector(
                     onTap: () {
                       Navigator.pop(context);
                     },
@@ -220,9 +249,8 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
         );

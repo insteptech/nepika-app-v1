@@ -6,6 +6,7 @@ class RoutineList extends StatelessWidget {
   final List<Routine> routines;
   final RoutineTileType tileType;
   final String? loadingRoutineId;
+  final Set<String>? successfullyAddedRoutineIds;
   final Function(String routineId)? onRoutineTap;
   final Function(String routineId)? onAddRoutine;
   final Function(String routineId)? onDeleteRoutine;
@@ -17,6 +18,7 @@ class RoutineList extends StatelessWidget {
     required this.routines,
     required this.tileType,
     this.loadingRoutineId,
+    this.successfullyAddedRoutineIds,
     this.onRoutineTap,
     this.onAddRoutine,
     this.onDeleteRoutine,
@@ -35,11 +37,13 @@ class RoutineList extends StatelessWidget {
       itemBuilder: (context, index) {
         final routine = routines[index];
         final isLoading = loadingRoutineId == routine.id;
+        final isSuccessfullyAdded = successfullyAddedRoutineIds?.contains(routine.id) ?? false;
 
         return RoutineTile(
           routine: routine,
           type: tileType,
           isLoading: isLoading,
+          isSuccessfullyAdded: isSuccessfullyAdded,
           onTap: onRoutineTap != null ? () => onRoutineTap!(routine.id) : null,
           onAdd: onAddRoutine != null ? () => onAddRoutine!(routine.id) : null,
           onDelete: onDeleteRoutine != null ? () => onDeleteRoutine!(routine.id) : null,
@@ -54,6 +58,7 @@ class RoutineListBuilder extends StatelessWidget {
   final List<Routine> routines;
   final RoutineTileType tileType;
   final String? loadingRoutineId;
+  final Set<String>? successfullyAddedRoutineIds;
   final Function(String routineId)? onRoutineTap;
   final Function(String routineId)? onAddRoutine;
   final Function(String routineId)? onDeleteRoutine;
@@ -70,6 +75,7 @@ class RoutineListBuilder extends StatelessWidget {
     required this.loadingBuilder,
     required this.errorBuilder,
     this.loadingRoutineId,
+    this.successfullyAddedRoutineIds,
     this.onRoutineTap,
     this.onAddRoutine,
     this.onDeleteRoutine,
@@ -82,6 +88,7 @@ class RoutineListBuilder extends StatelessWidget {
       routines: routines,
       tileType: tileType,
       loadingRoutineId: loadingRoutineId,
+      successfullyAddedRoutineIds: successfullyAddedRoutineIds,
       onRoutineTap: onRoutineTap,
       onAddRoutine: onAddRoutine,
       onDeleteRoutine: onDeleteRoutine,

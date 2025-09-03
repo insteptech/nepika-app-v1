@@ -28,7 +28,7 @@ class _FeatureSuggestionDialogState extends State<FeatureSuggestionDialog> {
 
   void _handleSubmit() {
     Navigator.of(context).pop();
-    print('Suggested feature: ${_controller.text}');
+    debugPrint('Suggested feature: ${_controller.text}');
     showDialog(
       context: context,
       builder: (context) => const ThankYouDialog(),

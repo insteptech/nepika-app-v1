@@ -1,5 +1,6 @@
 import 'dart:math';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 
 import 'package:injectable/injectable.dart';
 
@@ -44,10 +45,10 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
     try {
       final processingStartTime = DateTime.now();
       
-      print('🔍 Starting face image analysis...');
-      print('   - Session ID: $sessionId');
-      print('   - User ID: $userId');
-      print('   - Image size: ${imageBytes.length} bytes');
+      debugPrint('🔍 Starting face image analysis...');
+      debugPrint('   - Session ID: $sessionId');
+      debugPrint('   - User ID: $userId');
+      debugPrint('   - Image size: ${imageBytes.length} bytes');
 
       // Update session state to processing
       await _updateSessionSafely(sessionId, CameraSessionState.processing);
@@ -77,23 +78,23 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
           await _localDataSource.saveScanResult(analysisResult);
           await _updateSessionSafely(sessionId, CameraSessionState.processingComplete);
         } catch (e) {
-          print('⚠️ Failed to save scan result locally: $e');
+          debugPrint('⚠️ Failed to save scan result locally: $e');
           // Continue even if local save fails
         }
       } else {
         await _updateSessionSafely(sessionId, CameraSessionState.failed);
       }
 
-      print('✅ Face image analysis completed successfully');
+      debugPrint('✅ Face image analysis completed successfully');
       return success(faceScanResult);
 
     } on FaceAnalysisFailure catch (e) {
       await _updateSessionSafely(sessionId, CameraSessionState.failed);
-      print('❌ Face analysis failed: ${e.message}');
+      debugPrint('❌ Face analysis failed: ${e.message}');
       return failure(e);
     } catch (e) {
       await _updateSessionSafely(sessionId, CameraSessionState.failed);
-      print('❌ Unexpected error during analysis: $e');
+      debugPrint('❌ Unexpected error during analysis: $e');
       return failure(FaceAnalysisFailure(message: 'Analysis failed: ${e.toString()}'));
     }
   }
@@ -104,7 +105,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
     CameraSessionConfig? sessionConfig,
   }) async {
     try {
-      print('📷 Initializing camera session for user: $userId');
+      debugPrint('📷 Initializing camera session for user: $userId');
 
       // Check camera permissions first
       final hasPermission = await _cameraDataSource.checkCameraPermission();
@@ -131,11 +132,11 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
       final sessionModel = CameraScanSessionModel.fromEntity(session);
       await _localDataSource.saveSession(sessionModel);
 
-      print('✅ Camera session initialized: $sessionId');
+      debugPrint('✅ Camera session initialized: $sessionId');
       return success(session);
 
     } catch (e) {
-      print('❌ Failed to initialize camera session: $e');
+      debugPrint('❌ Failed to initialize camera session: $e');
       return failure(SessionFailure(message: 'Failed to initialize session: ${e.toString()}'));
     }
   }
@@ -146,7 +147,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
     required String userId,
   }) async {
     try {
-      print('📸 Capturing face image for session: $sessionId');
+      debugPrint('📸 Capturing face image for session: $sessionId');
 
       // Get current session
       final sessionModel = await _localDataSource.getSession(sessionId);
@@ -182,11 +183,11 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
       // Update session state
       await _updateSessionSafely(sessionId, CameraSessionState.captureComplete);
 
-      print('✅ Face image captured successfully');
+      debugPrint('✅ Face image captured successfully');
       return success(scanImage);
 
     } catch (e) {
-      print('❌ Failed to capture face image: $e');
+      debugPrint('❌ Failed to capture face image: $e');
       return failure(ImageCaptureFailure(message: 'Capture failed: ${e.toString()}'));
     }
   }
@@ -252,7 +253,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
     String? reason,
   }) async {
     try {
-      print('🛑 Terminating session: $sessionId');
+      debugPrint('🛑 Terminating session: $sessionId');
       
       final sessionModel = await _localDataSource.getSession(sessionId);
       if (sessionModel == null) {
@@ -271,7 +272,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
       final finalSessionModel = CameraScanSessionModel.fromEntity(session);
       await _localDataSource.updateSession(finalSessionModel);
 
-      print('✅ Session terminated: $sessionId');
+      debugPrint('✅ Session terminated: $sessionId');
       return success(session);
     } catch (e) {
       return failure(SessionFailure(message: 'Failed to terminate session: ${e.toString()}'));
@@ -461,7 +462,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
         await _localDataSource.updateSession(updatedModel);
       }
     } catch (e) {
-      print('⚠️ Failed to update session state: $e');
+      debugPrint('⚠️ Failed to update session state: $e');
     }
   }
 

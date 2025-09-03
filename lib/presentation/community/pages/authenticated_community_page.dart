@@ -44,7 +44,7 @@ class _AuthenticatedCommunityPageState extends State<AuthenticatedCommunityPage>
           final userMap = json.decode(userData) as Map<String, dynamic>;
           userId = userMap['user_id'] ?? userMap['id'] ?? 'user_001'; // Fallback userId
         } catch (e) {
-          print('Error parsing user data: $e');
+          debugPrint('Error parsing user data: $e');
           userId = 'user_001'; // Default fallback
         }
       } else {

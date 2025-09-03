@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import '../../core/config/env.dart';
 
 class ApiBase {
@@ -20,12 +21,12 @@ class ApiBase {
     Map<String, String>? headers,
     Map<String, dynamic>? query,
   }) async {
-    print('🚀🚀  Requesting: $method ${Env.baseUrl}/$path 🚀🚀');
+    debugPrint('🚀🚀  Requesting: $method ${Env.baseUrl}$path 🚀🚀');
     final mergedHeaders = {
       ..._dio.options.headers,
       if (headers != null) ...headers,
     };
-    print('Headers: $mergedHeaders');
+    debugPrint('Headers: $mergedHeaders');
     try { 
       final response = await _dio.request(
         path,
@@ -36,13 +37,13 @@ class ApiBase {
           headers: mergedHeaders,
         ),
       );
-      print('✅✅ Response [${response.statusCode}]: ${response.data} ✅✅');
+      debugPrint('✅✅ Response [${response.statusCode}]: ${response.data} ✅✅');
       return response;
     } on DioException catch (e) {
-      print('❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌');
+      debugPrint('❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌');
       rethrow;
     } catch (e) {
-      print('❌❌ Unexpected error: $e ❌❌');
+      debugPrint('❌❌ Unexpected error: $e ❌❌');
       rethrow;
     }
   }

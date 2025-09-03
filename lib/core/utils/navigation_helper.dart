@@ -9,8 +9,8 @@
 //     AuthResponse authResponse,
 //   ) {
 //     final user = authResponse.user;
-//     print('User data after OTP verification:');
-//     print(authResponse.user.activeStep);
+//     debugPrint('User data after OTP verification:');
+//     debugPrint(authResponse.user.activeStep);
     
 //     if (user.onboardingCompleted) {
 //       // Navigate to dashboard if onboarding is completed
@@ -22,7 +22,7 @@
 //     } else {
 //       // Navigate to the appropriate onboarding step
 //       final route = OnboardingSteps.getRouteForStep(user.activeStep);
-//       print(route);
+//       debugPrint(route);
 //       Navigator.pushNamedAndRemoveUntil(
 //         context,
 //         route,

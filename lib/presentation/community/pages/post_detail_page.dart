@@ -2,14 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
-import 'package:nepika/core/widgets/back_button.dart';
-import 'package:nepika/presentation/community/pages/user_search_page.dart';
 import 'package:nepika/presentation/community/widgets/like_comment_share_row.dart';
 import 'package:nepika/presentation/community/widgets/page_header.dart';
 import 'package:nepika/presentation/community/widgets/user_icon.dart';
 import 'package:nepika/presentation/community/widgets/user_name.dart';
 import 'package:nepika/presentation/community/widgets/user_post.dart';
-import 'package:nepika/presentation/community/widgets/like_button.dart';
 import '../../../domain/community/entities/community_entities.dart';
 import '../bloc/community_bloc.dart';
 import '../bloc/community_event.dart';
@@ -42,7 +39,6 @@ class _PostDetailPageState extends State<PostDetailPage> {
   void initState() {
     super.initState();
     // Fetch the post details when the page loads
-    debugPrint('PostDetailPage: Fetching post with ID: ${widget.postId}');
     context.read<CommunityBloc>().add(
       FetchSinglePost(token: widget.token, postId: widget.postId),
     );
@@ -113,7 +109,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
           }
 
           if (state is PostDetailLoaded) {
-            print('Post Detail Loaded: ${state.post}');
+            debugPrint('Post Detail Loaded: ${state.post}');
             return _buildPostDetailContent(context, state.post);
           }
 
@@ -161,7 +157,7 @@ class _PostDetailPageState extends State<PostDetailPage> {
                   SliverList(
                     delegate: SliverChildBuilderDelegate((context, index) {
                       final comment = post.comments[index];
-                      print(
+                      debugPrint(
                         'Comment Author Avatar URL: ${comment.author.avatarUrl}',
                       );
                       return Padding(

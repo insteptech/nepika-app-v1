@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/foundation.dart';
 
 import 'camera_event.dart' as event;
 import 'camera_state.dart' as state;
@@ -682,10 +683,10 @@ class CameraBloc extends Bloc<event.CameraEvent, state.CameraState> {
         }
         await _currentController!.dispose().timeout(
           const Duration(seconds: 3),
-          onTimeout: () => print('Camera disposal timed out'),
+          onTimeout: () => debugPrint('Camera disposal timed out'),
         );
       } catch (e) {
-        print('Error disposing camera: $e');
+        debugPrint('Error disposing camera: $e');
       } finally {
         _currentController = null;
       }

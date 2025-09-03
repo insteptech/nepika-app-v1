@@ -60,7 +60,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
 
       await controller.initialize().timeout(const Duration(seconds: 10));
       
-      print('📷 Camera initialized successfully: ${cameraDescription.name}');
+      debugPrint('📷 Camera initialized successfully: ${cameraDescription.name}');
       return controller;
     } catch (e) {
       throw Exception('Failed to initialize camera: $e');
@@ -77,11 +77,11 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
       await controller.dispose().timeout(
         const Duration(seconds: 3),
         onTimeout: () {
-          print('⚠️ Camera disposal timed out');
+          debugPrint('⚠️ Camera disposal timed out');
         },
       );
       
-      print('📷 Camera disposed successfully');
+      debugPrint('📷 Camera disposed successfully');
     } catch (e) {
       throw Exception('Failed to dispose camera: $e');
     }
@@ -98,7 +98,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
       }
 
       await controller.startImageStream(onImageAvailable);
-      print('📹 Camera stream started successfully');
+      debugPrint('📹 Camera stream started successfully');
     } catch (e) {
       throw Exception('Failed to start camera stream: $e');
     }
@@ -109,7 +109,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
     try {
       if (controller.value.isStreamingImages) {
         await controller.stopImageStream();
-        print('📹 Camera stream stopped successfully');
+        debugPrint('📹 Camera stream stopped successfully');
       }
     } catch (e) {
       throw Exception('Failed to stop camera stream: $e');
@@ -145,7 +145,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
       // Create metadata
       final metadata = await _createCaptureMetadata(controller, imageBytes);
 
-      print('📸 Image captured successfully: ${imageBytes.length} bytes');
+      debugPrint('📸 Image captured successfully: ${imageBytes.length} bytes');
 
       return ScanImageModel.fromBytes(
         imageBytes: imageBytes,
@@ -258,7 +258,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
       
       _faceDetector = FaceDetector(options: faceOptions);
       
-      print('👤 Face detector initialized successfully');
+      debugPrint('👤 Face detector initialized successfully');
       return _faceDetector!;
     } catch (e) {
       throw Exception('Failed to initialize face detector: $e');
@@ -284,7 +284,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
       final faces = await detector.processImage(inputImage);
       return faces;
     } catch (e) {
-      print('❌ Face detection error: $e');
+      debugPrint('❌ Face detection error: $e');
       return [];
     }
   }
@@ -398,7 +398,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
     try {
       await detector.close();
       _faceDetector = null;
-      print('👤 Face detector disposed successfully');
+      debugPrint('👤 Face detector disposed successfully');
     } catch (e) {
       throw Exception('Failed to dispose face detector: $e');
     }
@@ -474,7 +474,7 @@ class FaceScanCameraDataSourceImpl implements FaceScanCameraDataSource {
 
       return InputImage.fromBytes(bytes: plane.bytes, metadata: metadata);
     } catch (e) {
-      print('❌ Error converting camera image: $e');
+      debugPrint('❌ Error converting camera image: $e');
       return null;
     }
   }

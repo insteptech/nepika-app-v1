@@ -20,7 +20,7 @@
 //       final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
 //       final userData = sharedPrefs.getString(AppConstants.userDataKey);
 
-//       print('Fetching onboarding questionnaire for screen: $userData/$screenSlug');
+//       debugPrint('Fetching onboarding questionnaire for screen: $userData/$screenSlug');
 
 //       final response = await apiBase.request(
 //         path: '${ApiEndpoints.onboardingQuestionnaire}/$userData/$screenSlug',

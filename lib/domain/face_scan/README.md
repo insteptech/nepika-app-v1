@@ -85,8 +85,8 @@ final params = AnalyzeFaceImageParams(
 final result = await analyzeUseCase.call(params);
 
 result.fold(
-  (failure) => print('Analysis failed: ${failure.message}'),
-  (scanResult) => print('Analysis complete: ${scanResult.skinAnalysis}'),
+  (failure) => debugPrint('Analysis failed: ${failure.message}'),
+  (scanResult) => debugPrint('Analysis complete: ${scanResult.skinAnalysis}'),
 );
 ```
 

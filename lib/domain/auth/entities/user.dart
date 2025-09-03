@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 class User {
   final String id;
   final String? email;
@@ -113,11 +114,11 @@ class AuthResponse {
     // Handle user data safely
     final userData = data['user'];
     User user;
-    print('Parsing user data: $userData');
+    debugPrint('Parsing user data: $userData');
     
     if (userData != null && userData is Map<String, dynamic>) {
       user = User.fromJson(userData);
-      print('User active step: ${user.activeStep}');
+      debugPrint('User active step: ${user.activeStep}');
     } else {
       // Create a default user if user data is missing
       user = User(

@@ -35,7 +35,7 @@ class _FaceScanPageState extends State<FaceScanPage> {
     try {
       // Check current permission status
       var status = await Permission.camera.status;
-      print('Initial camera permission status: $status');
+      debugPrint('Initial camera permission status: $status');
 
       // If already granted, go to scan screen
       if (status.isGranted) {
@@ -44,33 +44,33 @@ class _FaceScanPageState extends State<FaceScanPage> {
       }
 
       // Request permission - this will show the native dialog
-      print('Requesting camera permission...');
+      debugPrint('Requesting camera permission...');
       final requestResult = await Permission.camera.request();
-      print('Permission request result: $requestResult');
+      debugPrint('Permission request result: $requestResult');
 
       // Handle the result with explicit enum values
       if (requestResult == PermissionStatus.granted) {
-        print('Permission granted, navigating to scan screen');
+        debugPrint('Permission granted, navigating to scan screen');
         _navigateToScanScreen();
       } else if (requestResult == PermissionStatus.denied) {
-        print('Permission denied');
+        debugPrint('Permission denied');
         _showPermissionDeniedMessage();
       } else if (requestResult == PermissionStatus.permanentlyDenied) {
-        print('Permission permanently denied');
+        debugPrint('Permission permanently denied');
         _showSettingsDialog();
       } else if (requestResult == PermissionStatus.restricted) {
-        print('Permission restricted');
+        debugPrint('Permission restricted');
         _showPermissionRestrictedMessage();
       } else if (requestResult == PermissionStatus.limited) {
-        print('Permission limited (iOS 14+)');
+        debugPrint('Permission limited (iOS 14+)');
         _navigateToScanScreen(); // Limited access might still work
       } else {
-        print('Unexpected permission status: $requestResult');
+        debugPrint('Unexpected permission status: $requestResult');
         _showErrorMessage('Unexpected permission status.');
       }
 
     } catch (e) {
-      print('Error handling camera permission: $e');
+      debugPrint('Error handling camera permission: $e');
       _showErrorMessage('Error requesting camera permission: ${e.toString()}');
     } finally {
       if (mounted) {
@@ -170,7 +170,7 @@ class _FaceScanPageState extends State<FaceScanPage> {
     );
   }
 void _handleSkipForNow() {
-  print(AppRoutes.dashboardHome);
+  debugPrint(AppRoutes.dashboardHome);
   Navigator.pushNamedAndRemoveUntil(
     context,
     AppRoutes.dashboardHome,

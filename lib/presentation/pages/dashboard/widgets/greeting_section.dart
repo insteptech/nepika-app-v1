@@ -1,6 +1,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 
 class GreetingSection extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -13,7 +14,7 @@ class GreetingSection extends StatelessWidget {
     final String greeting = user['greeting'] ?? '';
 
     final String? avatarUrl = user['avatarUrl'];
-    print(user);
+    logJson(user);
     final ImageProvider avatarImage =
         (avatarUrl != null && avatarUrl.trim().isNotEmpty)
         ? NetworkImage(avatarUrl)

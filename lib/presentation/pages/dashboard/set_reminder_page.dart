@@ -144,7 +144,7 @@ bool get _isFormValid {
     //       SaveReminderEvent(reminderData: reminderData, token: ''),
     //     );
 
-    print('Reminder Data: $reminderData');
+    debugPrint('Reminder Data: $reminderData');
 
     // Show success message
 

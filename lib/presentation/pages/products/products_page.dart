@@ -72,7 +72,7 @@ class _ProductsPageState extends State<ProductsPage> {
                     DebouncedSearchBar(
                       onSearch: (query) {
                         // Call your search logic or API call here
-                        print('Searching for: $query');
+                        debugPrint('Searching for: $query');
                       },
                     ),
 

@@ -4,6 +4,7 @@ import '../../../domain/community/entities/community_entities.dart';
 import '../../../domain/community/repositories/community_repository.dart';
 import 'community_event.dart';
 import 'community_state.dart';
+import 'package:flutter/foundation.dart';
 
 class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
   final CommunityRepository repository;
@@ -138,17 +139,17 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     on<FetchSinglePost>((event, emit) async {
       emit(PostDetailLoading());
       try {
-        print('CommunityBloc: Fetching single post with ID: ${event.postId}');
+        debugPrint('CommunityBloc: Fetching single post with ID: ${event.postId}');
         final post = await repository.fetchSinglePost(
           token: event.token,
           postId: event.postId,
         );
         
-        print('CommunityBloc: Successfully fetched post: ${post.postId}');
+        debugPrint('CommunityBloc: Successfully fetched post: ${post.postId}');
         emit(PostDetailLoaded(post: post));
       } catch (e, stackTrace) {
-        print('CommunityBloc: Error fetching single post: $e');
-        print('CommunityBloc: Stack trace: $stackTrace');
+        debugPrint('CommunityBloc: Error fetching single post: $e');
+        debugPrint('CommunityBloc: Stack trace: $stackTrace');
         emit(PostDetailError(e.toString()));
       }
     });
@@ -261,18 +262,18 @@ class CommunityBloc extends Bloc<CommunityEvent, CommunityState> {
     });
 
     on<FetchUserProfile>((event, emit) async {
-      print('BLoC: Received FetchUserProfile event for userId: ${event.userId}');
+      debugPrint('BLoC: Received FetchUserProfile event for userId: ${event.userId}');
       emit(UserProfileLoading());
       try {
-        print('BLoC: Calling repository.fetchUserProfile...');
+        debugPrint('BLoC: Calling repository.fetchUserProfile...');
         final response = await repository.fetchUserProfile(
           token: event.token,
           userId: event.userId,
         );
-        print('BLoC: Repository call successful, emitting UserProfileLoaded');
+        debugPrint('BLoC: Repository call successful, emitting UserProfileLoaded');
         emit(UserProfileLoaded(profileData: response));
       } catch (e) {
-        print('BLoC: Error in fetchUserProfile: $e');
+        debugPrint('BLoC: Error in fetchUserProfile: $e');
         emit(UserProfileError(e.toString()));
       }
     });

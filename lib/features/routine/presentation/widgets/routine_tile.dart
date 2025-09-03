@@ -13,6 +13,7 @@ class RoutineTile extends StatelessWidget {
   final Routine routine;
   final RoutineTileType type;
   final bool isLoading;
+  final bool isSuccessfullyAdded;
   final VoidCallback? onTap;
   final VoidCallback? onAdd;
   final VoidCallback? onDelete;
@@ -23,6 +24,7 @@ class RoutineTile extends StatelessWidget {
     required this.routine,
     required this.type,
     this.isLoading = false,
+    this.isSuccessfullyAdded = false,
     this.onTap,
     this.onAdd,
     this.onDelete,
@@ -203,6 +205,22 @@ class RoutineTile extends StatelessWidget {
   }
 
   Widget _buildSelectionAction(BuildContext context) {
+    if (isSuccessfullyAdded) {
+      return Container(
+        width: 28,
+        height: 28,
+        decoration: BoxDecoration(
+          color: Colors.green,
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: const Icon(
+          Icons.check,
+          color: Colors.white,
+          size: 16,
+        ),
+      );
+    }
+    
     return GestureDetector(
       onTap: onAdd,
       child: SizedBox(

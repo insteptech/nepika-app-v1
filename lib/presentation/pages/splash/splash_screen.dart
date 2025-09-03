@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'dart:async';
 import '../../../core/config/constants/theme.dart';
@@ -106,7 +107,7 @@ class _SplashScreenState extends State<SplashScreen>
           if (!mounted) return;
 
           // Navigate based on onboarding status
-          if (onboardingCompleted) {
+          if (token.isNotEmpty) {
             // Onboarding completed, go to dashboard
             Navigator.of(context).pushReplacementNamed(AppRoutes.dashboardHome);
           } else {
@@ -147,10 +148,10 @@ class _SplashScreenState extends State<SplashScreen>
         errorMessage = 'No internet connection';
       }
 
-      _showErrorAndNavigateToLogin(errorMessage);
+      _navigateToLogin();
     } catch (e) {
       if (!mounted) return;
-      print(e);
+      logJson(e);
       _showErrorAndNavigateToLogin('An unexpected error occurred');
     }
   }
@@ -195,25 +196,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _showErrorAndNavigateToLogin(String errorMessage) {
     if (!mounted) return;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Authentication Error'),
-          content: Text(errorMessage),
-          actions: [
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close dialog
-                _navigateToLogin(); // Navigate to login
-              },
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
+    // Directly navigate to login without showing alert dialog
+    _navigateToLogin();
   }
 
   @override

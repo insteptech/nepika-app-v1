@@ -1,5 +1,6 @@
 import 'dart:typed_data';
 import 'dart:math';
+import 'package:flutter/foundation.dart';
 
 import 'package:dio/dio.dart';
 import 'package:injectable/injectable.dart';
@@ -46,7 +47,7 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
       LogInterceptor(
         requestBody: false, // Don't log binary image data
         responseBody: false, // Don't log large response bodies
-        logPrint: (object) => print('[Face Scan API] $object'),
+        logPrint: (object) => debugPrint('[Face Scan API] $object'),
       ),
     );
 
@@ -82,10 +83,10 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
         'user_id': userId,
       });
 
-      print('🚀 Sending face image analysis request to $_analysisEndpoint');
-      print('   - Image size: ${imageBytes.length} bytes');
-      print('   - User ID: $userId');
-      print('   - Include annotated: $includeAnnotatedImage');
+      debugPrint('🚀 Sending face image analysis request to $_analysisEndpoint');
+      debugPrint('   - Image size: ${imageBytes.length} bytes');
+      debugPrint('   - User ID: $userId');
+      debugPrint('   - Include annotated: $includeAnnotatedImage');
 
       final response = await _dio.post(
         _analysisEndpoint,
@@ -98,9 +99,9 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
 
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
 
-      print('✅ Face analysis API response received:');
-      print('   - Status: ${response.statusCode}');
-      print('   - Processing time: ${processingTime}ms');
+      debugPrint('✅ Face analysis API response received:');
+      debugPrint('   - Status: ${response.statusCode}');
+      debugPrint('   - Processing time: ${processingTime}ms');
 
       if (response.statusCode == 200 && response.data != null) {
         final responseData = response.data as Map<String, dynamic>;
@@ -135,7 +136,7 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
       final errorMessage = _handleDioError(e);
       
-      print('❌ Face analysis API error: $errorMessage');
+      debugPrint('❌ Face analysis API error: $errorMessage');
       
       return FaceScanResultModel.failed(
         userId: userId,
@@ -147,7 +148,7 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
       final processingTime = DateTime.now().difference(startTime).inMilliseconds;
       final errorMessage = 'Failed to analyze image: ${e.toString()}';
       
-      print('❌ Face analysis unexpected error: $errorMessage');
+      debugPrint('❌ Face analysis unexpected error: $errorMessage');
       
       return FaceScanResultModel.failed(
         userId: userId,

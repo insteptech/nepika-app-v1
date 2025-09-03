@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,7 +40,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       // Update active sessions list
       await _addToActiveSessionsList(session.userId, session.sessionId);
       
-      print('💾 Saved face scan session: ${session.sessionId}');
+      debugPrint('💾 Saved face scan session: ${session.sessionId}');
     } catch (e) {
       throw Exception('Failed to save session: $e');
     }
@@ -58,7 +59,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       final sessionData = json.decode(sessionJson) as Map<String, dynamic>;
       return CameraScanSessionModel.fromJson(sessionData);
     } catch (e) {
-      print('❌ Failed to get session $sessionId: $e');
+      debugPrint('❌ Failed to get session $sessionId: $e');
       return null;
     }
   }
@@ -82,7 +83,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       // Remove from active sessions list
       await _removeFromActiveSessionsList(sessionId);
       
-      print('🗑️ Deleted face scan session: $sessionId');
+      debugPrint('🗑️ Deleted face scan session: $sessionId');
     } catch (e) {
       throw Exception('Failed to delete session: $e');
     }
@@ -105,7 +106,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       
       return sessions;
     } catch (e) {
-      print('❌ Failed to get active sessions for user $userId: $e');
+      debugPrint('❌ Failed to get active sessions for user $userId: $e');
       return [];
     }
   }
@@ -141,7 +142,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       // Clean up active sessions lists
       await _cleanupActiveSessionsLists();
       
-      print('🧹 Cleaned up $cleanedCount expired face scan sessions');
+      debugPrint('🧹 Cleaned up $cleanedCount expired face scan sessions');
       return cleanedCount;
     } catch (e) {
       throw Exception('Failed to cleanup expired sessions: $e');
@@ -161,7 +162,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       // Update user results list
       await _addToUserResultsList(scanResult.userId, scanResult.scanId);
       
-      print('💾 Saved face scan result: ${scanResult.scanId}');
+      debugPrint('💾 Saved face scan result: ${scanResult.scanId}');
     } catch (e) {
       throw Exception('Failed to save scan result: $e');
     }
@@ -185,7 +186,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         processingTimeMs: resultData['processing_time_ms'] as int,
       );
     } catch (e) {
-      print('❌ Failed to get scan result $scanId: $e');
+      debugPrint('❌ Failed to get scan result $scanId: $e');
       return null;
     }
   }
@@ -234,7 +235,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
           ? results.take(limitValue).toList()
           : results;
     } catch (e) {
-      print('❌ Failed to get scan results for user $userId: $e');
+      debugPrint('❌ Failed to get scan results for user $userId: $e');
       return [];
     }
   }
@@ -245,7 +246,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       final results = await getScanResults(userId: userId, limit: 1);
       return results.isNotEmpty ? results.first : null;
     } catch (e) {
-      print('❌ Failed to get latest scan result for user $userId: $e');
+      debugPrint('❌ Failed to get latest scan result for user $userId: $e');
       return null;
     }
   }
@@ -259,7 +260,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         await _prefs.remove(resultKey);
         await _removeFromUserResultsList(userId, scanId);
         
-        print('🗑️ Deleted face scan result: $scanId');
+        debugPrint('🗑️ Deleted face scan result: $scanId');
       } else {
         // Delete all scan results for user
         final userResultsKey = _userResultsPrefix + userId;
@@ -272,12 +273,12 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         
         await _prefs.remove(userResultsKey);
         
-        print('🗑️ Deleted all face scan results for user: $userId');
+        debugPrint('🗑️ Deleted all face scan results for user: $userId');
       }
       
       return true;
     } catch (e) {
-      print('❌ Failed to delete scan results: $e');
+      debugPrint('❌ Failed to delete scan results: $e');
       return false;
     }
   }
@@ -289,7 +290,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       final resultIds = _prefs.getStringList(userResultsKey) ?? [];
       return resultIds.length;
     } catch (e) {
-      print('❌ Failed to get scan results count for user $userId: $e');
+      debugPrint('❌ Failed to get scan results count for user $userId: $e');
       return 0;
     }
   }
@@ -312,10 +313,10 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       final userPrefsKey = _userPrefsPrefix + userId;
       await _prefs.remove(userPrefsKey);
       
-      print('🧹 Cleared all cache for user: $userId');
+      debugPrint('🧹 Cleared all cache for user: $userId');
       return true;
     } catch (e) {
-      print('❌ Failed to clear cache for user $userId: $e');
+      debugPrint('❌ Failed to clear cache for user $userId: $e');
       return false;
     }
   }
@@ -344,7 +345,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       
       return totalSize;
     } catch (e) {
-      print('❌ Failed to calculate cache size: $e');
+      debugPrint('❌ Failed to calculate cache size: $e');
       return 0;
     }
   }
@@ -356,10 +357,10 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       // But we can clean up expired data
       await cleanupExpiredSessions();
       
-      print('✨ Storage optimization completed');
+      debugPrint('✨ Storage optimization completed');
       return true;
     } catch (e) {
-      print('❌ Failed to optimize storage: $e');
+      debugPrint('❌ Failed to optimize storage: $e');
       return false;
     }
   }
@@ -373,7 +374,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       final prefsJson = json.encode(preferences);
       await _prefs.setString(userPrefsKey, prefsJson);
       
-      print('💾 Saved user preferences for: $userId');
+      debugPrint('💾 Saved user preferences for: $userId');
     } catch (e) {
       throw Exception('Failed to save user preferences: $e');
     }
@@ -391,7 +392,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       
       return json.decode(prefsJson) as Map<String, dynamic>;
     } catch (e) {
-      print('❌ Failed to get user preferences for $userId: $e');
+      debugPrint('❌ Failed to get user preferences for $userId: $e');
       return {};
     }
   }
@@ -402,7 +403,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       final configJson = json.encode(config);
       await _prefs.setString(_appConfigKey, configJson);
       
-      print('💾 Saved app configuration');
+      debugPrint('💾 Saved app configuration');
     } catch (e) {
       throw Exception('Failed to save app configuration: $e');
     }
@@ -419,7 +420,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
       
       return json.decode(configJson) as Map<String, dynamic>;
     } catch (e) {
-      print('❌ Failed to get app configuration: $e');
+      debugPrint('❌ Failed to get app configuration: $e');
       return {};
     }
   }
@@ -436,7 +437,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         await _prefs.setStringList(activeSessionsKey, sessionIds);
       }
     } catch (e) {
-      print('❌ Failed to add to active sessions list: $e');
+      debugPrint('❌ Failed to add to active sessions list: $e');
     }
   }
 
@@ -453,7 +454,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         }
       }
     } catch (e) {
-      print('❌ Failed to remove from active sessions list: $e');
+      debugPrint('❌ Failed to remove from active sessions list: $e');
     }
   }
 
@@ -475,7 +476,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         await _prefs.setStringList(key, validSessionIds);
       }
     } catch (e) {
-      print('❌ Failed to cleanup active sessions lists: $e');
+      debugPrint('❌ Failed to cleanup active sessions lists: $e');
     }
   }
 
@@ -489,7 +490,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         await _prefs.setStringList(userResultsKey, resultIds);
       }
     } catch (e) {
-      print('❌ Failed to add to user results list: $e');
+      debugPrint('❌ Failed to add to user results list: $e');
     }
   }
 
@@ -503,7 +504,7 @@ class FaceScanLocalDataSourceImpl implements FaceScanLocalDataSource {
         await _prefs.setStringList(userResultsKey, resultIds);
       }
     } catch (e) {
-      print('❌ Failed to remove from user results list: $e');
+      debugPrint('❌ Failed to remove from user results list: $e');
     }
   }
 }

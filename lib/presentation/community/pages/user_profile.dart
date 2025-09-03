@@ -144,7 +144,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   width: 25,
                   color: Theme.of(context).textTheme.headlineMedium!.color,
                 ),
-                onPressed: () => {print('Globe icon pressed')},
+                onPressed: () => {debugPrint('Globe icon pressed')},
               ),
               IconButton(
                 icon: Image.asset(
@@ -153,7 +153,7 @@ class _UserProfilePageState extends State<UserProfilePage> {
                   width: 25,
                   color: Theme.of(context).textTheme.headlineMedium!.color,
                 ),
-                onPressed: () => {print('Menu icon pressed')},
+                onPressed: () => {debugPrint('Menu icon pressed')},
               ),
             ],
           ),

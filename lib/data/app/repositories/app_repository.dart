@@ -2,6 +2,7 @@
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/config/env.dart';
 import 'package:nepika/core/config/constants/api_endpoints.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 
 abstract class AppRepository {
   final ApiBase apiBase;
@@ -22,7 +23,7 @@ class AppRepositoryImpl extends AppRepository {
       headers: {'Authorization': 'Bearer $token'},
     );
     if (response.statusCode == 200 && response.data['success'] == true) {
-      print(response.data['data']);
+      logJson(response.data['data']);
       return Map<String, dynamic>.from(response.data['data']);
     } else {
       throw Exception(response.data['message'] ?? 'Failed to fetch dashboard data');

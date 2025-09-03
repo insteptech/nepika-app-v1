@@ -33,12 +33,12 @@ class _NotificationsAndSettingsState extends State<NotificationsAndSettings> {
       _SettingsOptionData(
         'Dark Mode',
         onTap: () {
-          print('Dark Mode Toggled');
+          debugPrint('Dark Mode Toggled');
         },
         showToggle: true,
         toggleValue: false,
         onToggle: (value) async {
-          print('Dark Mode Toggled 2: $value');
+          debugPrint('Dark Mode Toggled 2: $value');
           themeNotifier.toggleTheme(value);
           await SharedPrefsHelper().setBool('Dark Mode', value);
           setState(() {}); // important

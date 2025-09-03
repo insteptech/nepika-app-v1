@@ -140,66 +140,91 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const SizedBox(height: 16),
-                  const CustomBackButton(),
-                  const SizedBox(height: 32),
-                  Text(
-                    "Edit routine",
-                    style: Theme.of(context).textTheme.displaySmall,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Remove routine steps from your daily routine',
-                    style: Theme.of(context)
-                        .textTheme
-                        .headlineMedium!
-                        .secondary(context),
-                  ),
-                  const SizedBox(height: 45),
-                  Expanded(
-                    child: RefreshIndicator(
-                      onRefresh: () async {
-                        _refreshRoutines();
-                        // Wait a bit for the refresh to complete
-                        await Future.delayed(const Duration(milliseconds: 500));
-                      },
-                      child: loading
-                          ? const Center(child: CircularProgressIndicator())
-                          : errorMessage != null
-                              ? RoutineErrorWidget(
-                                  message: errorMessage,
-                                  onRetry: () {
-                                    context.read<RoutineBloc>().add(
-                                          LoadTodaysRoutineEvent(token: _token!, type: 'get-user-routines'),
-                                        );
-                                  },
-                                )
-                            : routines.isEmpty
-                                ? NoRoutinesFound(
-                                    onAddRoutines: () async {
-                                      await Navigator.pushNamed(
-                                        context,
-                                        AppRoutes.dashboardAddRoutine,
-                                      );
-                                      // Refresh the routines when coming back from add routine screen
-                                      _refreshRoutines();
-                                    },
-                                  )
-                                : RoutineList(
-                                    routines: routines,
-                                    tileType: RoutineTileType.editable,
-                                    loadingRoutineId: loadingRoutineId,
-                                    onDeleteRoutine: _onDeleteRoutine,
-                                  ),
+            child: Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 16),
+                        const CustomBackButton(),
+                        const SizedBox(height: 10),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  GestureDetector(
+                ),
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: () async {
+                      _refreshRoutines();
+                      // Wait a bit for the refresh to complete
+                      await Future.delayed(const Duration(milliseconds: 500));
+                    },
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 32),
+                          Text(
+                            "Edit routine",
+                            style: Theme.of(context).textTheme.displaySmall,
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Remove routine steps from your daily routine',
+                            style: Theme.of(context)
+                                .textTheme
+                                .headlineMedium!
+                                .secondary(context),
+                          ),
+                          const SizedBox(height: 45),
+                          loading
+                              ? const Center(child: CircularProgressIndicator())
+                              : errorMessage != null
+                                  ? RoutineErrorWidget(
+                                      message: errorMessage,
+                                      onRetry: () {
+                                        context.read<RoutineBloc>().add(
+                                              LoadTodaysRoutineEvent(token: _token!, type: 'get-user-routines'),
+                                            );
+                                      },
+                                    )
+                                : routines.isEmpty
+                                    ? NoRoutinesFound(
+                                        onAddRoutines: () async {
+                                          await Navigator.pushNamed(
+                                            context,
+                                            AppRoutes.dashboardAddRoutine,
+                                          );
+                                          // Refresh the routines when coming back from add routine screen
+                                          _refreshRoutines();
+                                        },
+                                      )
+                                    : Column(
+                                        children: routines.map((routine) {
+                                          final isLoading = loadingRoutineId == routine.id;
+                                          
+                                          return RoutineTile(
+                                            routine: routine,
+                                            type: RoutineTileType.editable,
+                                            isLoading: isLoading,
+                                            onDelete: () => _onDeleteRoutine(routine.id),
+                                          );
+                                        }).toList(),
+                                      ),
+                          const SizedBox(height: 100),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical:14),
+                  child: GestureDetector(
                     onTap: () async {
                       await Navigator.pushNamed(
                         context,
@@ -228,9 +253,9 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
                       ],
                     ),
                   ),
-                  const SizedBox(height: 24),
-                ],
-              ),
+                ),
+                // const SizedBox(height: 24),
+              ],
             ),
           ),
         );

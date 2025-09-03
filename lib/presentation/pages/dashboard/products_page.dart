@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/core/widgets/debounce_search_bar.dart';
+import 'package:flutter/foundation.dart';
+
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
@@ -51,7 +54,7 @@ class _ProductsPageState extends State<ProductsPage> {
                     DebouncedSearchBar(
                       onSearch: (query) {
                         // Call your search logic or API call here
-                        print('Searching for: $query');
+                        debugPrint('Searching for: $query');
                       },
                     ),
 
@@ -92,7 +95,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                       maxRating: '100',
                                       showCheckmark: true,
                                       onTap: () {
-                                        print(product);
+                                        logJson(product);
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (_) => ProductInfoPage(
@@ -103,7 +106,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                       },
                                       onCheckmarkTap: () {
                                         // Handle checkmark tap
-                                        print('Checkmark tapped for: ${product['product_name'] ?? product['productName']}');
+                                        debugPrint('Checkmark tapped for: ${product['product_name'] ?? product['productName']}');
                                         // You can add product to favorites, cart, or any other action
                                         _handleCheckmarkTap(product);
                                       },
