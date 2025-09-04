@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
+import 'package:provider/provider.dart';
 import 'dart:async';
 import '../../../core/config/constants/theme.dart';
 import '../../../core/config/constants/routes.dart';
@@ -22,6 +24,7 @@ class _SplashScreenState extends State<SplashScreen>
   late AnimationController _animationController;
   late Animation<double> _scaleAnimation;
   late Animation<double> _opacityAnimation;
+
 
   @override
   void initState() {
@@ -200,6 +203,17 @@ class _SplashScreenState extends State<SplashScreen>
     _navigateToLogin();
   }
 
+  bool _isDarkMode(BuildContext context, ThemeNotifier themeNotifier) {
+    switch (themeNotifier.themeMode) {
+      case ThemeMode.dark:
+        return true;
+      case ThemeMode.light:
+        return false;
+      case ThemeMode.system:
+        return MediaQuery.of(context).platformBrightness == Brightness.dark;
+    }
+  }
+
   @override
   void dispose() {
     _animationController.dispose();
@@ -208,6 +222,8 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
+
     return Scaffold(
       body: Container(
         decoration: BoxDecoration(
@@ -230,21 +246,13 @@ class _SplashScreenState extends State<SplashScreen>
                   scale: _scaleAnimation.value,
                   child: Container(
                     width: 150,
-                    height: 150,
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
+                    height: 150, 
                     child: Center(
                       child: ClipOval(
-                        child: Container(
-                          width: 120,
-                          height: 120,
-                          padding: const EdgeInsets.all(20),
-                          child: Image.asset(
-                            AppAssets.nepikaLogo,
-                            fit: BoxFit.contain,
-                          ),
+                        child: Image.asset(
+                          AppAssets.appLogoStroke,
+                          fit: BoxFit.contain,
+                          color: _isDarkMode(context, themeNotifier) ? Theme.of(context).colorScheme.primary : Colors.white,
                         ),
                       ),
                     ),

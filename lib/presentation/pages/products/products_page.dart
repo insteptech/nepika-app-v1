@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/core/widgets/debounce_search_bar.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/data/products/datasources/products_remote_datasource_impl.dart';
@@ -10,6 +11,8 @@ import 'package:nepika/domain/products/usecases/get_product_info.dart';
 import 'package:nepika/presentation/bloc/products/products_bloc.dart';
 import 'package:nepika/presentation/bloc/products/products_event.dart';
 import 'package:nepika/presentation/bloc/products/products_state.dart';
+import 'package:nepika/data/auth/datasources/auth_local_data_source_impl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'product_info_page.dart';
 import 'widgets/product_card.dart';
 
@@ -21,10 +24,38 @@ class ProductsPage extends StatefulWidget {
 }
 
 class _ProductsPageState extends State<ProductsPage> {
-  final String token = ''; // You can set this from your auth logic
+  String? token;
+  Set<String> selectedProductIds = <String>{};
+
+  @override
+  void initState() {
+    super.initState();
+    _loadToken();
+  }
+
+  Future<void> _loadToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final authDataSource = AuthLocalDataSourceImpl(prefs);
+    final loadedToken = await authDataSource.getToken();
+    
+    // final directToken = prefs.getString('access_token');
+    if (mounted) {
+      setState(() {
+        token = loadedToken!;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (token == null) {
+      return const Scaffold(
+        body: Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return BlocProvider(
       create: (context) {
         final apiBase = ApiBase();
@@ -36,7 +67,7 @@ class _ProductsPageState extends State<ProductsPage> {
         return ProductsBloc(
           getMyProductsUseCase: getMyProductsUseCase,
           getProductInfoUseCase: getProductInfoUseCase,
-        )..add(GetMyProductsRequested(token: token));
+        )..add(GetMyProductsRequested(token: token!));
       },
       child: BlocBuilder<ProductsBloc, ProductsState>(
         builder: (context, state) {
@@ -69,18 +100,18 @@ class _ProductsPageState extends State<ProductsPage> {
                   children: [
                     const SizedBox(height: 16),
 
-                    DebouncedSearchBar(
-                      onSearch: (query) {
-                        // Call your search logic or API call here
-                        debugPrint('Searching for: $query');
-                      },
-                    ),
+                    // DebouncedSearchBar(
+                    //   onSearch: (query) {
+                    //     // Call your search logic or API call here
+                    //     debugPrint('Searching for: $query');
+                    //   },
+                    // ),
 
-                    const SizedBox(height: 45),
+                    // const SizedBox(height: 45),
 
                     // Title (must not be const because it uses dynamic value)
                     Text(
-                      "My Products (${myProducts.length})",
+                      "Recommend  Products",
                       style: textTheme.bodyLarge
                     ),
 
@@ -105,6 +136,7 @@ class _ProductsPageState extends State<ProductsPage> {
                                   itemCount: myProducts.length,
                                   itemBuilder: (context, index) {
                                     final product = myProducts[index];
+                                    final productId = product['id'] ?? 'Unknown';
                                     return ProductCard(
                                       imageUrl: product['imageUrl'],
                                       brandName: product['brand_name'] ?? 'Unknown Brand',
@@ -112,17 +144,18 @@ class _ProductsPageState extends State<ProductsPage> {
                                       rating: (product['score'] ?? '0').toString(),
                                       maxRating: '100',
                                       showCheckmark: true,
+                                      isSelected: selectedProductIds.contains(productId),
                                       onTap: () {
                                         Navigator.of(context).push(
                                           MaterialPageRoute(
                                             builder: (_) => ProductInfoPage(
-                                              productId: product['id'] ?? 'Unknown',
+                                              productId: productId,
                                             ),
                                           ),
                                         );
                                       },
                                       onCheckmarkTap: () {
-                                        _handleCheckmarkTap(product);
+                                        _handleCheckmarkTap(productId);
                                       },
                                       margin: const EdgeInsets.only(bottom: 12),
                                     );
@@ -139,13 +172,23 @@ class _ProductsPageState extends State<ProductsPage> {
     );
   }
 
-  void _handleCheckmarkTap(Map<String, dynamic> product) {
-    // Handle checkmark tap logic here
-    // For example: add to favorites, mark as selected, etc.
+  void _handleCheckmarkTap(String productId) {
+    setState(() {
+      if (selectedProductIds.contains(productId)) {
+        selectedProductIds.remove(productId);
+      } else {
+        selectedProductIds.add(productId);
+      }
+    });
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('${product['name']} marked!'),
-        duration: const Duration(seconds: 2),
+        content: Text(
+          selectedProductIds.contains(productId) 
+              ? 'Product selected!' 
+              : 'Product unselected!'
+        ),
+        duration: const Duration(seconds: 1),
       ),
     );
   }

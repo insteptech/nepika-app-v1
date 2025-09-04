@@ -1,16 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
-import 'package:nepika/data/products/datasources/products_remote_datasource_impl.dart';
-import 'package:nepika/data/products/repositories/products_repository_impl.dart';
-import 'package:nepika/domain/products/usecases/get_my_products.dart';
-import 'package:nepika/domain/products/usecases/get_product_info.dart';
-import 'package:nepika/presentation/bloc/products/products_bloc.dart';
-import 'package:nepika/presentation/bloc/products/products_event.dart';
-import 'package:nepika/presentation/bloc/products/products_state.dart';
+import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
+import 'package:nepika/presentation/bloc/dashboard/dashboard_bloc.dart';
+import 'package:nepika/presentation/bloc/dashboard/dashboard_event.dart';
+import 'package:nepika/presentation/bloc/dashboard/dashboard_state.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ProductInfoPage extends StatefulWidget {
   final String productId;
@@ -33,9 +33,9 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
   Color _getRiskColor(String riskLevel) {
     switch (riskLevel.toLowerCase()) {
       case 'high':
-        return const Color(0xFFEF4444);
+        return Color(0xFFEF4444);
       case 'moderate':
-        return const Color(0xFFFFD748);
+        return Color(0xFFFFD748);
       case 'low':
       default:
         return Theme.of(context).colorScheme.secondary;
@@ -49,46 +49,128 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
     return 'Poor';
   }
 
+  Future<void> _launchAmazonUrl() async {
+    const url = 'https://www.amazon.com';
+    final uri = Uri.parse(url);
+    
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(
+          uri,
+          mode: LaunchMode.externalApplication,
+        );
+      } else {
+        // Show error message if can't launch URL
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Could not open Amazon. Please try again.'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      // Handle any errors
+      logJson(e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Error opening Amazon. Please try again.'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  void _showInfoModal(BuildContext context, String info) {
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Ingredient Information',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.headlineMedium,
+                    ),
+                    GestureDetector(
+                      onTap: () => Navigator.of(context).pop(),
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        child: Icon(
+                          Icons.close,
+                          color: Theme.of(context).iconTheme.color,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Flexible(
+                  child: Text(
+                    info.isNotEmpty
+                        ? info
+                        : 'No additional information available.',
+                    textAlign: TextAlign.left,
+                    softWrap: true,
+                    overflow: TextOverflow.visible,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyLarge!.secondary(context),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (productId.isEmpty) {
       return Scaffold(
         backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: const Center(
-          child: Text("Product ID missing"),
+        body: Center(
+          child: Text(
+            "Product ID missing",
+            style: Theme.of(context).textTheme.bodyMedium!.secondary(context),
+          ),
         ),
       );
     }
 
     return BlocProvider(
-      create: (context) {
-        final apiBase = ApiBase();
-        final dataSource = ProductsRemoteDataSourceImpl(apiBase);
-        final repository = ProductsRepositoryImpl(dataSource);
-        final getProductInfoUseCase = GetProductInfo(repository);
-        
-        return ProductsBloc(
-          getMyProductsUseCase: GetMyProducts(repository),
-          getProductInfoUseCase: getProductInfoUseCase,
-        )..add(GetProductInfoRequested(token: token, productId: productId));
-      },
-      child: BlocBuilder<ProductsBloc, ProductsState>(
+      create: (context) =>
+          DashboardBloc(DashboardRepositoryImpl(ApiBase()))
+            ..add(FetchProductInfo(token, productId)),
+      child: BlocBuilder<DashboardBloc, DashboardState>(
         builder: (context, state) {
           bool isLoading = state is ProductInfoLoading;
-          Map<String, dynamic> productInfo = {};
 
+          Map<String, dynamic> productInfo = {};
           if (state is ProductInfoLoaded) {
-            final product = state.productInfo;
-            productInfo = {
-              'id': product.id,
-              'name': product.name,
-              'brand_name': product.brandName,
-              'imageUrl': product.imageUrl,
-              'score': product.score,
-              'ingredients': product.ingredients,
-              ...product.details,
-            };
+            productInfo = state.productInfo.info;
           }
+          debugPrint('Product Info: ${productInfo['imageUrl']}');
 
           return Scaffold(
             backgroundColor: Theme.of(context).scaffoldBackgroundColor,
@@ -97,11 +179,12 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                 children: [
                   // Header
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                    padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 20),
                     child: Row(children: [
                       const CustomBackButton(),
                     ]),
                   ),
+                  // const CustomBackButton(),
                   if (isLoading)
                     Expanded(
                       child: Center(
@@ -112,183 +195,412 @@ class _ProductInfoPageState extends State<ProductInfoPage> {
                     )
                   else
                     Expanded(
-                      child: SingleChildScrollView(
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            const SizedBox(height: 32),
-                            // Product Image
-                            Container(
-                              width: 120,
-                              height: 120,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(16),
-                                color: Theme.of(context).colorScheme.surface,
-                              ),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(16),
-                                child: productInfo['imageUrl'] != null
-                                    ? Image.network(
-                                        productInfo['imageUrl'],
-                                        fit: BoxFit.cover,
-                                        errorBuilder: (context, error, stackTrace) {
-                                          return Icon(
-                                            Icons.image_not_supported,
-                                            size: 60,
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .onSurface
-                                                .withValues(alpha: 0.5),
-                                          );
-                                        },
-                                      )
-                                    : Icon(
-                                        Icons.image,
-                                        size: 60,
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .onSurface
-                                            .withValues(alpha: 0.5),
-                                      ),
-                              ),
-                            ),
-                            const SizedBox(height: 24),
-                            // Brand Name
-                            Text(
-                              productInfo['brand_name'] ?? 'Unknown Brand',
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .bodyMedium!
-                                  .secondary(context),
-                            ),
-                            const SizedBox(height: 8),
-                            // Product Name
-                            Text(
-                              productInfo['name'] ?? 'Unknown Product',
-                              style: Theme.of(context).textTheme.headlineMedium,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            // Score
-                            Container(
+                      child: Column(
+                        children: [
+                          Expanded(
+                            child: SingleChildScrollView(
                               padding: const EdgeInsets.symmetric(
-                                horizontal: 16,
-                                vertical: 8,
+                                horizontal: 20,
                               ),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context)
-                                    .colorScheme
-                                    .primary
-                                    .withValues(alpha: 0.1),
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Text(
-                                'Score: ${productInfo['score'] ?? 0}/100',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodyLarge!
-                                    .copyWith(
-                                      color: Theme.of(context).colorScheme.primary,
-                                      fontWeight: FontWeight.w600,
-                                    ),
-                              ),
-                            ),
-                            const SizedBox(height: 32),
-                            // Ingredients Section
-                            if (productInfo['ingredients'] != null &&
-                                (productInfo['ingredients'] as List).isNotEmpty)
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.center,
                                 children: [
-                                  Text(
-                                    'Ingredients',
-                                    style: Theme.of(context).textTheme.headlineMedium,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  ...((productInfo['ingredients'] as List)
-                                      .map((ingredient) => Container(
-                                            margin: const EdgeInsets.only(bottom: 12),
-                                            padding: const EdgeInsets.all(16),
-                                            decoration: BoxDecoration(
-                                              borderRadius: BorderRadius.circular(12),
-                                              border: Border.all(
-                                                color: Theme.of(context)
-                                                    .colorScheme
-                                                    .primary
-                                                    .withValues(alpha: 0.2),
-                                              ),
+                                  const SizedBox(height: 32),
+
+                                  // Product Image
+                                  Container(
+                                    height: 200,
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.surface,
+                                      borderRadius: BorderRadius.circular(12), 
+                                    ),
+                                    child: productInfo['imageUrl'] != null
+                                        ? ClipRRect(
+                                            borderRadius: BorderRadius.circular(
+                                              12,
                                             ),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.spaceBetween,
-                                                  children: [
-                                                    Expanded(
-                                                      child: Text(
-                                                        ingredient['name'] ?? '',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .bodyLarge,
-                                                      ),
-                                                    ),
-                                                    Container(
-                                                      padding: const EdgeInsets
-                                                          .symmetric(
-                                                        horizontal: 8,
-                                                        vertical: 4,
-                                                      ),
-                                                      decoration: BoxDecoration(
-                                                        color: _getRiskColor(
-                                                                ingredient[
-                                                                        'riskLevel'] ??
-                                                                    'low')
-                                                            .withValues(alpha: 0.1),
-                                                        borderRadius:
-                                                            BorderRadius.circular(6),
-                                                      ),
-                                                      child: Text(
-                                                        ingredient['riskLevel'] ??
-                                                            'Low',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .bodySmall!
-                                                            .copyWith(
-                                                              color: _getRiskColor(
-                                                                  ingredient[
-                                                                          'riskLevel'] ??
-                                                                      'low'),
-                                                              fontWeight:
-                                                                  FontWeight.w600,
-                                                            ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                                if (ingredient['info'] != null &&
-                                                    ingredient['info'].isNotEmpty)
-                                                  Padding(
-                                                    padding: const EdgeInsets.only(
-                                                        top: 8),
+                                            child: Image.network(
+                                              productInfo['imageUrl'],
+                                              fit: BoxFit.cover,
+                                              errorBuilder:
+                                                  (context, error, stackTrace) {
+                                                    return Icon(
+                                                      Icons.image,
+                                                      size: 40,
+                                                      color: Theme.of(
+                                                        context,
+                                                      ).colorScheme.onTertiary,
+                                                    );
+                                                  },
+                                            ),
+                                          )
+                                        : Icon(
+                                            Icons.image,
+                                            size: 40,
+                                            color: Theme.of(
+                                              context,
+                                            ).colorScheme.onTertiary,
+                                          ),
+                                  ),
+
+                                  const SizedBox(height: 24),
+
+                                  // Brand Name
+                                  Text(
+                                    productInfo['brand_name'] ?? '',
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodyMedium!.secondary(context),
+                                  ),
+
+                                  const SizedBox(height: 10),
+
+                                  // Product Name
+                                  Text(
+                                    productInfo['name'] ?? 'Loading...',
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.headlineMedium,
+                                  ),
+
+                                  const SizedBox(height: 25),
+
+                                  // Score Badge
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 24,
+                                      vertical: 10,
+                                    ),
+                                    decoration: BoxDecoration(
+                                      color: Theme.of(
+                                        context,
+                                      ).colorScheme.secondary,
+                                      borderRadius: BorderRadius.circular(25),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(
+                                          '${productInfo['score'] ?? 0}/100',
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.copyWith(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Container(
+                                          width: 4,
+                                          height: 4,
+                                          decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle,
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Text(
+                                          _getScoreText(
+                                            productInfo['score'] ?? 0,
+                                          ),
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodyLarge?.copyWith(
+                                            color: Colors.white,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 25),
+
+                                  // Ingredients Section
+                                  Align(
+                                    alignment: Alignment.centerLeft,
+                                    child: Text(
+                                      'Ingredients',
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.headlineMedium,
+                                    ),
+                                  ),
+
+                                  const SizedBox(height: 24),
+
+                                  // Ingredients Content
+                                  if (productInfo['ingredients'] != null)
+                                    ...(() {
+                                      List<dynamic> ingredients =
+                                          productInfo['ingredients'];
+                                      List<dynamic> negativeIngredients =
+                                          ingredients
+                                              .where(
+                                                (ingredient) =>
+                                                    ingredient['riskLevel']
+                                                        ?.toLowerCase() ==
+                                                    'high',
+                                              )
+                                              .toList();
+
+                                      List<Widget> widgets = [];
+
+                                      if (negativeIngredients.isNotEmpty) {
+                                        widgets.add(
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              'Negatives',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.headlineMedium,
+                                            ),
+                                          ),
+                                        );
+                                        widgets.add(const SizedBox(height: 10));
+
+                                        for (var ingredient
+                                            in negativeIngredients) {
+                                          widgets.add(
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 2,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
                                                     child: Text(
-                                                      ingredient['info'],
+                                                      ingredient['name'] ?? '',
                                                       style: Theme.of(context)
                                                           .textTheme
-                                                          .bodyMedium!
-                                                          .secondary(context),
+                                                          .headlineMedium,
                                                     ),
                                                   ),
-                                              ],
+                                                  GestureDetector(
+                                                    onTap: () => _showInfoModal(
+                                                      context,
+                                                      ingredient['info'] ??
+                                                          productInfo['info'] ??
+                                                          '',
+                                                    ),
+                                                    child: SizedBox(
+                                                      width: 19,
+                                                      height: 19,
+                                                      child: Image.asset(
+                                                        'assets/icons/info_icon.png',
+                                                        width: 12,
+                                                        height: 12,
+                                                        color: Theme.of(
+                                                          context,
+                                                        ).textTheme.bodyLarge!.secondary(context).color,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
-                                          ))),
+                                          );
+                                          widgets.add(
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 16,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Text(
+                                                    'High Risk',
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodyMedium
+                                                        ?.copyWith(
+                                                          color: _getRiskColor(
+                                                            'high',
+                                                          ),
+                                                        ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                          widgets.add(
+                                            negativeIngredients.length > 1
+                                                ? Container(
+                                                    height: 1,
+                                                    color: Theme.of(context)
+                                                        .colorScheme
+                                                        .onSurface
+                                                        .withValues(alpha: 0.2),
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                          bottom: 16,
+                                                        ),
+                                                  )
+                                                : const SizedBox(),
+                                          );
+                                        }
+                                        widgets.add(const SizedBox(height: 30));
+                                      }
+
+                                      // Positive Section
+                                      List<dynamic> positiveIngredients =
+                                          ingredients
+                                              .where(
+                                                (ingredient) =>
+                                                    ingredient['riskLevel']
+                                                        ?.toLowerCase() !=
+                                                    'high',
+                                              )
+                                              .toList();
+
+                                      if (positiveIngredients.isNotEmpty) {
+                                        widgets.add(
+                                          Align(
+                                            alignment: Alignment.centerLeft,
+                                            child: Text(
+                                              'Positive',
+                                              style: Theme.of(
+                                                context,
+                                              ).textTheme.bodyLarge,
+                                            ),
+                                          ),
+                                        );
+                                        widgets.add(const SizedBox(height: 10));
+
+                                        for (
+                                          int i = 0;
+                                          i < positiveIngredients.length &&
+                                              i < 2;
+                                          i++
+                                        ) {
+                                          var ingredient =
+                                              positiveIngredients[i];
+                                          widgets.add(
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 2,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Expanded(
+                                                    child: Text(
+                                                      ingredient['name'] ?? '',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .headlineMedium,
+                                                    ),
+                                                  ),
+                                                  GestureDetector(
+                                                    onTap: () => _showInfoModal(
+                                                      context,
+                                                      ingredient['info'] ??
+                                                          productInfo['info'] ??
+                                                          '',
+                                                    ),
+                                                    child: SizedBox(
+                                                      width: 19,
+                                                      height: 19,
+                                                      child: Image.asset(
+                                                        'assets/icons/info_icon.png',
+                                                        width: 12,
+                                                        height: 12,
+                                                        color: Theme.of(
+                                                          context,
+                                                        ).textTheme.bodyLarge!.secondary(context).color,
+                                                      ),
+
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                          widgets.add(
+                                            Container(
+                                              margin: const EdgeInsets.only(
+                                                bottom: 16,
+                                              ),
+                                              child: Row(
+                                                children: [
+                                                  Text(
+                                                    '${ingredient['riskLevel'] ?? 'Low'} Risk',
+                                                    style: TextStyle(
+                                                      color: _getRiskColor(
+                                                        ingredient['riskLevel'] ??
+                                                            'Low',
+                                                      ),
+                                                      fontSize: 12,
+                                                      fontWeight:
+                                                          FontWeight.w400,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                          if (i <
+                                                  positiveIngredients.length -
+                                                      1 &&
+                                              i < 1) {
+                                            widgets.add(
+                                              Container(
+                                                height: 1,
+                                                color: Theme.of(context)
+                                                    .colorScheme
+                                                    .onSurface.withValues(alpha: 0.2),
+                                                margin: const EdgeInsets.only(
+                                                  bottom: 16,
+                                                ),
+                                              ),
+                                            );
+                                          }
+                                        }
+
+                                        // Add spacer to push button to bottom when there are few ingredients
+                                        widgets.add(const SizedBox(height: 20));
+                                      }
+
+                                      return widgets;
+                                    })(),
+
+                                    const SizedBox(height: 40),
+                          if (productInfo['ingredients'] != null)
+                            ...(() {
+                              List<dynamic> ingredients =
+                                  productInfo['ingredients'];
+                              List<dynamic> positiveIngredients = ingredients
+                                  .where(
+                                    (ingredient) =>
+                                        ingredient['riskLevel']
+                                            ?.toLowerCase() !=
+                                        'high',
+                                  )
+                                  .toList();
+
+                              if (positiveIngredients.length > 2) {
+                                return [
+                                  Container(
+                                    padding: const EdgeInsets.all(0),
+                                    child: CustomButton(
+                                      // text:
+                                      //     'View ${positiveIngredients.length - 2} positive ingredients',
+                                      text: "Buy from Amazon",
+                                      onPressed: _launchAmazonUrl,
+                                      isLoading: false,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 30),
+
+                                ];
+                              }
+                              return [const SizedBox()];
+                            })(),
                                 ],
                               ),
-                            const SizedBox(height: 32),
-                          ],
-                        ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                 ],

@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import '../../core/config/env.dart';
 
 class ApiBase {
@@ -37,13 +38,15 @@ class ApiBase {
           headers: mergedHeaders,
         ),
       );
-      debugPrint('✅✅ Response [${response.statusCode}]: ${response.data} ✅✅');
+      debugPrint('\n\n\n✅✅ Response [${response.statusCode}] ✅✅\n');
+      logJson(response.data);
+      debugPrint('\n\n\n');
       return response;
     } on DioException catch (e) {
-      debugPrint('❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌');
+      debugPrint('\n\n\n❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌\n\n\n');
       rethrow;
     } catch (e) {
-      debugPrint('❌❌ Unexpected error: $e ❌❌');
+      debugPrint('\n❌❌ Unexpected error: $e ❌❌\n');
       rethrow;
     }
   }

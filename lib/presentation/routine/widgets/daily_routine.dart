@@ -42,7 +42,7 @@ class DailyRoutineSection extends StatelessWidget {
     final theme = Theme.of(context);
     
     // Calculate display values
-    final bool hasProgress = progress > 0;
+    final bool hasProgress = progress != 0;
     final String displayText = _getDisplayText(progress, unit, completed, hasProgress);
     final double progressValue = _calculateProgressValue(progress, completed);
 
@@ -53,29 +53,31 @@ class DailyRoutineSection extends StatelessWidget {
       ),
       padding: const EdgeInsets.all(20),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          const SizedBox(width: 12),
+          // const SizedBox(width: 12),
           Image.asset(
             'assets/icons/calender_icon.png',
             width: 37,
             height: 37,
             color: Theme.of(context).colorScheme.primary,
           ),
-          const SizedBox(width: 30),
+          // const SizedBox(width: 20),
           Flexible(
             child: Text(
               displayText,
               style: Theme.of(context).textTheme.bodyLarge,
-              overflow: TextOverflow.ellipsis,
+              // overflow: TextOverflow.,
             ),
           ),
-          const SizedBox(width: 30),
+          // Spacer(),
+          // const SizedBox(width: 30),
           // Only show progress bar if there's actual progress or completion
-          if (hasProgress || completed)
+          if (completed || hasProgress)
             Expanded(
               child: LinearProgressIndicator(
                 value: progressValue,
-                backgroundColor: Colors.grey[200],
+                backgroundColor: Colors.grey[300],
                 valueColor: AlwaysStoppedAnimation<Color>(
                   _getProgressColor(completed, hasProgress, theme),
                 ),
@@ -83,9 +85,9 @@ class DailyRoutineSection extends StatelessWidget {
                 borderRadius: BorderRadius.circular(6),
               ),
             )
-          else
-            // Show empty space when no progress to maintain layout
-            const Expanded(child: SizedBox()),
+          // else
+          //   // Show empty space when no progress to maintain layout
+          //   const Expanded(child: SizedBox()),
         ],
       ),
     );
@@ -110,12 +112,13 @@ class DailyRoutineSection extends StatelessWidget {
   /// Gets appropriate display text based on progress state
   String _getDisplayText(double progress, String unit, bool completed, bool hasProgress) {
     if (completed && hasProgress) {
-      return 'Daily Routine Complete';
+      return 'Completed';
     } else if (hasProgress) {
       // Format progress to remove unnecessary decimal places
-      final String formattedProgress = progress % 1 == 0 
+      String formattedProgress = progress % 1 == 0 
         ? progress.toInt().toString() 
         : progress.toStringAsFixed(1);
+      formattedProgress = formattedProgress.split('.')[0];
       return '$formattedProgress$unit Complete';
     } else {
       return 'Daily Routine';

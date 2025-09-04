@@ -68,6 +68,8 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
               inputPlaceholder: q.inputPlaceholder ?? '',
               isRequired: q.isRequired,
               displayOrder: q.displayOrder,
+              visibilityConditions: q.visibilityConditions,
+              validationRules: q.validationRules,
               options: q.options
                   .map(
                     (o) => OnboardingOptionEntity(

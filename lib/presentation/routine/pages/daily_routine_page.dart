@@ -281,7 +281,11 @@ class _TodaysRoutineViewState extends State<_TodaysRoutineView>
                                     ],
                                   )
                                 : routineSteps.isEmpty
-                                    ? Column(
+                                    ? SizedBox(
+                                      width: double.infinity,
+                                      child: Column(
+                                      // mainAxisAlignment: MainAxisAlignment.center,
+                                      crossAxisAlignment: CrossAxisAlignment.center,
                                         children: [
                                           const SizedBox(height: 50),
                                           Icon(
@@ -319,31 +323,34 @@ class _TodaysRoutineViewState extends State<_TodaysRoutineView>
                                               _refreshRoutines();
                                             },
                                             child: Text(
-                                              'Add routines →',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .bodyLarge!
-                                                  .copyWith(
-                                                    color: Theme.of(
-                                                      context,
-                                                    ).colorScheme.primary,
-                                                    // decoration:
-                                                    //     TextDecoration.underline,
-                                                  ),
-                                            ),
+                                            'Add routines →',
+                                            maxLines: 1,
+                                            textAlign: TextAlign.end,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodyLarge
+                                                ?.hint(context)
+                                                .copyWith(
+                                                  decoration:
+                                                      TextDecoration.combine([
+                                                        TextDecoration
+                                                            .underline,
+                                                      ]),
+                                                  decorationColor: Theme.of(
+                                                    context,
+                                                  ).colorScheme.primary,
+                                                ),
                                           ),
-                                        ],
-                                      )
-                                    : Column(
-                                        children: routineSteps.map((step) {
-                                          final isCompleted = step['isCompleted'] == true;
+                                        ),
+                                      ],
+                                    ),
+                                  )
+                                : Column(
+                                    children: routineSteps.map((step) {
+                                      final isCompleted = step['isCompleted'] == true;
                                           final timing = step['timing'] == 'morning'
                                               ? 'Morning Routine'
                                               : 'Night Routine';
-                                          final colorScheme = Theme.of(context).colorScheme;
-                                          final color = step['timing'] == 'morning'
-                                              ? colorScheme.onSecondary
-                                              : colorScheme.primary;
                                           
                                           return Container(
                                             height: 85,

@@ -1,4 +1,5 @@
 
+import 'package:nepika/presentation/pages/products/product_info_page.dart';
 import 'package:nepika/presentation/settings/pages/components/community_and_engagement_page.dart';
 
 import 'package:nepika/presentation/settings/pages/components/help_and_support_page.dart';
@@ -13,8 +14,9 @@ import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
 import 'package:nepika/presentation/routine/pages/add_routine.dart';
 import 'package:nepika/presentation/pages/dashboard/dashboard_page.dart';
 import 'package:nepika/presentation/routine/pages/edit_routine.dart';
-import 'package:nepika/presentation/pages/dashboard/product_info.dart';
-import 'package:nepika/presentation/pages/dashboard/products_page.dart';
+// import 'package:nepika/presentation/pages/dashboard/product_info.dart';
+// import 'package:nepika/presentation/pages/dashboard/products_page.dart';
+import 'package:nepika/presentation/pages/products/products_page.dart';
 import 'package:nepika/presentation/routine/pages/daily_routine_page.dart';
 import 'package:nepika/presentation/settings/pages/settings_page.dart';
 // import 'package:nepika/presentation/pages/first_scan/camera_scan_screen.dart';

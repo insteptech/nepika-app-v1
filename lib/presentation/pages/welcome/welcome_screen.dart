@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/config/constants/theme_notifier.dart';
+import 'package:provider/provider.dart';
 import '../../../core/config/constants/routes.dart';
 import '../../../core/config/constants/assets.dart';
 import '../../../core/widgets/custom_button.dart';
@@ -73,8 +75,21 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     super.dispose();
   }
 
+    bool _isDarkMode(BuildContext context, ThemeNotifier themeNotifier) {
+    switch (themeNotifier.themeMode) {
+      case ThemeMode.dark:
+        return true;
+      case ThemeMode.light:
+        return false;
+      case ThemeMode.system:
+        return MediaQuery.of(context).platformBrightness == Brightness.dark;
+    }
+  }
+
+
   @override
   Widget build(BuildContext context) {
+    final themeNotifier = Provider.of<ThemeNotifier>(context);
     return Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
@@ -128,15 +143,29 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                   padding: const EdgeInsets.symmetric(horizontal: 20.0),
                   child: Column(
                     children: [
-                      const SizedBox(height: 40),
+                      const SizedBox(height: 20),
                       // Logo
-                      Image.asset(
-                        AppAssets.nepikaLogoShadow,
-                        height: 200,
+                      Container(
+                        decoration: BoxDecoration(
+                          // color: _isDarkMode(context, themeNotifier) ? Theme.of(context).colorScheme.primary : Colors.white,
+                          borderRadius: BorderRadius.circular(100)
+                        ),
+                        padding: EdgeInsets.all(10),
+                        height: 120,
+                        width: 120,
+                        child: Image.asset(
+                          'assets/app/app_logo_stroke.png',
+                        height: 90,
                         fit: BoxFit.contain,
+                        // color: !_isDarkMode(context, themeNotifier) ? Theme.of(context).colorScheme.primary : Colors.white,
+                        // filterQuality: FilterQuality.high,
+                        color: Theme.of(context).colorScheme.primary ,
+                        // color: Theme.of(context).primaryColorDark,
                       ),
+                      ),
+                      
 
-                      const SizedBox(height: 0),
+                      const SizedBox(height: 20),
 
                       // Main Title
                       Text(

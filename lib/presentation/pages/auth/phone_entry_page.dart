@@ -24,7 +24,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
   String _selectedCountryCode = '+91';
   String _selectedCountryFlag = '🇮🇳';
   String _phoneNumber = '';
-  String _phoneHint = '9876543210';
+  String _phoneHint = '(XXX)-XXXX-XXX';
   num phoneLimit = 10;
 
   final List<Map<String, String>> _countries = [
@@ -208,35 +208,43 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return BlocListener<AuthBloc, AuthState>(
-      listener: (context, state) {
-        if (state is OtpSent) {
-          setState(() {
-            _isResponseLoading = false;
-          });
-          debugPrint('OTP sent successfully: ${state}');
-          Navigator.pushNamed(
-            context,
-            AppRoutes.otpVerification,
-            arguments: {'phoneNumber': _selectedCountryCode + _phoneNumber, 'otpId': state.otpId},
-          );
-        } else if (state is ErrorWhileSendingOtp) {
-          setState(() {
-            _isResponseLoading = false;
-          });
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Failed to send OTP'),
-              backgroundColor: Theme.of(context).colorScheme.error,
-            ),
-          );
-        }
-      },
-      child: Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        body: SafeArea(
+@override
+Widget build(BuildContext context) {
+  return BlocListener<AuthBloc, AuthState>(
+    listener: (context, state) {
+      if (state is OtpSent) {
+        setState(() {
+          _isResponseLoading = false;
+        });
+        debugPrint('OTP sent successfully: ${state}');
+        Navigator.pushNamed(
+          context,
+          AppRoutes.otpVerification,
+          arguments: {
+            'phoneNumber': _selectedCountryCode + _phoneNumber,
+            'otpId': state.otpId,
+          },
+        );
+      } else if (state is ErrorWhileSendingOtp) {
+        setState(() {
+          _isResponseLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send OTP'),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
+    },
+    child: Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      body: GestureDetector(
+        behavior: HitTestBehavior.translucent,
+        onTap: () {
+          FocusScope.of(context).unfocus(); // 🔑 dismiss keyboard + unfocus input
+        },
+        child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
             child: Form(
@@ -244,9 +252,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Back button
-                  const SizedBox(height: 60),
-                  // Title
+                  const Spacer(),
                   Center(
                     child: Column(
                       children: [
@@ -255,7 +261,7 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                           textAlign: TextAlign.center,
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
-                        SizedBox(height: 8),
+                        const SizedBox(height: 8),
                         Text(
                           'What’s your number?',
                           textAlign: TextAlign.center,
@@ -265,7 +271,6 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                     ),
                   ),
                   const SizedBox(height: 40),
-                  // Phone number input
                   Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 30.0),
                     child: Row(
@@ -277,16 +282,19 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                             readOnly: true,
                             onTap: _showCountryPicker,
                             controller: _countryCodeController,
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.end,
                             textStyle: Theme.of(context).textTheme.displaySmall,
-                            hintStyle: Theme.of(
-                              context,
-                            ).textTheme.displaySmall!.secondary(context),
+                            hintStyle: Theme.of(context)
+                                .textTheme
+                                .displaySmall!
+                                .secondary(context),
                             suffixIcon: Icon(
                               Icons.keyboard_arrow_down,
-                              color: Theme.of(
-                                context,
-                              ).textTheme.bodySmall!.secondary(context).color,
+                              color: Theme.of(context)
+                                  .textTheme
+                                  .bodySmall!
+                                  .secondary(context)
+                                  .color,
                               size: 20,
                             ),
                           ),
@@ -294,10 +302,10 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                         Expanded(
                           child: UnderlinedTextField(
                             key: ValueKey(_phoneHint),
-                            hint: _phoneHint,
+                            hint: '(XXX)-XXXX-XXX',
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
-                            textAlign: TextAlign.center,
+                            textAlign: TextAlign.start,
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
                               LengthLimitingTextInputFormatter(
@@ -310,10 +318,10 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                               });
                             },
                             textStyle: Theme.of(context).textTheme.displaySmall,
-                            hintStyle: Theme.of(
-                              context,
-                            ).textTheme.displaySmall!.secondary(context),
-
+                            hintStyle: Theme.of(context)
+                                .textTheme
+                                .displaySmall!
+                                .secondary(context),
                             validator: (value) {
                               if (value == null || value.isEmpty) {
                                 return 'Please enter your\nphone number';
@@ -329,22 +337,17 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                     ),
                   ),
                   const Spacer(),
-                  // Continue button
                   SizedBox(
                     width: double.infinity,
                     child: CustomButton(
                       text: 'Continue',
-                      onPressed: _phoneNumber.length == phoneLimit
-                          ? _handleContinue
-                          : null,
+                      onPressed:
+                          _phoneNumber.length == phoneLimit ? _handleContinue : null,
                       isDisabled: _phoneNumber.length != phoneLimit,
-
                       isLoading: _isResponseLoading,
                     ),
                   ),
                   const SizedBox(height: 24),
-                  // Terms and privacy
-                  
                   Center(
                     child: RichText(
                       textAlign: TextAlign.center,
@@ -356,16 +359,18 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
                           ),
                           TextSpan(
                             text: 'terms of service',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall!.hint(context),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall!
+                                .hint(context),
                           ),
                           const TextSpan(text: ' and '),
                           TextSpan(
                             text: 'privacy policy',
-                            style: Theme.of(
-                              context,
-                            ).textTheme.bodySmall!.hint(context),
+                            style: Theme.of(context)
+                                .textTheme
+                                .bodySmall!
+                                .hint(context),
                           ),
                         ],
                       ),
@@ -377,6 +382,8 @@ class _PhoneEntryPageState extends State<PhoneEntryPage> {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
+
 }

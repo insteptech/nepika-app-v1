@@ -91,9 +91,18 @@ class AuthRepositoryImpl implements AuthRepository {
       if ((wrappedResult['data']?['token'] ?? wrappedResult['token']) != null) {
         final authResponse = AuthResponse.fromJson(wrappedResult);
 
+        // Debug token storage
+        print('🔑 AuthRepository: Storing token: "${authResponse.token}"');
+        print('🔑 AuthRepository: Token length: ${authResponse.token.length}');
+        print('🔑 AuthRepository: Refresh token: "${authResponse.refreshToken}"');
+
         // ✅ Save tokens locally
         await localDataSource.storeToken(authResponse.token);
         await localDataSource.storeRefreshToken(authResponse.refreshToken);
+        
+        // Verify token was saved
+        final savedToken = await localDataSource.getToken();
+        print('🔑 AuthRepository: Verified saved token: "$savedToken"');
 
         // ✅ Convert to UserModel & save locally
         final userModel = UserModel.fromEntity(authResponse.user);

@@ -58,7 +58,6 @@ class ImageGallerySection extends StatelessWidget {
         itemBuilder: (context, index) {
           final img = imageGallery[index];
           final imageUrl = img['url'];
-          debugPrint(imageUrl);
           return ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Image.network(

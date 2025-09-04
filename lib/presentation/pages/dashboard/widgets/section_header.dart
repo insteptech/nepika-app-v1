@@ -33,7 +33,7 @@ class SectionHeader extends StatelessWidget {
               Flexible(
                 child: Text(
                   heading,
-                  style: Theme.of(context).textTheme.headlineMedium,
+                  style: Theme.of(context).textTheme.bodyLarge,
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
@@ -47,8 +47,18 @@ class SectionHeader extends StatelessWidget {
                       opacity: buttonLoading ? 0.7 : 1.0,
                       child: Text(
                         buttonText,
-                        style: Theme.of(context).textTheme.bodyLarge!.hint(context),
                         maxLines: 1,
+                        textAlign: TextAlign.end,
+                        style: Theme.of(context).textTheme.bodyLarge
+                            ?.hint(context)
+                            .copyWith(
+                              decoration: TextDecoration.combine([
+                                TextDecoration.underline,
+                              ]),
+                              decorationColor: Theme.of(
+                                context,
+                              ).colorScheme.primary,
+                            ),
                       ),
                     ),
                   ),

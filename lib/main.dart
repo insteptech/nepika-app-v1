@@ -4,6 +4,7 @@ import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/core/utils/secure_storage.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
+import 'package:nepika/presentation/pages/dashboard/skin_condition_details_page.dart';
 import 'core/di/injection_container.dart' as di;
 import 'package:nepika/presentation/community/pages/authenticated_community_page.dart';
 import 'package:nepika/presentation/community/pages/user_profile.dart';
@@ -113,6 +114,11 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.dashboardHome:
               return MaterialPageRoute(builder: (_) => const Dashboard());
+            case AppRoutes.conditionDetailsPage:
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) => const SkinConditionDetailsPage(),
+              );
             case AppRoutes.communityHome:
               return MaterialPageRoute(
                 builder: (_) => const AuthenticatedCommunityPage(),

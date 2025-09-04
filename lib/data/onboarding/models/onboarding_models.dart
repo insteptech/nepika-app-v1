@@ -51,6 +51,8 @@ class OnboardingQuestionModel {
   final bool isRequired;
   final int displayOrder;
   final List<OnboardingOptionModel> options;
+  final Map<String, dynamic>? visibilityConditions;
+  final Map<String, dynamic>? validationRules;
 
   OnboardingQuestionModel({
     required this.id,
@@ -65,6 +67,8 @@ class OnboardingQuestionModel {
     required this.isRequired,
     required this.displayOrder,
     required this.options,
+    this.visibilityConditions,
+    this.validationRules,
   });
 
   factory OnboardingQuestionModel.fromJson(Map<String, dynamic> json) {
@@ -80,6 +84,8 @@ class OnboardingQuestionModel {
       inputPlaceholder: json['input_placeholder'] as String?,
       isRequired: json['is_required'] ?? false,
       displayOrder: json['display_order'] ?? 0,
+      visibilityConditions: json['visibility_conditions'] as Map<String, dynamic>?,
+      validationRules: json['validation_rules'] as Map<String, dynamic>?,
       options: (json['options'] as List<dynamic>? ?? [])
           .map((e) => OnboardingOptionModel.fromJson(e))
           .toList(),

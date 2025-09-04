@@ -50,6 +50,257 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
   final prefHelper = SharedPrefsHelper();
   final secureStorage = SecureStorage();
 
+  // Utility function to evaluate visibility conditions
+  bool evaluateVisibility(
+    Map<String, dynamic>? conditions,
+    Map<String, dynamic> responses,
+  ) {
+    if (conditions == null) return true;
+    
+    debugPrint("🔍 Evaluating visibility: conditions=$conditions, responses=$responses");
+    
+    final operator = conditions['operator'] as String?;
+    final questionSlug = conditions['question_slug'] as String?;
+    final expectedValue = conditions['value'];
+    
+    if (operator == null || questionSlug == null || expectedValue == null) {
+      return true; // Show by default if condition is malformed
+    }
+    
+    // Get the actual response value for the referenced question
+    final actualValue = responses[questionSlug];
+    
+    switch (operator) {
+      case 'equals':
+        return actualValue?.toString() == expectedValue.toString();
+      case 'not_equals':
+        return actualValue?.toString() != expectedValue.toString();
+      case 'in':
+        if (expectedValue is List && actualValue is List) {
+          return actualValue.any((val) => expectedValue.contains(val));
+        }
+        if (expectedValue is List) {
+          return expectedValue.contains(actualValue);
+        }
+        return false;
+      case 'not_in':
+        if (expectedValue is List && actualValue is List) {
+          return !actualValue.any((val) => expectedValue.contains(val));
+        }
+        if (expectedValue is List) {
+          return !expectedValue.contains(actualValue);
+        }
+        return true;
+      default:
+        return true; // Show by default for unknown operators
+    }
+  }
+
+  // Utility function to apply validation rules
+  void applyValidationRules(
+    OnboardingQuestionEntity question,
+    dynamic selectedValue,
+    Map<String, dynamic> responses,
+    Function(Map<String, dynamic>) setResponses,
+  ) {
+    final validationRules = question.validationRules;
+    if (validationRules == null) return;
+    
+    final rule = validationRules['rule'] as String?;
+    if (rule != 'exclusive') return;
+    
+    final excludes = validationRules['excludes'] as List<dynamic>?;
+    if (excludes == null || excludes.isEmpty) return;
+    
+    // If this question was selected, clear excluded questions
+    if (selectedValue != null && selectedValue.toString().isNotEmpty) {
+      final updatedResponses = Map<String, dynamic>.from(responses);
+      
+      for (final excludedSlug in excludes) {
+        if (excludedSlug is String) {
+          updatedResponses.remove(excludedSlug);
+          // Also remove from _selected and _responses arrays
+          _selected.remove(excludedSlug);
+          final excludedQuestion = _questions.firstWhere(
+            (q) => q.slug == excludedSlug,
+            orElse: () => OnboardingQuestionEntity(
+              id: '', slug: '', questionText: '', targetField: '', 
+              targetTable: '', inputType: '', isRequired: false, 
+              displayOrder: 0, options: []
+            ),
+          );
+          if (excludedQuestion.id.isNotEmpty) {
+            _responses.removeWhere((r) => r['question_id'] == excludedQuestion.id);
+          }
+        }
+      }
+      
+      setResponses(updatedResponses);
+    }
+  }
+
+  // Helper function to check if any excluded question is selected for exclusivity rules
+  bool isExclusiveQuestionConflicted(OnboardingQuestionEntity question, Map<String, dynamic> responses) {
+    final validationRules = question.validationRules;
+    if (validationRules == null) return false;
+    
+    final rule = validationRules['rule'] as String?;
+    if (rule != 'exclusive') return false;
+    
+    final excludes = validationRules['excludes'] as List<dynamic>?;
+    if (excludes == null || excludes.isEmpty) return false;
+    
+    // Check if any excluded question has a value
+    for (final excludedSlug in excludes) {
+      if (excludedSlug is String && responses.containsKey(excludedSlug)) {
+        final value = responses[excludedSlug];
+        if (value != null && value.toString().isNotEmpty) {
+          return true; // There's a conflict
+        }
+      }
+    }
+    
+    return false;
+  }
+
+  // Helper method to handle reverse exclusivity
+  void _handleReverseExclusivity(String currentQuestionSlug) {
+    // Find exclusive questions that should be cleared when current question is selected
+    for (final exclusiveQuestion in _questions) {
+      final validationRules = exclusiveQuestion.validationRules;
+      if (validationRules?['rule'] == 'exclusive') {
+        final excludes = validationRules?['excludes'] as List<dynamic>?;
+        if (excludes != null && excludes.contains(currentQuestionSlug)) {
+          // Clear the exclusive question
+          setState(() {
+            _answers.remove(exclusiveQuestion.slug);
+            _selected.remove(exclusiveQuestion.slug);
+            _responses.removeWhere((r) => r['question_id'] == exclusiveQuestion.id);
+          });
+          debugPrint("🗑️ Cleared exclusive question ${exclusiveQuestion.slug} because ${currentQuestionSlug} was selected");
+        }
+      }
+    }
+  }
+
+  // Helper method to clear responses for invisible questions
+  void _clearInvisibleQuestionResponses() {
+    final invisibleQuestions = _questions.where((q) => 
+      !evaluateVisibility(q.visibilityConditions, _answers)
+    ).toList();
+    
+    setState(() {
+      for (final question in invisibleQuestions) {
+        // Remove from answers map
+        _answers.remove(question.slug);
+        _selected.remove(question.slug);
+        
+        // Remove from responses list
+        _responses.removeWhere((r) => r['question_id'] == question.id);
+        
+        debugPrint("🗑️ Cleared response for invisible question: ${question.slug}");
+      }
+    });
+  }
+  
+  // Helper method to ensure dropdown values are valid (safe for build phase)
+  String? _getSafeDropdownValue(OnboardingQuestionEntity question) {
+    if (question.inputType != "dropdown") return null;
+    
+    final selectedId = _selected[question.slug];
+    final answersValue = _answers[question.slug];
+    
+    debugPrint("🔍 _getSafeDropdownValue for ${question.slug}: selectedId=$selectedId, answersValue=$answersValue");
+    
+    // First check if selected ID is valid
+    if (selectedId != null) {
+      final optionExists = question.options.any((opt) => opt.id == selectedId);
+      if (optionExists) {
+        debugPrint("✅ Found valid selected ID: $selectedId");
+        return selectedId;
+      }
+    }
+    
+    // If no valid selected ID, try to find option by answer value
+    if (answersValue != null) {
+      final matchingOption = question.options.firstWhere(
+        (opt) => opt.value == answersValue.toString() || opt.id == answersValue.toString(),
+        orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
+      );
+      if (matchingOption.id.isNotEmpty) {
+        debugPrint("✅ Found matching option by value: ${answersValue} -> ${matchingOption.id}");
+        return matchingOption.id;
+      }
+    }
+    
+    // Try to find by prefillValue if it's available
+    if (question.prefillValue != null) {
+      final matchingOption = question.options.firstWhere(
+        (opt) => opt.text == question.prefillValue || 
+                opt.value == question.prefillValue ||
+                opt.id == question.prefillValue,
+        orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
+      );
+      if (matchingOption.id.isNotEmpty) {
+        debugPrint("✅ Found matching option by prefillValue: ${question.prefillValue} -> ${matchingOption.id}");
+        return matchingOption.id;
+      }
+    }
+    
+    debugPrint("❌ No valid dropdown value found for ${question.slug}");
+    return null;
+  }
+  
+  // Method to fix dropdown values (can call setState)  
+  void _fixDropdownValues() {
+    bool needsUpdate = false;
+    
+    for (final question in _questions) {
+      if (question.inputType != "dropdown") continue;
+      
+      final selectedId = _selected[question.slug];
+      final answersValue = _answers[question.slug];
+      
+      debugPrint("🔍 Fixing dropdown ${question.slug}: selectedId=$selectedId, answersValue=$answersValue");
+      
+      // If we have stale data in _answers that's a value instead of ID, try to find the correct ID
+      if (selectedId == null && answersValue != null) {
+        final matchingOption = question.options.firstWhere(
+          (opt) => opt.value == answersValue.toString() || opt.id == answersValue.toString(),
+          orElse: () => OnboardingOptionEntity(id: '', text: '', value: ''),
+        );
+        if (matchingOption.id.isNotEmpty) {
+          _selected[question.slug] = matchingOption.id;
+          debugPrint("🔄 Fixed dropdown mapping for ${question.slug}: $answersValue -> ${matchingOption.id}");
+          needsUpdate = true;
+        } else {
+          _answers.remove(question.slug);
+          _responses.removeWhere((r) => r['question_id'] == question.id);
+          debugPrint("🗑️ Cleared invalid dropdown value for ${question.slug}: $answersValue");
+          needsUpdate = true;
+        }
+      }
+      
+      // Check if the selected ID still exists in current options
+      if (selectedId != null) {
+        final optionExists = question.options.any((opt) => opt.id == selectedId);
+        if (!optionExists) {
+          _selected.remove(question.slug);
+          _answers.remove(question.slug);
+          _responses.removeWhere((r) => r['question_id'] == question.id);
+          debugPrint("🗑️ Cleared invalid dropdown selection for ${question.slug}: $selectedId");
+          needsUpdate = true;
+        }
+      }
+    }
+    
+    if (needsUpdate) {
+      setState(() {
+        _isFormValid = _validateForm();
+      });
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -127,7 +378,12 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
   void _selectOption(String slug, String optionId, String optionText, String questionId) {
     setState(() {
       _selected[slug] = optionId;
-      _answers[slug] = optionId;
+      
+      // Store the option value (not ID) in _answers for visibility condition evaluation
+      final question = _questions.firstWhere((q) => q.slug == slug);
+      final selectedOption = question.options.firstWhere((o) => o.id == optionId);
+      _answers[slug] = selectedOption.value; // Store "yes"/"no" instead of option ID
+      
       _responses.removeWhere((r) => r['question_id'] == questionId);
       _responses.add({
         "question_id": questionId,
@@ -136,6 +392,8 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
       });
       _isFormValid = _validateForm();
     });
+    
+    debugPrint("🎯 Selected option for $slug: ID=$optionId, Value=${_answers[slug]}, Text=$optionText");
   }
 
   void _updateValue(String slug, String questionId, dynamic value) {
@@ -168,33 +426,86 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
   }
 
   bool _validateForm() {
-    debugPrint("🔍 Validating form with ${_responses.length} responses for ${_questions.length} questions");
-    for (var q in _questions) {
-      final responses = _responses.where((r) => r["question_id"] == q.id).toList();
-      debugPrint("Question ${q.slug} (required: ${q.isRequired}): ${responses.length} responses");
+    // Only validate visible questions
+    final visibleQuestions = _questions.where((q) => 
+      evaluateVisibility(q.visibilityConditions, _answers)
+    ).toList();
+    
+    debugPrint("🔍 Validating form with ${_responses.length} responses for ${visibleQuestions.length} visible questions (${_questions.length} total)");
+    
+    // Group questions by validation rules
+    final exclusiveQuestions = <OnboardingQuestionEntity>[];
+    final excludedBySomeExclusive = <String>{};
+    final normalQuestions = <OnboardingQuestionEntity>[];
+    
+    for (var q in visibleQuestions) {
+      if (q.validationRules?['rule'] == 'exclusive') {
+        exclusiveQuestions.add(q);
+        final excludes = q.validationRules?['excludes'] as List<dynamic>?;
+        if (excludes != null) {
+          for (var excludedSlug in excludes) {
+            if (excludedSlug is String) {
+              excludedBySomeExclusive.add(excludedSlug);
+            }
+          }
+        }
+      } else {
+        normalQuestions.add(q);
+      }
+    }
+    
+    debugPrint("🔍 Exclusive questions: ${exclusiveQuestions.map((q) => q.slug).toList()}");
+    debugPrint("🔍 Excluded by exclusive: $excludedBySomeExclusive");
+    debugPrint("🔍 Normal questions: ${normalQuestions.map((q) => q.slug).toList()}");
+    
+    // Check if any exclusive question is answered
+    bool hasExclusiveAnswer = false;
+    for (var exclusiveQ in exclusiveQuestions) {
+      final responses = _responses.where((r) => r["question_id"] == exclusiveQ.id).toList();
+      if (responses.isNotEmpty && _hasValidResponse(exclusiveQ, responses)) {
+        hasExclusiveAnswer = true;
+        debugPrint("✅ Exclusive question ${exclusiveQ.slug} has valid answer");
+        break;
+      }
+    }
+    
+    if (hasExclusiveAnswer) {
+      // If exclusive answer exists, only validate the exclusive question that's answered
+      debugPrint("✅ Form valid - exclusive question answered, others cleared");
+      return true;
+    }
+    
+    // Otherwise, validate all required non-exclusive questions
+    for (var q in visibleQuestions) {
+      if (q.isRequired && q.validationRules?['rule'] != 'exclusive') {
+        final responses = _responses.where((r) => r["question_id"] == q.id).toList();
+        debugPrint("Question ${q.slug} (required: ${q.isRequired}, visible: true): ${responses.length} responses");
 
-      if (q.isRequired) {
         if (responses.isEmpty) {
           debugPrint("❌ Missing response for required question: ${q.slug}");
           return false;
         }
-        if (q.inputType == 'checkbox' || q.inputType == 'multi_choice') {
-          if (responses.isEmpty || responses.every((r) => r['value'] == null || r['value'].toString().isEmpty)) {
-            debugPrint("❌ No valid selections for required checkbox/multi_choice question: ${q.slug}");
-            return false;
-          }
-        } else {
-          final response = responses.first;
-          final value = response["value"];
-          if (value == null || (value is String && value.trim().isEmpty)) {
-            debugPrint("❌ Invalid value for required question: ${q.slug}");
-            return false;
-          }
+        if (!_hasValidResponse(q, responses)) {
+          debugPrint("❌ Invalid response for required question: ${q.slug}");
+          return false;
         }
       }
     }
+    
     debugPrint("✅ Form validation passed");
     return true;
+  }
+  
+  // Helper method to check if a question has a valid response
+  bool _hasValidResponse(OnboardingQuestionEntity question, List<Map<String, dynamic>> responses) {
+    if (question.inputType == 'checkbox' || question.inputType == 'multi_choice') {
+      return responses.isNotEmpty && 
+             responses.any((r) => r['value'] != null && r['value'].toString().isNotEmpty);
+    } else {
+      final response = responses.first;
+      final value = response["value"];
+      return value != null && (value is! String || value.trim().isNotEmpty);
+    }
   }
 
   void _handleNext() async {
@@ -224,14 +535,16 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
         ),
       );
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please answer all required questions")),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Please answer all required questions")),
+        );
+      }
     }
   }
 
   void _handleSkip() {
-    final totalSteps = _screen['totalSteps'] ?? 8;
+    final totalSteps = _screen['totalSteps'] ?? 7;
     debugPrint('🚀 Skip clicked - Current step: $_currentStep, Total steps: $totalSteps');
     
     if (_currentStep < totalSteps) {
@@ -317,7 +630,7 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
               'title': state.data.title,
               'subtitle': state.data.description ?? '',
               'buttonText': state.data.buttonText ?? 'Next',
-              'totalSteps': state.data.totalSteps ?? 8
+              'totalSteps': state.data.totalSteps ?? 7
             };
 
             _questions = List.from(state.data.questions)
@@ -357,12 +670,13 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                   );
                   if (matchOpt.id.isNotEmpty) {
                     _selected[qSlug] = matchOpt.id;
-                    _answers[qSlug] = matchOpt.id;
+                    _answers[qSlug] = matchOpt.value; // Store the option value for visibility evaluation
                     _responses.add({
                       "question_id": qId,
                       "option_id": matchOpt.id,
                       "value": matchOpt.text,
                     });
+                    debugPrint("🎯 Prefilled $qSlug: ID=${matchOpt.id}, Value=${matchOpt.value}");
                   }
                 } else {
                   _answers[qSlug] = prefilledValue;
@@ -413,12 +727,13 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                 );
                 if (opt.id.isNotEmpty) {
                   _selected[qSlug] = opt.id;
-                  _answers[qSlug] = opt.id;
+                  _answers[qSlug] = opt.value; // Store the option value for visibility evaluation
                   _responses.add({
                     "question_id": qId,
                     "option_id": opt.id,
                     "value": opt.text,
                   });
+                  debugPrint("🎯 Pre-selected $qSlug: ID=${opt.id}, Value=${opt.value}");
                 }
               }
             }
@@ -433,6 +748,12 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
               debugPrint("  ${entry.key}: ${entry.value} (${entry.value.runtimeType})");
             }
 
+            // Fix all dropdown values and clear invalid ones
+            _fixDropdownValues();
+
+            // Clear responses for invisible questions after processing prefills
+            _clearInvisibleQuestionResponses();
+            
             setState(() {
               _isFormValid = _validateForm();
             });
@@ -482,14 +803,21 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
           } else if (state is OnboardingError) {
             content = SomethingWentWrong();
           } else {
+            // Filter questions based on visibility conditions
+            final visibleQuestions = _questions.where((question) {
+              return evaluateVisibility(question.visibilityConditions, _answers);
+            }).toList();
+            
             content = Column(
               spacing: 25,
-              children: _questions.map((question) {
+              children: visibleQuestions.map((question) {
                 final options = question.options
                     .map((o) {
                           final isSelected = _answers[question.slug] is List<dynamic>
                               ? (_answers[question.slug] as List<dynamic>).contains(o.id)
-                              : _answers[question.slug] == o.id;
+                              : question.inputType == "dropdown" 
+                                ? _selected[question.slug] == o.id // For dropdowns, compare with selected ID
+                                : _answers[question.slug] == o.value; // For other types, compare with value
                           
                           debugPrint('🔍 Option ${o.text} (${o.id}): isSelected = $isSelected, _answers[${question.slug}] = ${_answers[question.slug]}, inputType = ${question.inputType}');
                           
@@ -510,12 +838,23 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                   title: question.questionText,
                   inputType: question.inputType,
                   keyboardType: question.keyboardType,
-                  prefillValue: _answers[question.slug] ?? question.prefillValue,
+                  prefillValue: question.inputType == "dropdown" 
+                    ? _getSafeDropdownValue(question)
+                    : _answers[question.slug] ?? question.prefillValue,
                   options: options,
                   optionsPerRow: _currentStep == 7 ? 2 : null,
-                  values: _answers,
+                  values: question.inputType == "dropdown" 
+                    ? {
+                        ...Map<String, dynamic>.from(_answers)
+                          ..remove(question.slug), // Remove the dropdown entry
+                        if (_getSafeDropdownValue(question) != null)
+                          question.slug: _getSafeDropdownValue(question), // Add the safe ID
+                      }
+                    : _answers,
                   onValueChanged: (slug, value) {
                     final question = _questions.firstWhere((q) => q.slug == slug);
+                    
+                    // Handle regular value updates
                     if (question.inputType == "single_choice" || question.inputType == "dropdown") {
                       final selectedOption = question.options.firstWhere(
                         (o) => o.id == value,
@@ -523,32 +862,89 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
                       );
                       if (selectedOption.id.isNotEmpty) {
                         _selectOption(slug, selectedOption.id, selectedOption.text, question.id);
+                        
+                        // Apply validation rules for exclusivity
+                        applyValidationRules(question, selectedOption.value, _answers, (updatedResponses) {
+                          setState(() {
+                            _answers.clear();
+                            _answers.addAll(updatedResponses);
+                            _isFormValid = _validateForm();
+                          });
+                        });
+                        
+                        // Handle reverse exclusivity - clear exclusive questions if this question is in their excludes list
+                        _handleReverseExclusivity(slug);
+                        
+                        // Trigger rebuild to re-evaluate visibility conditions
+                        setState(() {
+                          _isFormValid = _validateForm();
+                        });
                       }
                     } else if (question.inputType == "multi_choice" || question.inputType == "checkbox") {
                       if (value is List<dynamic>) {
                         _updateValue(slug, question.id, value);
+                        
+                        // For multi-choice, apply validation rules for each selected value
+                        if (value.isNotEmpty) {
+                          applyValidationRules(question, value, _answers, (updatedResponses) {
+                            setState(() {
+                              _answers.clear();
+                              _answers.addAll(updatedResponses);
+                            });
+                          });
+                          
+                          // Handle reverse exclusivity for multi-choice
+                          _handleReverseExclusivity(slug);
+                        }
                       }
                     } else {
                       _updateValue(slug, question.id, value);
+                      
+                      // Apply validation rules for text/other inputs
+                      applyValidationRules(question, value, _answers, (updatedResponses) {
+                        setState(() {
+                          _answers.clear();
+                          _answers.addAll(updatedResponses);
+                        });
+                      });
+                      
+                      // Handle reverse exclusivity for text inputs
+                      _handleReverseExclusivity(slug);
                     }
+                    
+                    // Clear responses for questions that are no longer visible
+                    _clearInvisibleQuestionResponses();
+                    
+                    // Fix any dropdown value issues after visibility changes
+                    _fixDropdownValues();
                   },
                 );
               }).toList(),
             );
           }
 
-          return BaseQuestionPage(
-            currentStep: _currentStep,
-            onSkip: _handleSkip,
-            totalSteps: 7,
-            title: _screen['title'] ?? 'Tell us about your lifestyle',
-            subtitle: _screen['subtitle'] ?? 'Your lifestyle helps us analyze your skin.',
-            buttonText: _screen['buttonText'] ?? 'Next',
+          return GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: () {
+              FocusScope.of(
+                context,
+              ).unfocus(); // 🔑 dismiss keyboard + unfocus input
+            },
+            child: BaseQuestionPage(
+              currentStep: _currentStep,
+              onSkip: _handleSkip,
+              totalSteps: 7,
+              title: _screen['title'] ?? 'Tell us about your lifestyle',
+              subtitle:
+                  _screen['subtitle'] ??
+                  'Your lifestyle helps us analyze your skin.',
+              buttonText: _screen['buttonText'] ?? 'Next',
             isFormValid: _isFormValid,
             onNext: _handleNext,
             showBackButton: _currentStep > 1,
             onBack: _handleBack,
             content: content,
+          ),
           );
         },
       ),

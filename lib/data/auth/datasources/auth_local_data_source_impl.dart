@@ -100,7 +100,9 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> storeToken(String token) async {
+    print('🔑 AuthLocalDataSource: Storing token with key "${AppConstants.accessTokenKey}": "$token"');
     await sharedPreferences.setString(AppConstants.accessTokenKey, token);
+    print('🔑 AuthLocalDataSource: Token stored successfully');
   }
 
   @override

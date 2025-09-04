@@ -35,7 +35,7 @@ class OnboardingRemoteDataSource implements IOnboardingRemoteDataSource {
     try {
       final response = await apiBase.request(
         path:
-            '${ApiEndpoints.onboardingQuestionnaire}/$userId/$screenSlug?lang=$lang',
+            '${ApiEndpoints.onboardingQuestionnaire}/$screenSlug?lang=$lang',
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
       );
@@ -55,7 +55,7 @@ class OnboardingRemoteDataSource implements IOnboardingRemoteDataSource {
   ) async {
     try {
       final response = await apiBase.request(
-        path: '${ApiEndpoints.onboardingQuestionnaire}/$userId/$screenSlug',
+        path: '${ApiEndpoints.onboardingQuestionnaire}/$screenSlug',
         method: 'POST',
         headers: {
           'Authorization': 'Bearer $token',

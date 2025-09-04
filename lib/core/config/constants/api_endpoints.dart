@@ -17,7 +17,7 @@ class ApiEndpoints {
   static const String userOnboarding = '/user/onboarding';
 
   static const String userDailyRoutine = '/routines';
-  static const String userMyProducts = '/user/my-products';
+  static const String userMyProducts = '/products/recomendations';
   static const String userDetails = '/user/details';
   // static const String lifestyle = '/user/lifestyle';
   // static const String skinGoals = '/user/skin-goals';
@@ -25,6 +25,10 @@ class ApiEndpoints {
 
   static const String dashboard = '/dashboard/welcome';
   static const String subscriptionPlanInfo = '/subscription/plans/info';
+
+
+  // # it need condition slug at end of this endpoint
+  static const String fetchSkinConditionDetails = '/dashboard/skin-condition';
   
   // Community Endpoints
   static const String communityPosts = '/community/posts';

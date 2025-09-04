@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:nepika/presentation/pages/dashboard/set_reminder_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 // import 'package:nepika/presentation/pages/dashboard/products_page.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
@@ -72,6 +73,14 @@ class SettingsPage extends StatelessWidget {
         onTap: () {
           Navigator.of(context).push(
             MaterialPageRoute(builder: (_) => const NotificationsAndSettings()),
+          );
+        },
+      ),
+      _SettingsOptionData(
+        'Reminders',
+        onTap: () {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => const ReminderSettings()),
           );
         },
       ),

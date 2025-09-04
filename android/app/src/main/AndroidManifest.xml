@@ -11,7 +11,7 @@
 
     <application
         android:name="${applicationName}"
-        android:label="nepika_app"
+        android:label="Nepika"
         android:icon="@mipmap/ic_launcher">
 
         <activity

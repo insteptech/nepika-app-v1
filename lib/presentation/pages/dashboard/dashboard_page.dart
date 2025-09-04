@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/presentation/routine/widgets/daily_routine.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/face_scan_card.dart';
@@ -12,6 +13,7 @@ import 'package:nepika/presentation/pages/dashboard/widgets/progress_summary_cha
 import 'package:nepika/presentation/pages/dashboard/widgets/recomended_products.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/skin_score_card.dart';
 import 'package:nepika/presentation/pages/dashboard/widgets/section_header.dart';
+import 'package:nepika/presentation/pages/dashboard/widgets/conditions_section.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../bloc/dashboard/dashboard_bloc.dart';
 import '../../bloc/dashboard/dashboard_event.dart';
@@ -77,6 +79,7 @@ class _DashboardPageState extends State<DashboardPage> {
           Map<String, dynamic> dailyRoutine = {};
           List<Map<String, dynamic>> imageGallery = [];
           List<Map<String, dynamic>> recommendedProducts = [];
+          Map<String, dynamic>? latestConditionResult;
 
           bool isLoading = state is DashboardLoading;
           bool isError = state is DashboardError;
@@ -94,6 +97,7 @@ class _DashboardPageState extends State<DashboardPage> {
             recommendedProducts = List<Map<String, dynamic>>.from(
               dashboardData['recommendedProducts'] ?? [],
             );
+            latestConditionResult = dashboardData['latestConditionResult'];
           }
 
           return PopScope(
@@ -162,6 +166,25 @@ class _DashboardPageState extends State<DashboardPage> {
                                 ],
                               ),
 
+
+                              
+                              ConditionsSection(
+                                latestConditionResult: latestConditionResult,
+                                onConditionTap: (conditionName) {
+                                  
+                                  final arguments = {
+                                    'skinScore': skinScore,
+                                    'conditionInfo': conditionName
+                                  };
+                                  Navigator.of(
+                                    context,
+                                    rootNavigator: true
+                                  ).pushNamed(AppRoutes.conditionDetailsPage, arguments: arguments);
+                                },
+                              ),
+
+                              const SizedBox(height: 10),
+
                               SectionHeader(
                                 heading: 'Progress Summary',
                                 showButton: false,
@@ -170,6 +193,7 @@ class _DashboardPageState extends State<DashboardPage> {
                               ProgressSummaryChart(
                                 progressSummary: progressSummary,
                                 height: 280,
+                                showPointsAndLabels: false,
                               ),
 
                               RepaintBoundary(

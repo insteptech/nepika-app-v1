@@ -14,7 +14,6 @@ class GreetingSection extends StatelessWidget {
     final String greeting = user['greeting'] ?? '';
 
     final String? avatarUrl = user['avatarUrl'];
-    logJson(user);
     final ImageProvider avatarImage =
         (avatarUrl != null && avatarUrl.trim().isNotEmpty)
         ? NetworkImage(avatarUrl)

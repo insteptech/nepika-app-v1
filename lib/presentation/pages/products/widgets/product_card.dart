@@ -8,6 +8,7 @@ class ProductCard extends StatelessWidget {
   final String rating;
   final String maxRating;
   final bool showCheckmark;
+  final bool isSelected;
   final VoidCallback? onTap;
   final VoidCallback? onCheckmarkTap;
   final double? width;
@@ -23,6 +24,7 @@ class ProductCard extends StatelessWidget {
     required this.rating,
     this.maxRating = '100',
     this.showCheckmark = true,
+    this.isSelected = false,
     this.onTap,
     this.onCheckmarkTap,
     this.width,
@@ -140,17 +142,24 @@ class ProductCard extends StatelessWidget {
                   GestureDetector(
                     onTap: onCheckmarkTap,
                     child: Container(
-                      width: 32,
-                      height: 32,
+                      width: 22,
+                      height: 22,
+                      padding: EdgeInsets.all(2),
                       decoration: BoxDecoration(
-                        color: colorScheme.primary,
-                        borderRadius: BorderRadius.circular(8),
+                        color: isSelected ? colorScheme.primary : Colors.transparent,
+                        border: Border.all(
+                          color: colorScheme.primary,
+                          width: 1,
+                        ),
+                        borderRadius: BorderRadius.circular(100),
                       ),
-                      child: Icon(
-                        Icons.check,
-                        color: colorScheme.onPrimary,
-                        size: 20,
-                      ),
+                      child: isSelected
+                          ? Icon(
+                              Icons.check,
+                              color: Colors.white,
+                              size: 14,
+                            )
+                          : null,
                     ),
                   ),
               ],

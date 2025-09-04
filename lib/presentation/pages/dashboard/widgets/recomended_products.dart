@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/presentation/pages/dashboard/product_info.dart';
+import 'package:nepika/presentation/pages/products/product_info_page.dart';
 
 class RecommendedProductsSection extends StatelessWidget {
   final List<Map<String, dynamic>> products;
@@ -14,61 +14,44 @@ class RecommendedProductsSection extends StatelessWidget {
     this.showTag = true,
   });
 
-@override
-Widget build(BuildContext context) {
-  // 1. Loading state → show skeletons
-  if (isLoading) {
-    return scrollDirection == Axis.horizontal
-        ? _buildSkeletonLoaderHorizontal()
-        : _buildSkeletonLoaderVertical();
-  }
+  @override
+  Widget build(BuildContext context) {
+    // 1. Loading state → show skeletons
+    if (isLoading) {
+      return scrollDirection == Axis.horizontal
+          ? _buildSkeletonLoaderHorizontal()
+          : _buildSkeletonLoaderVertical();
+    }
 
-  // 2. After loading, no products found
-  if (!isLoading && products.isEmpty) {
+    // 2. After loading, no products found
+    if (!isLoading && products.isEmpty) {
+      return SizedBox(
+        height: 80,
+        width: double.infinity,
+        child: Center(
+          child: Text(
+            'No Products Found',
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    // 3. Loaded products → show product cards
     return SizedBox(
-      height: 80,
-      width: double.infinity,
-      child: Center(
-        child: Text(
-          'No Products Found',
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Colors.grey,
-                ),        
-                ),
-      ),
-    );
-  }
-
-  // 3. Loaded products → show product cards
-  return SizedBox(
-    height: scrollDirection == Axis.horizontal ? 140 : null,
-    child: scrollDirection == Axis.horizontal
-        ? PageView.builder(
-            controller: PageController(viewportFraction: 0.96),
-            itemCount: products.length,
-            padEnds: false,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return _buildProductCard(product, () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (_) => ProductInfoPage(
-                      productId: product['id'] ?? 'Unknown',
-                    ),
-                  ),
-                );
-              });
-            },
-          )
-        : ListView.builder(
-            physics: const NeverScrollableScrollPhysics(),
-            shrinkWrap: true,
-            itemCount: products.length,
-            itemBuilder: (context, index) {
-              final product = products[index];
-              return Padding(
-                padding: const EdgeInsets.only(bottom: 12),
-                child: _buildProductCard(product, () {
+      height: scrollDirection == Axis.horizontal ? 140 : null,
+      child: scrollDirection == Axis.horizontal
+          ? PageView.builder(
+              controller: PageController(
+                viewportFraction: products.length == 1 ? 1 : 0.96,
+              ),
+              itemCount: products.length,
+              padEnds: false,
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return _buildProductCard(product, () {
                   Navigator.of(context).push(
                     MaterialPageRoute(
                       builder: (_) => ProductInfoPage(
@@ -76,13 +59,31 @@ Widget build(BuildContext context) {
                       ),
                     ),
                   );
-                }),
-              );
-            },
-          ),
-  );
-}
-
+                });
+              },
+            )
+          : ListView.builder(
+              physics: const NeverScrollableScrollPhysics(),
+              shrinkWrap: true,
+              itemCount: products.length,
+              itemBuilder: (context, index) {
+                final product = products[index];
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _buildProductCard(product, () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => ProductInfoPage(
+                          productId: product['id'] ?? 'Unknown',
+                        ),
+                      ),
+                    );
+                  }),
+                );
+              },
+            ),
+    );
+  }
 
   Widget _buildProductCard(Map<String, dynamic> product, VoidCallback onTap) {
     final padding = scrollDirection == Axis.horizontal
@@ -195,7 +196,9 @@ Widget build(BuildContext context) {
                                         border: Border.all(
                                           color: colorScheme.primary,
                                         ),
-                                        borderRadius: BorderRadius.circular(100),
+                                        borderRadius: BorderRadius.circular(
+                                          100,
+                                        ),
                                       ),
                                       child: Text(
                                         product['tag'] ?? 'Tag',

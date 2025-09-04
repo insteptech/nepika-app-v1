@@ -369,40 +369,47 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
 
 
 
+void _evaluateAlignment() {
+  if (_controller?.value.previewSize == null || !mounted) return;
 
-  void _evaluateAlignment() {
-    if (_controller?.value.previewSize == null || !mounted) return;
+  bool newAlignmentState = false;
 
-    bool newAlignmentState = false;
+  if (_faces.isNotEmpty) {
+    final face = _faces.first;
 
-    if (_faces.isNotEmpty) {
-      final face = _faces.first;
-      final rotY = face.headEulerAngleY ?? 0;
-      final rotZ = face.headEulerAngleZ ?? 0;
-      final lookingStraight = rotY.abs() < 10 && rotZ.abs() < 10;
+    // 🔹 Relax head rotation tolerance from ±10° → ±15°
+    final rotY = face.headEulerAngleY ?? 0;
+    final rotZ = face.headEulerAngleZ ?? 0;
+    final lookingStraight = rotY.abs() < 15 && rotZ.abs() < 15;
 
-      final preview = _controller!.value.previewSize!;
-      final box = face.boundingBox;
-      final centerX = box.center.dx;
-      final centerY = box.center.dy;
-      final cx = preview.width / 2;
-      final cy = preview.height / 2;
-      final dx = (centerX - cx).abs();
-      final dy = (centerY - cy).abs();
-      final rx = preview.width * 0.4;
-      final ry = preview.height * 0.5;
-      final insideOval = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) < 1;
+    final preview = _controller!.value.previewSize!;
+    final box = face.boundingBox;
+    final centerX = box.center.dx;
+    final centerY = box.center.dy;
 
-      newAlignmentState = lookingStraight && insideOval;
-    }
+    // Screen center
+    final cx = preview.width / 2;
+    final cy = preview.height / 2;
 
-    // Handle state changes
-    if (newAlignmentState && !_isAligned) {
-      _onAligned();
-    } else if (!newAlignmentState && _isAligned) {
-      _onMisaligned();
-    }
+    final dx = (centerX - cx).abs();
+    final dy = (centerY - cy).abs();
+
+    // 🔹 Make oval larger → rx = 50% width, ry = 65% height
+    final rx = preview.width * 0.5;
+    final ry = preview.height * 0.65;
+
+    final insideOval = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) < 1;
+
+    newAlignmentState = lookingStraight && insideOval;
   }
+
+  // Handle state changes
+  if (newAlignmentState && !_isAligned) {
+    _onAligned();
+  } else if (!newAlignmentState && _isAligned) {
+    _onMisaligned();
+  }
+}
 
   void _onAligned() {
     if (!_isAligned && mounted) {
@@ -870,7 +877,20 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
                         else if (_isInitialized &&
                             _controller != null &&
                             _controller!.value.isInitialized) ...[
-                          CameraPreview(_controller!),
+                          ClipRect(
+                            child: OverflowBox(
+                              alignment: Alignment.center,
+                              child: FittedBox(
+                                fit: BoxFit.cover,
+                                child: SizedBox(
+                                  width: _controller!.value.previewSize!.height,
+                                  height: _controller!.value.previewSize!.width,
+                                  child: CameraPreview(_controller!),
+                                ),
+                              ),
+                            ),
+                          ),
+
                           CustomPaint(
                             painter: _OvalPainter(
                               color: _isAligned ? Colors.green : Colors.red,

@@ -46,10 +46,16 @@ class RoutineEmptyState extends StatelessWidget {
               onTap: onActionTap,
               child: Text(
                 actionText!,
-                style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  decoration: TextDecoration.underline,
-                ),
+                maxLines: 1,
+                textAlign: TextAlign.end,
+                style: Theme.of(context).textTheme.bodyLarge
+                    ?.hint(context)
+                    .copyWith(
+                      decoration: TextDecoration.combine([
+                        TextDecoration.underline,
+                      ]),
+                      decorationColor: Theme.of(context).colorScheme.primary,
+                    ),
               ),
             ),
           ],

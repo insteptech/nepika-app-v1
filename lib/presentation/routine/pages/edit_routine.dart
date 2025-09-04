@@ -244,7 +244,7 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
                         ),
                         const SizedBox(width: 6),
                         Text(
-                          'Add more routines',
+                          'Add new step',
                           style: Theme.of(context)
                               .textTheme
                               .headlineMedium!

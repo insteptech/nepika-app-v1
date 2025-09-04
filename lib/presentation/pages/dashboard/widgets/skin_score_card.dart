@@ -3,18 +3,18 @@ import 'package:nepika/core/config/constants/theme.dart';
 
 String _monthName(int month) {
   const months = [
-    'January',
-    'February',
-    'March',
-    'April',
+    'Jan',
+    'Feb',
+    'Mar',
+    'Apr',
     'May',
-    'June',
-    'July',
-    'August',
-    'September',
-    'October',
-    'November',
-    'December',
+    'Jun',
+    'Jul',
+    'Aug',
+    'Sep',
+    'Oct',
+    'Nov',
+    'Dec',
   ];
   return (month >= 1 && month <= 12) ? months[month - 1] : 'Unknown';
 }
@@ -72,13 +72,13 @@ class SkinScoreCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
+        // boxShadow: [
+        //   BoxShadow(
+        //     color: colorScheme.shadow.withValues(alpha: 0.08),
+        //     blurRadius: 20,
+        //     offset: const Offset(0, 10),
+        //   ),
+        // ],
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -86,9 +86,11 @@ class SkinScoreCard extends StatelessWidget {
         children: [
           Text(
             'Your skin score',
-            style: textTheme.bodyLarge!.secondary(context),
+            style: textTheme.bodyLarge!.secondary(context).copyWith(
+              fontSize: 13
+            ),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 3),
           Row(
             children: [
               Text(
@@ -99,7 +101,7 @@ class SkinScoreCard extends StatelessWidget {
                   color: colorScheme.primary,
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 10),
               Text(
                 '${change > 0 ? '+' : ''}$change',
                 style: textTheme.bodyMedium?.copyWith(
@@ -115,14 +117,20 @@ class SkinScoreCard extends StatelessWidget {
           Text(
             'Last updated:', style: textTheme.bodyMedium!.secondary(context),),
 
-          Expanded(
-            child: Text(
+          Text(
               formattedDate,
-              overflow: TextOverflow.visible,
+              overflow: TextOverflow.ellipsis,
               softWrap: true,
               style: textTheme.bodyMedium!.secondary(context),
             ),
-          ),
+          // Expanded(
+          //   child: Text(
+          //     formattedDate,
+          //     overflow: TextOverflow.ellipsis,
+          //     softWrap: true,
+          //     style: textTheme.bodyMedium!.secondary(context),
+          //   ),
+          // ),
         ],
       ),
     );

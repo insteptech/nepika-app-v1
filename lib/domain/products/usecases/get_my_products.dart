@@ -10,7 +10,7 @@ class GetMyProducts extends UseCase<List<Product>, GetMyProductsParams> {
   GetMyProducts(this.repository);
 
   @override
-  Future<Result<List<Product>>> call(GetMyProductsParams params) async {
+  Future<Result<List<Product>>> call(GetMyProductsParams params) async { 
     return await repository.getMyProducts(token: params.token);
   }
 }

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import '../../../core/api_base.dart';
 import '../../../core/config/constants/api_endpoints.dart';
 import '../models/product_model.dart';

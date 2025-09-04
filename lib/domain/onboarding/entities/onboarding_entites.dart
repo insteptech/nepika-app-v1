@@ -40,6 +40,8 @@ class OnboardingQuestionEntity {
   final bool isRequired;
   final int displayOrder;
   final List<OnboardingOptionEntity> options;
+  final Map<String, dynamic>? visibilityConditions;
+  final Map<String, dynamic>? validationRules;
 
   OnboardingQuestionEntity({
     required this.id,
@@ -54,7 +56,8 @@ class OnboardingQuestionEntity {
     required this.isRequired,
     required this.displayOrder,
     required this.options,
-
+    this.visibilityConditions,
+    this.validationRules,
   });
 }
 
