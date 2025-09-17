@@ -31,6 +31,7 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
   bool _isInitialized = false;
   final Set<String> _addedRoutineIds = {};
   final Set<String> _successfullyAddedRoutineIds = {};
+  String? _addingRoutineId; // Track which routine is being added
 
   @override
   void initState() {
@@ -131,17 +132,22 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
       builder: (context, state) {
         Logger.bloc('AddRoutine builder - Current state: ${state.runtimeType}');
         
-        bool loading = state is RoutineLoading;
+        bool loading = state is RoutineLoading; // Only show full loading for initial load
         List<Routine> routines = [];
         String? errorMessage;
-        String? loadingRoutineId;
+        
+        // Track which specific routine is being added
+        if (state is RoutineOperationLoading) {
+          _addingRoutineId = state.operationId;
+        } else {
+          _addingRoutineId = null;
+        }
 
         if (state is RoutineLoaded) {
           routines = state.routines;
           Logger.bloc('AddRoutine - RoutineLoaded with ${routines.length} routines');
         } else if (state is RoutineOperationLoading) {
           routines = state.currentRoutines;
-          loadingRoutineId = state.operationId;
           Logger.bloc('AddRoutine - RoutineOperationLoading with ${routines.length} routines');
         } else if (state is RoutineOperationSuccess) {
           routines = state.routines;
@@ -156,33 +162,45 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
           body: SafeArea(
-            child: Column(
-              children: [
-                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: SizedBox(
-                    width: double.infinity,
+            child: CustomScrollView(
+              slivers: [
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const SizedBox(height: 16),
                         const CustomBackButton(),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 15),
                       ],
                     ),
                   ),
                 ),
-                Expanded(
-                  child: SingleChildScrollView(
+                SliverPersistentHeader(
+                  pinned: true,
+                  delegate: _StickyHeaderDelegate(
+                    minHeight: 40,
+                    maxHeight: 40,
+                    showAnimatedBackButton: true,
+                    title: "Add new routine",
+                    child: Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Add new routine",
+                        style: Theme.of(context).textTheme.displaySmall,
+                      ),
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 20),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const SizedBox(height: 32),
-                        Text(
-                          "Add new routine",
-                          style: Theme.of(context).textTheme.displaySmall,
-                        ),
                         const SizedBox(height: 8),
                         Text(
                           'Select routine steps to add to your daily routine',
@@ -191,7 +209,7 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
                               .headlineMedium!
                               .secondary(context),
                         ),
-                        const SizedBox(height: 45),
+                        const SizedBox(height: 35),
                         loading
                             ? const Center(child: CircularProgressIndicator())
                             : errorMessage != null
@@ -213,7 +231,7 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
                                       )
                                     : Column(
                                         children: routines.map((routine) {
-                                          final isLoading = loadingRoutineId == routine.id;
+                                          final isLoading = _addingRoutineId == routine.id;
                                           final isSuccessfullyAdded = _successfullyAddedRoutineIds.contains(routine.id);
                                           
                                           return RoutineTile(
@@ -225,27 +243,28 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
                                           );
                                         }).toList(),
                                       ),
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                  child: GestureDetector(
-                    onTap: () {
-                      Navigator.pop(context);
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          'Done',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium!
-                              .hint(context),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 10),
+                          child: GestureDetector(
+                            onTap: () {
+                              Navigator.pop(context);
+                            },
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Done',
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .headlineMedium!
+                                      .hint(context),
+                                ),
+                              ],
+                            ),
+                          ),
                         ),
+                        const SizedBox(height: 100),
                       ],
                     ),
                   ),
@@ -256,5 +275,85 @@ class _AddRoutineViewState extends State<_AddRoutineView> {
         );
       },
     );
+  }
+}
+
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+  final bool showAnimatedBackButton;
+  final String? title;
+  final Color? backgroundColor;
+
+  _StickyHeaderDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
+    this.showAnimatedBackButton = false,
+    this.title,
+    this.backgroundColor,
+  });
+
+  @override
+  double get minExtent => minHeight;
+
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    if (showAnimatedBackButton && title != null) {
+      final isStuckToTop = shrinkOffset > 0;
+      
+      return Container(
+        color: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+        padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 10),
+        child: Row(
+          children: [
+            // Animated back button with slide effect
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: isStuckToTop ? 40 : 0,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: isStuckToTop ? 1.0 : 0.0,
+                child: OverflowBox(
+                  alignment: Alignment.centerLeft,
+                  maxWidth: 40,
+                  child: CustomBackButton(
+                    label: '',
+                    iconSize: 24,
+                    iconColor: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title!,
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return SizedBox.expand(child: child);
+    }
+  }
+
+  @override
+  bool shouldRebuild(_StickyHeaderDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxHeight ||
+        minHeight != oldDelegate.minHeight ||
+        child != oldDelegate.child ||
+        showAnimatedBackButton != oldDelegate.showAnimatedBackButton ||
+        title != oldDelegate.title ||
+        backgroundColor != oldDelegate.backgroundColor;
   }
 }

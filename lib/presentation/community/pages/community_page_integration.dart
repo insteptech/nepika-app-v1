@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../core/api_base.dart';
-import '../../../data/community/repositories/community_repository_impl.dart';
-import 'home.dart';
-import '../bloc/community_bloc.dart';
+import 'community_gateway_page.dart';
 
-/// Example of how to integrate the CommunityHomePage into your app
+/// Main integration point for the community feature
+/// 
+/// This handles:
+/// 1. Checking if user has a community profile
+/// 2. Creating profile if needed
+/// 3. Navigating to community feed once profile is ready
 /// 
 /// Usage:
 /// ```dart
@@ -30,14 +31,9 @@ class CommunityPageIntegration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return BlocProvider(
-      create: (context) => CommunityBloc(
-        CommunityRepositoryImpl(ApiBase()),
-      ),
-      child: CommunityHomePage(
-        token: token,
-        userId: userId,
-      ),
+    return CommunityGatewayPage(
+      token: token,
+      userId: userId,
     );
   }
 }

@@ -142,4 +142,5 @@ class CommunityRoutes {
   static const String createPost = '/community/create-post';
   static const String userProfile = '/community/user-profile';
   static const String searchUsers = '/community/search-users';
+  static const String createProfile = '/community/create-profile';
 }

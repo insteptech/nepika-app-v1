@@ -9,13 +9,13 @@ class SectionHeader extends StatelessWidget {
   final bool buttonLoading;
 
   const SectionHeader({
-    Key? key,
+    super.key,
     required this.heading,
     this.showButton = false,
     this.buttonText = 'View all',
     this.onButtonPressed,
     this.buttonLoading = false,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

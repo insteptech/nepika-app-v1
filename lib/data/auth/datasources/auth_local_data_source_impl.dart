@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:injectable/injectable.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 // import '../../core/constants/app_constants.dart';
 import '../../../core/config/constants/app_constants.dart';
 import '../models/auth_token_model.dart';
@@ -10,6 +11,7 @@ import 'auth_local_data_source.dart';
 @Injectable(as: AuthLocalDataSource)
 class AuthLocalDataSourceImpl implements AuthLocalDataSource {
   final SharedPreferences sharedPreferences;
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
   
   const AuthLocalDataSourceImpl(this.sharedPreferences);
   
@@ -100,14 +102,18 @@ class AuthLocalDataSourceImpl implements AuthLocalDataSource {
 
   @override
   Future<void> storeToken(String token) async {
-    print('🔑 AuthLocalDataSource: Storing token with key "${AppConstants.accessTokenKey}": "$token"');
+    // Store in both SharedPreferences and SecureStorage for compatibility
     await sharedPreferences.setString(AppConstants.accessTokenKey, token);
-    print('🔑 AuthLocalDataSource: Token stored successfully');
+    await _secureStorage.write(key: "access_token", value: token);
+    print('✅ AuthLocalDataSource: Access token saved successfully (${token.substring(0, 20)}...)');
   }
 
   @override
   Future<void> storeRefreshToken(String refreshToken) async {
+    // Store in both SharedPreferences and SecureStorage for compatibility  
     await sharedPreferences.setString(AppConstants.refreshTokenKey, refreshToken);
+    await _secureStorage.write(key: "refresh_token", value: refreshToken);
+    print('✅ AuthLocalDataSource: Refresh token saved successfully (${refreshToken.substring(0, 20)}...)');
   }
 
   @override

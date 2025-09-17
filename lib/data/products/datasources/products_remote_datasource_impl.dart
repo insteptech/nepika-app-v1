@@ -11,10 +11,12 @@ class ProductsRemoteDataSourceImpl implements ProductsRemoteDataSource {
 
   @override
   Future<List<ProductModel>> getMyProducts({required String token}) async {
+    // Note: Token is automatically added by SecureApiClient, but keeping parameter for compatibility
+    // In the future, you can remove the token parameter and the SecureApiClient will handle it
     final response = await apiBase.request(
       path: ApiEndpoints.userMyProducts,
       method: 'GET',
-      headers: {'Authorization': 'Bearer $token'},
+      // Authorization header is now automatically added by SecureApiClient
     );
     
     if (response.statusCode == 200 && response.data['success'] == true) {
@@ -27,16 +29,29 @@ class ProductsRemoteDataSourceImpl implements ProductsRemoteDataSource {
 
   @override
   Future<ProductInfoModel> getProductInfo({required String token, required String productId}) async {
+    // Token automatically handled by SecureApiClient with refresh capability
     final response = await apiBase.request(
       path: '${ApiEndpoints.userMyProducts}/$productId',
       method: 'GET',
-      headers: {'Authorization': 'Bearer $token'},
     );
     
     if (response.statusCode == 200 && response.data['success'] == true) {
       return ProductInfoModel.fromJson(response.data['data']);
     } else {
       throw Exception(response.data['message'] ?? 'Failed to fetch product info');
+    }
+  }
+
+  @override
+  Future<void> toggleProduct({required String token, required String productId}) async {
+    // Secure API client automatically adds token and handles refresh on 401
+    final response = await apiBase.request(
+      path: '/products/$productId/toggle',
+      method: 'PUT',
+    );
+    
+    if (response.statusCode != 200 || response.data['success'] != true) {
+      throw Exception(response.data['message'] ?? 'Failed to toggle product');
     }
   }
 }

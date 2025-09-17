@@ -31,3 +31,7 @@ export 'custom_button.dart';
 export 'custom_text_field.dart';
 export 'loading_widget.dart';
 export 'color_palette.dart';
+
+// Image Components
+export 'skeleton_loader.dart';
+export 'routine_image.dart';

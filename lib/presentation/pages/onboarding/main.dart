@@ -932,6 +932,7 @@ class _OnboardingMapperState extends State<OnboardingMapper> with WidgetsBinding
             },
             child: BaseQuestionPage(
               currentStep: _currentStep,
+              showSkipButton: _currentStep != 1,
               onSkip: _handleSkip,
               totalSteps: 7,
               title: _screen['title'] ?? 'Tell us about your lifestyle',

@@ -125,11 +125,11 @@ class RoutineBloc extends Bloc<RoutineEvent, RoutineState> {
         emit(RoutineError(failure: failure));
       },
       (success) async {
-        Logger.bloc('Successfully updated routine step, refreshing...');
-        // Refresh routines to get updated state
-        await _refreshCurrentRoutines(event.token, emit);
+        Logger.bloc('Successfully updated routine step');
+        // Update the local routine data instead of refreshing from server
+        final updatedRoutines = _updateLocalRoutineCompletion(event.routineId, event.isCompleted);
         emit(RoutineOperationSuccess(
-          routines: _getCurrentRoutines(),
+          routines: updatedRoutines,
           message: 'Routine step updated successfully',
           operationId: event.routineId,
         ));
@@ -157,10 +157,11 @@ class RoutineBloc extends Bloc<RoutineEvent, RoutineState> {
         emit(RoutineError(failure: failure));
       },
       (success) async {
-        Logger.bloc('Successfully deleted routine step, refreshing...');
-        await _refreshCurrentRoutines(event.token, emit);
+        Logger.bloc('Successfully deleted routine step');
+        // Update local data by removing the deleted routine
+        final updatedRoutines = _removeLocalRoutine(event.routineId);
         emit(RoutineOperationSuccess(
-          routines: _getCurrentRoutines(),
+          routines: updatedRoutines,
           message: 'Routine step deleted successfully',
           operationId: event.routineId,
         ));
@@ -230,13 +231,28 @@ class RoutineBloc extends Bloc<RoutineEvent, RoutineState> {
     return [];
   }
 
-  Future<void> _refreshCurrentRoutines(String token, Emitter<RoutineState> emit) async {
-    if (_currentRoutineType != null) {
-      final result = await getTodaysRoutine(token, _currentRoutineType!);
-      result.fold(
-        (failure) => Logger.bloc('Failed to refresh routines after operation', error: failure),
-        (routines) => emit(RoutineLoaded(routines: routines)),
-      );
-    }
+
+  // Update local routine completion status without API call
+  List<Routine> _updateLocalRoutineCompletion(String routineId, bool isCompleted) {
+    final currentRoutines = _getCurrentRoutines();
+    return currentRoutines.map((routine) {
+      if (routine.id == routineId) {
+        return Routine(
+          id: routine.id,
+          isCompleted: isCompleted,
+          name: routine.name,
+          timing: routine.timing,
+          routineIcon: routine.routineIcon,
+          description: routine.description,
+        );
+      }
+      return routine;
+    }).toList();
+  }
+
+  // Remove routine from local data without API call
+  List<Routine> _removeLocalRoutine(String routineId) {
+    final currentRoutines = _getCurrentRoutines();
+    return currentRoutines.where((routine) => routine.id != routineId).toList();
   }
 }

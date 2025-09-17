@@ -52,7 +52,7 @@ class NavigationHelper {
         (route) => false,
       );
     } else {
-      final route = OnboardingSteps.getRouteForStep(user.activeStep);
+      final route = OnboardingSteps.getRouteForStep(user.activeStep.toString());
       
       // Use standard Flutter navigation with the routes defined in main.dart
       Navigator.pushNamedAndRemoveUntil(

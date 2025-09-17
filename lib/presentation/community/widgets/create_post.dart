@@ -18,24 +18,24 @@ class CreatePostWidget extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Container(
-            height: 50,
-            width: 50,
-            margin: const EdgeInsets.only(right: 10),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Theme.of(context).colorScheme.primary,
+            Container(
+              height: 50,
+              width: 50,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(6),
+                child: Image.asset(
+                'assets/images/nepika_logo_image.png',
+                height: 10,
+                color: Theme.of(context).colorScheme.onSecondary,
+                fit: BoxFit.scaleDown,
+              ),
+              )
             ),
-            child: Padding(
-              padding: const EdgeInsets.all(6),
-              child: Image.asset(
-              'assets/images/nepika_logo_image.png',
-              height: 10,
-              color: Theme.of(context).colorScheme.onSecondary,
-              fit: BoxFit.scaleDown,
-            ),
-            )
-          ),
           Expanded(
             child: Container(
               padding: const EdgeInsets.symmetric(

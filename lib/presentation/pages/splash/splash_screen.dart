@@ -87,6 +87,11 @@ class _SplashScreenState extends State<SplashScreen>
 
     try {
       final dio = Dio();
+      // Add timeout configuration
+      dio.options.connectTimeout = const Duration(seconds: 5);
+      dio.options.receiveTimeout = const Duration(seconds: 10);
+      dio.options.sendTimeout = const Duration(seconds: 5);
+      
       final response = await dio.get(
         '${Env.baseUrl}/auth/users/validate',
         options: Options(
@@ -95,7 +100,7 @@ class _SplashScreenState extends State<SplashScreen>
             'Content-Type': 'application/json',
           },
         ),
-      );
+      ).timeout(const Duration(seconds: 8));
 
       if (response.statusCode == 200 && response.data != null) {
         final responseData = response.data;

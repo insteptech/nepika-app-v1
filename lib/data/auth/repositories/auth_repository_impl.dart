@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:injectable/injectable.dart';
 import 'package:nepika/core/utils/secure_storage.dart';
 import '../../../core/utils/either.dart';
@@ -91,18 +92,14 @@ class AuthRepositoryImpl implements AuthRepository {
       if ((wrappedResult['data']?['token'] ?? wrappedResult['token']) != null) {
         final authResponse = AuthResponse.fromJson(wrappedResult);
 
-        // Debug token storage
-        print('🔑 AuthRepository: Storing token: "${authResponse.token}"');
-        print('🔑 AuthRepository: Token length: ${authResponse.token.length}');
-        print('🔑 AuthRepository: Refresh token: "${authResponse.refreshToken}"');
-
         // ✅ Save tokens locally
+        debugPrint('🔑 AuthRepository: Saving access token: ${authResponse.token.substring(0, 20)}...');
+        debugPrint('🔑 AuthRepository: Saving refresh token: ${authResponse.refreshToken.substring(0, 20)}...');
         await localDataSource.storeToken(authResponse.token);
         await localDataSource.storeRefreshToken(authResponse.refreshToken);
         
         // Verify token was saved
         final savedToken = await localDataSource.getToken();
-        print('🔑 AuthRepository: Verified saved token: "$savedToken"');
 
         // ✅ Convert to UserModel & save locally
         final userModel = UserModel.fromEntity(authResponse.user);

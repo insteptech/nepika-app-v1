@@ -29,6 +29,7 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
   String? _token;
   bool _isLoading = true;
   bool _isInitialized = false;
+  String? _deletingRoutineId; // Track which routine is being deleted
 
   @override
   void initState() {
@@ -121,16 +122,21 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
         }
       },
       builder: (context, state) {
-        bool loading = state is RoutineLoading;
+        bool loading = state is RoutineLoading; // Only show full loading for initial load
         List<Routine> routines = [];
         String? errorMessage;
-        String? loadingRoutineId;
+        
+        // Track which specific routine is being deleted
+        if (state is RoutineOperationLoading) {
+          _deletingRoutineId = state.operationId;
+        } else {
+          _deletingRoutineId = null;
+        }
 
         if (state is RoutineLoaded) {
           routines = state.routines;
         } else if (state is RoutineOperationLoading) {
           routines = state.currentRoutines;
-          loadingRoutineId = state.operationId;
         } else if (state is RoutineOperationSuccess) {
           routines = state.routines;
         } else if (state is RoutineError) {
@@ -139,40 +145,51 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
 
         return Scaffold(
           backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-          body: SafeArea(
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: SizedBox(
-                    width: double.infinity,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 16),
-                        const CustomBackButton(),
-                        const SizedBox(height: 10),
-                      ],
-                    ),
-                  ),
-                ),
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: () async {
-                      _refreshRoutines();
-                      // Wait a bit for the refresh to complete
-                      await Future.delayed(const Duration(milliseconds: 500));
-                    },
-                    child: SingleChildScrollView(
+          body: RefreshIndicator(
+            onRefresh: () async {
+              _refreshRoutines();
+              await Future.delayed(const Duration(milliseconds: 500));
+            },
+            child: SafeArea(
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SizedBox(height: 32),
-                          Text(
-                            "Edit routine",
-                            style: Theme.of(context).textTheme.displaySmall,
-                          ),
+                          const SizedBox(height: 16),
+                          const CustomBackButton(),
+                          const SizedBox(height: 15),
+                        ],
+                      ),
+                    ),
+                  ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: _StickyHeaderDelegate(
+                      minHeight: 40,
+                      maxHeight: 40,
+                      showAnimatedBackButton: true,
+                      title: "Edit routine",
+                      child: Container(
+                        color: Theme.of(context).scaffoldBackgroundColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Edit routine",
+                          style: Theme.of(context).textTheme.displaySmall,
+                        ),
+                      ),
+                    ),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                           const SizedBox(height: 8),
                           Text(
                             'Remove routine steps from your daily routine',
@@ -181,7 +198,7 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
                                 .headlineMedium!
                                 .secondary(context),
                           ),
-                          const SizedBox(height: 45),
+                          const SizedBox(height: 35),
                           loading
                               ? const Center(child: CircularProgressIndicator())
                               : errorMessage != null
@@ -200,13 +217,12 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
                                             context,
                                             AppRoutes.dashboardAddRoutine,
                                           );
-                                          // Refresh the routines when coming back from add routine screen
                                           _refreshRoutines();
                                         },
                                       )
                                     : Column(
                                         children: routines.map((routine) {
-                                          final isLoading = loadingRoutineId == routine.id;
+                                          final isLoading = _deletingRoutineId == routine.id;
                                           
                                           return RoutineTile(
                                             routine: routine,
@@ -216,50 +232,130 @@ class _EditRoutineViewState extends State<_EditRoutineView> with WidgetsBindingO
                                           );
                                         }).toList(),
                                       ),
+                          if(routines.isNotEmpty)
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              child: GestureDetector(
+                                onTap: () async {
+                                  await Navigator.pushNamed(
+                                    context,
+                                    AppRoutes.dashboardAddRoutine,
+                                  );
+                                  _refreshRoutines();
+                                },
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Image.asset(
+                                      'assets/icons/add_icon.png',
+                                      width: 20,
+                                      height: 20,
+                                      color: Theme.of(context).colorScheme.primary,
+                                    ),
+                                    const SizedBox(width: 6),
+                                    Text(
+                                      'Add new step',
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .headlineMedium!
+                                          .hint(context),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           const SizedBox(height: 100),
                         ],
                       ),
                     ),
                   ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical:14),
-                  child: GestureDetector(
-                    onTap: () async {
-                      await Navigator.pushNamed(
-                        context,
-                        AppRoutes.dashboardAddRoutine,
-                      );
-                      // Refresh the routines when coming back from add routine screen
-                      _refreshRoutines();
-                    },
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Image.asset(
-                          'assets/icons/add_icon.png',
-                          width: 20,
-                          height: 20,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Add new step',
-                          style: Theme.of(context)
-                              .textTheme
-                              .headlineMedium!
-                              .hint(context),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // const SizedBox(height: 24),
-              ],
+                ],
+              ),
             ),
           ),
         );
       },
     );
+  }
+}
+
+class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
+  final double minHeight;
+  final double maxHeight;
+  final Widget child;
+  final bool showAnimatedBackButton;
+  final String? title;
+  final Color? backgroundColor;
+
+  _StickyHeaderDelegate({
+    required this.minHeight,
+    required this.maxHeight,
+    required this.child,
+    this.showAnimatedBackButton = false,
+    this.title,
+    this.backgroundColor,
+  });
+
+  @override
+  double get minExtent => minHeight;
+
+  @override
+  double get maxExtent => maxHeight;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    if (showAnimatedBackButton && title != null) {
+      final isStuckToTop = shrinkOffset > 0;
+      
+      return Container(
+        color: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        child: Row(
+          children: [
+            // Animated back button with slide effect
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              curve: Curves.easeInOut,
+              width: isStuckToTop ? 40 : 0,
+              child: AnimatedOpacity(
+                duration: const Duration(milliseconds: 200),
+                opacity: isStuckToTop ? 1.0 : 0.0,
+                child: OverflowBox(
+                  alignment: Alignment.centerLeft,
+                  maxWidth: 40,
+                  child: CustomBackButton(
+                    label: '',
+                    iconSize: 24,
+                    iconColor: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  title!,
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    } else {
+      return SizedBox.expand(child: child);
+    }
+  }
+
+  @override
+  bool shouldRebuild(_StickyHeaderDelegate oldDelegate) {
+    return maxHeight != oldDelegate.maxHeight ||
+        minHeight != oldDelegate.minHeight ||
+        child != oldDelegate.child ||
+        showAnimatedBackButton != oldDelegate.showAnimatedBackButton ||
+        title != oldDelegate.title ||
+        backgroundColor != oldDelegate.backgroundColor;
   }
 }

@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 
-const double kNavBarIconSize = 24.0;
-const double kScanIconSize = 28.0;
+const double kNavBarIconSize = 22.0;
+const double kScanIconSize = 24.0;
 
 class DashboardNavBar extends StatefulWidget {
   final int selectedIndex;
@@ -22,7 +22,7 @@ class DashboardNavBar extends StatefulWidget {
 class _DashboardNavBarState extends State<DashboardNavBar> {
   static const _icons = [
     'assets/icons/home_icon.png',
-    'assets/icons/community_icon.png',
+    'assets/icons/2_people.png',
     'assets/icons/scan_icon.png',
     'assets/icons/box_icon.png',
     'assets/icons/person_icon.png',
@@ -39,7 +39,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     AppRoutes.dashboardHome,
     AppRoutes.communityHome,
     AppRoutes.cameraScanGuidence,
-    AppRoutes.dashboardAllProducts,
+    AppRoutes.notFound,
     AppRoutes.dashboardSettings,
   ];
 
@@ -84,8 +84,8 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
                 if (index == 2) ...[
                   // Scan icon larger and no label
                   Container(
-                    width: 65,
-                    height: 65,
+                    width: 55,
+                    height: 55,
                     alignment: Alignment.center,
                     decoration: BoxDecoration(
                       color: Theme.of(context).colorScheme.primary,

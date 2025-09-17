@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/widgets.dart';
+import 'package:nepika/core/services/navigation_service.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 
@@ -64,7 +65,8 @@ class NotFound extends StatelessWidget {
 
                   // Scan Link
                   GestureDetector(
-                    onTap: () => _navigateTo(context, AppRoutes.cameraScanGuidence),
+                    onTap: () =>  NavigationService.navigateCameraScam(),
+                    // onTap: () => _navigateTo(, AppRoutes.cameraScanGuidence),
                     child: Text(
                       'Scan',
                       style: Theme.of(context).textTheme.headlineMedium

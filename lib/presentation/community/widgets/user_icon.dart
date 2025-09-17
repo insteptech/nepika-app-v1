@@ -16,52 +16,59 @@ class UserImageIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final avatarUrl = author.avatarUrl;
+    final hasValidUrl = avatarUrl.isNotEmpty;
 
-    return GestureDetector(
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
         onTap: () {
           Navigator.pushNamed(
             context,
             AppRoutes.communityUserProfile,
             arguments: {'userId': author.id},
           );
-        },  
-      child: Container(
-        height: 40,
-        width: 40,
-        margin: EdgeInsets.all(padding.toDouble()),
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: Theme.of(context).colorScheme.primary,
+        },
+        borderRadius: BorderRadius.circular(20),
+        child: Container(
+          height: 40,
+          width: 40,
+          margin: EdgeInsets.all(padding.toDouble()),
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: hasValidUrl 
+                ? Colors.transparent 
+                : Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            border: Border.all(
+              color: hasValidUrl 
+                  ? Colors.transparent 
+                  : Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+              width: 1,
+            ),
+          ),
+          child: hasValidUrl
+              ? ClipOval(
+                  child: Image.network(
+                    avatarUrl,
+                    height: 40,
+                    width: 40,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return _buildDefaultIcon(context);
+                    },
+                  ),
+                )
+              : _buildDefaultIcon(context),
         ),
-        child: avatarUrl.isNotEmpty
-            ? ClipOval(
-                child: Image.network(
-                  avatarUrl,
-                  height: 40,
-                  width: 40,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) {
-                    return Padding(
-                      padding: const EdgeInsets.all(6),
-                      child: Image.asset(
-                        'assets/images/user_default_image_1.png',
-                        height: 10,
-                        color: Theme.of(context).colorScheme.onSecondary,
-                        fit: BoxFit.scaleDown,
-                      ),
-                    );
-                  },
-                ),
-              )
-            : Padding(
-                padding: const EdgeInsets.all(6),
-                child: Image.asset(
-                  'assets/images/nepika_logo_image.png',
-                  height: 10,
-                  color: Theme.of(context).colorScheme.onSecondary,
-                  fit: BoxFit.scaleDown,
-                ),
-              ),
+      ),
+    );
+  }
+
+  Widget _buildDefaultIcon(BuildContext context) {
+    return Center(
+      child: Icon(
+        Icons.person,
+        size: 24,
+        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
       ),
     );
   }

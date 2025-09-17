@@ -1,15 +1,17 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
-import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/config/env.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/core/utils/secure_storage.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:dio/dio.dart';
+import 'package:image/image.dart' as img;
+import 'package:shared_preferences/shared_preferences.dart';
 
 class FaceScanResultPage extends StatefulWidget {
   final CameraController? cameraController;
@@ -25,7 +27,8 @@ class FaceScanResultPage extends StatefulWidget {
   State<FaceScanResultPage> createState() => _FaceScanResultPageState();
 }
 
-class _FaceScanResultPageState extends State<FaceScanResultPage> {
+class _FaceScanResultPageState extends State<FaceScanResultPage> 
+    with SingleTickerProviderStateMixin {
   CameraController? _controller;
   List<CameraDescription>? _cameras;
   late FaceDetector _faceDetector;
@@ -33,7 +36,15 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
   bool _isDetecting = false;
   bool _isInitializing = false;
   String? _errorMessage;
+  String? _token;
   List<Face> _faces = [];
+  
+  // Animation controller for shimmer effect
+  late AnimationController _shimmerController;
+  late Animation<double> _shimmerAnimation;
+  
+  // Transformation controller for zoom functionality
+  late TransformationController _transformationController;
 
   // Alignment & capture state
   bool _isAligned = false;
@@ -44,9 +55,18 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
 
   // API state - Updated for complete analysis
   bool _isProcessingAPI = false;
-  Uint8List? _apiResponseImageBytes;
+  String? _reportImageUrl;
   Map<String, dynamic>? _analysisResults;
   String? _apiError;
+  
+  // Shimmer effect states
+  bool _isLoadingAnnotatedImage = false;
+  bool _annotatedImageLoaded = false;
+  bool _imagePreloadComplete = false;
+  DateTime? _shimmerStartTime;
+  
+  // Flag to force complete reinitialization
+  bool _forceReinitialization = false;
 
   // Updated API endpoint to use the combined analysis
   static const String _apiEndpoint =
@@ -58,7 +78,24 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
     _initializeDio();
     _initializeFaceDetector();
     _initializeCamera();
+    _initializeShimmerAnimation();
+    _transformationController = TransformationController();
   }
+
+
+void _initializeShimmerAnimation() {
+  _shimmerController = AnimationController(
+    duration: const Duration(milliseconds: 1800), // Faster for more visible effect
+    vsync: this,
+  );
+  _shimmerAnimation = Tween<double>(
+    begin: -2.0,
+    end: 2.0,
+  ).animate(CurvedAnimation(
+    parent: _shimmerController,
+    curve: Curves.linear,
+  ));
+}
 
   void _initializeDio() {
     _dio = Dio(
@@ -101,7 +138,11 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
 
   void _resetAlignment() {
     _isAligned = false;
-    _cancelTimer();
+    if (mounted) {
+      _cancelTimer();
+    } else {
+      _cancelTimer(skipStateUpdate: true);
+    }
     _countdown = 5;
   }
 
@@ -111,8 +152,10 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
         _isAligned = false;
         _countdown = 5;
       });
+      _cancelTimer();
+    } else {
+      _cancelTimer(skipStateUpdate: true);
     }
-    _cancelTimer();
   }
 
   Future<bool> _checkCameraPermission() async {
@@ -137,15 +180,25 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
       _isInitialized = false;
       _errorMessage = null;
       _capturedImage = null;
-      _apiResponseImageBytes = null;
+      _reportImageUrl = null;
       _analysisResults = null;
       _apiError = null;
+      _isLoadingAnnotatedImage = false;
+      _annotatedImageLoaded = false;
+      _imagePreloadComplete = false;
       _resetAlignment();
     });
+    
+    // Reset shimmer timing
+    _shimmerStartTime = null;
 
     try {
-      // If pre-initialized camera is available, use it directly
-      if (widget.cameraController != null && widget.cameraController!.value.isInitialized) {
+      // If pre-initialized camera is available and still initialized, use it directly
+      // But skip if we're forcing reinitialization
+      if (!_forceReinitialization &&
+          widget.cameraController != null && 
+          widget.cameraController!.value.isInitialized && 
+          _controller == null) {
         debugPrint('Using pre-initialized camera controller');
         _controller = widget.cameraController;
         _cameras = widget.availableCameras;
@@ -154,6 +207,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
           setState(() {
             _isInitialized = true;
             _isInitializing = false;
+            _forceReinitialization = false; // Reset the flag
           });
           await _startImageStream();
           return;
@@ -192,6 +246,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
       setState(() {
         _isInitialized = true;
         _isInitializing = false;
+        _forceReinitialization = false; // Reset the flag after successful initialization
       });
 
       await _startImageStream();
@@ -202,6 +257,7 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
           _errorMessage = _getReadableError(e.toString());
           _isInitializing = false;
           _isInitialized = false;
+          _forceReinitialization = false; // Reset the flag on error too
         });
       }
     }
@@ -272,28 +328,52 @@ class _FaceScanResultPageState extends State<FaceScanResultPage> {
     }
   }
 
+  Future<void> _stopCameraAfterCapture() async {
+    if (_controller != null) {
+      try {
+        if (_controller!.value.isStreamingImages) {
+          await _controller!.stopImageStream();
+          debugPrint('Camera stream stopped after successful capture');
+        }
+        // Always dispose the camera to turn off the light after successful capture
+        await _controller!.dispose();
+        _controller = null;
+        debugPrint('Camera fully disposed after successful capture');
+      } catch (e) {
+        debugPrint('Error stopping camera: $e');
+      }
+    }
+  }
+
   Future<void> _disposeController() async {
-    _cancelTimer();
+    debugPrint('Face scan: Starting camera disposal...');
+    _cancelTimer(skipStateUpdate: true);
 
     if (_controller != null) {
       try {
-        // Only dispose if it's not the pre-initialized controller from guidance screen
-        if (widget.cameraController == null) {
+        // Check if controller is still initialized before disposing
+        if (_controller!.value.isInitialized) {
+          debugPrint('Face scan: Camera is initialized, stopping stream and disposing...');
           if (_controller!.value.isStreamingImages) {
             await _controller!.stopImageStream();
+            debugPrint('Face scan: Image stream stopped');
           }
           await _controller!.dispose().timeout(
             const Duration(seconds: 3),
-            onTimeout: () => debugPrint('Camera disposal timed out'),
+            onTimeout: () => debugPrint('Face scan: Camera disposal timed out'),
           );
+          debugPrint('Face scan: Camera disposed successfully');
+        } else {
+          debugPrint('Face scan: Camera was already disposed or not initialized');
         }
       } catch (e) {
-        debugPrint('Error disposing camera: $e');
+        debugPrint('Face scan: Error disposing camera: $e');
       } finally {
-        if (widget.cameraController == null) {
-          _controller = null;
-        }
+        _controller = null;
+        debugPrint('Face scan: Camera controller set to null');
       }
+    } else {
+      debugPrint('Face scan: No camera controller to dispose');
     }
   }
 
@@ -413,18 +493,27 @@ void _evaluateAlignment() {
 
   void _onAligned() {
     if (!_isAligned && mounted) {
-      setState(() => _isAligned = true);
-      _startCountdown();
+      try {
+        setState(() => _isAligned = true);
+        _startCountdown();
+      } catch (e) {
+        debugPrint('Error in _onAligned setState: $e');
+      }
     }
   }
 
   void _onMisaligned() {
     if (_isAligned && mounted) {
-      setState(() {
-        _isAligned = false;
-        _countdown = 5; // Reset countdown immediately when misaligned
-      });
-      _cancelTimer();
+      try {
+        setState(() {
+          _isAligned = false;
+          _countdown = 5; // Reset countdown immediately when misaligned
+        });
+        _cancelTimer();
+      } catch (e) {
+        debugPrint('Error in _onMisaligned setState: $e');
+        _cancelTimer(skipStateUpdate: true);
+      }
     }
   }
 
@@ -450,16 +539,30 @@ void _evaluateAlignment() {
         t.cancel();
         _capturePhoto();
       } else {
-        setState(() => _countdown--);
+        if (mounted) {
+          try {
+            setState(() => _countdown--);
+          } catch (e) {
+            debugPrint('Error in countdown setState: $e');
+            t.cancel();
+          }
+        } else {
+          t.cancel();
+        }
       }
     });
   }
 
-  void _cancelTimer() {
+  void _cancelTimer({bool skipStateUpdate = false}) {
     _timer?.cancel();
     _timer = null;
-    if (mounted) {
-      setState(() => _countdown = 5);
+    // Only update state if we're not disposing and mounted
+    if (!skipStateUpdate && mounted) {
+      try {
+        setState(() => _countdown = 5);
+      } catch (e) {
+        debugPrint('Error in _cancelTimer setState: $e');
+      }
     }
   }
 
@@ -470,12 +573,16 @@ void _evaluateAlignment() {
       return;
     }
     try {
+      // Stop image stream to pause camera processing
       await _controller!.stopImageStream();
       final file = await _controller!.takePicture();
       if (mounted) {
+        // Process the image first (flip if front camera)
+        final processedImageFile = await _processImageForUpload(file);
+        
         setState(() {
-          _capturedImage = file;
-          _apiResponseImageBytes = null;
+          _capturedImage = processedImageFile;
+          _reportImageUrl = null;
           _analysisResults = null;
           _apiError = null;
         });
@@ -491,6 +598,33 @@ void _evaluateAlignment() {
     }
   }
 
+  Future<XFile> _processImageForUpload(XFile imageFile) async {
+    // If it's a front camera, flip the image horizontally
+    if (_controller?.description.lensDirection == CameraLensDirection.front) {
+      try {
+        final bytes = await imageFile.readAsBytes();
+        final image = img.decodeImage(bytes);
+        
+        if (image != null) {
+          // Flip horizontally
+          final flippedImage = img.flipHorizontal(image);
+          
+          // Save the flipped image to a temporary file
+          final tempDir = Directory.systemTemp;
+          final tempFile = File('${tempDir.path}/flipped_face_image_${DateTime.now().millisecondsSinceEpoch}.jpg');
+          await tempFile.writeAsBytes(img.encodeJpg(flippedImage));
+          
+          return XFile(tempFile.path);
+        }
+      } catch (e) {
+        debugPrint('Error processing image: $e');
+      }
+    }
+    
+    // Return original image if not front camera or if processing failed
+    return imageFile;
+  }
+
   Future<void> _sendImageToAPI(XFile imageFile) async {
     if (!mounted) return;
 
@@ -499,15 +633,18 @@ void _evaluateAlignment() {
     setState(() {
       _isProcessingAPI = true;
       _apiError = null;
-      _apiResponseImageBytes = null;
+      _reportImageUrl = null;
       _analysisResults = null;
     });
 
     try {
+      // Process the image (flip if front camera)
+      final processedImageFile = await _processImageForUpload(imageFile);
+      
       // Create FormData for multipart upload
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
-          imageFile.path,
+          processedImageFile.path,
           filename: 'face_image.jpg',
         ),
         'include_annotated_image': 'true', // Request annotated image
@@ -526,7 +663,7 @@ void _evaluateAlignment() {
       );
 
       debugPrint('API Response Status: ${response.statusCode}');
-      debugPrint('API Response Data: ${response.data}');
+      logJson(response.data);
 
       if (response.statusCode == 200 && response.data != null) {
         final responseData = response.data as Map<String, dynamic>;
@@ -535,30 +672,36 @@ void _evaluateAlignment() {
           // Extract analysis results
           _analysisResults = responseData;
 
-          // Extract and decode annotated image if available
-          final analysis = responseData['analysis'] as Map<String, dynamic>?;
-          final skinAreas = analysis?['skin_areas'] as Map<String, dynamic>?;
-          final annotatedImageBase64 = skinAreas?['annotated_image'] as String?;
-
-          if (annotatedImageBase64 != null) {
-            // Remove data URL prefix if present
-            String base64String = annotatedImageBase64;
-            if (base64String.startsWith('data:image')) {
-              base64String = base64String.split(',')[1];
-            }
-
-            try {
-              final imageBytes = base64Decode(base64String);
-              _apiResponseImageBytes = imageBytes;
-            } catch (e) {
-              debugPrint('Error decoding base64 image: $e');
-            }
+          // Extract report image URL
+          final report = responseData['report'] as Map<String, dynamic>?;
+          final imageUrl = report?['image_url'] as String?;
+          
+          if (imageUrl != null) {
+            // Construct full URL
+            _reportImageUrl = '${Env.backendBase}$imageUrl';
+            debugPrint('Report image URL: $_reportImageUrl');
+            print(_token);
           }
 
           if (mounted) {
             setState(() {
               _isProcessingAPI = false;
+              // Start shimmer effect when annotated image URL is received
+              if (_reportImageUrl != null) {
+                debugPrint('Setting shimmer states: _isLoadingAnnotatedImage = true, _annotatedImageLoaded = false');
+                _isLoadingAnnotatedImage = true;
+                _annotatedImageLoaded = false;
+              }
             });
+            
+            // Start shimmer animation
+            if (_reportImageUrl != null) {
+              debugPrint('Report image URL received, starting shimmer effect');
+              _startShimmerEffect();
+            }
+            
+            // Turn off camera after successful API response
+            await _stopCameraAfterCapture();
           }
         } else {
           throw Exception(responseData['error_message'] ?? 'Analysis failed');
@@ -591,6 +734,7 @@ void _evaluateAlignment() {
         setState(() {
           _apiError = errorMessage;
           _isProcessingAPI = false;
+          _reportImageUrl = null;
         });
       }
     } catch (e) {
@@ -599,44 +743,99 @@ void _evaluateAlignment() {
         setState(() {
           _apiError = 'Failed to analyze image: ${e.toString()}';
           _isProcessingAPI = false;
+          _reportImageUrl = null;
         });
       }
     }
   }
 
+  Future<String?> _getAuthToken() async {
+    try {
+    final sharedPrefs = await SharedPreferences.getInstance();
+    final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
+    _token = accessToken!;
+    return accessToken;
+    } catch (e) {
+      debugPrint('Error getting auth token: $e');
+      return null;
+    }
+  }
+
   Future<void> _retryInitialization() async {
+    // First dispose any existing controller
+    await _disposeController();
+    
     setState(() {
       _errorMessage = null;
-      _apiResponseImageBytes = null;
+      _reportImageUrl = null;
       _analysisResults = null;
       _apiError = null;
+      _capturedImage = null;
+      _isInitialized = false;
+      _isInitializing = false;
+      _isProcessingAPI = false;
+      _isLoadingAnnotatedImage = false;
+      _annotatedImageLoaded = false;
+      _imagePreloadComplete = false;
+      _forceReinitialization = true; // Force complete reinitialization
+      _resetAlignment();
     });
+    
+    // Reset shimmer timing and stop effect
+    _shimmerStartTime = null;
+    _stopShimmerEffect();
+    
+    // Reinitialize camera from scratch
     await _initializeCamera();
   }
 
-  Widget _buildImageWidget() {
-    // Always prioritize showing the API processed image
-    if (_apiResponseImageBytes != null) {
-      // Display the processed/annotated image
-      return Image.memory(
-        _apiResponseImageBytes!,
-        fit: BoxFit.cover,
-        errorBuilder: (context, error, stackTrace) {
-          debugPrint('Error displaying processed image: $error');
-          return const Center(
-            child: Text(
-              'Error loading processed image',
-              style: TextStyle(color: Colors.white),
-            ),
-          );
-        },
-      );
-    }
-    // Only show captured image while processing or if API failed
-    else if (_capturedImage != null &&
-        (_isProcessingAPI || _apiError != null)) {
-      // Display the original captured image as placeholder
-      return Image.file(
+Widget _buildImageWidget() {
+  if (_capturedImage == null) {
+    return const SizedBox.shrink();
+  }
+
+  return GestureDetector(
+    onDoubleTapDown: (TapDownDetails details) {
+      final currentScale = _transformationController.value.getMaxScaleOnAxis();
+      if (currentScale > 1.0) {
+        // If zoomed in, reset to default
+        _transformationController.value = Matrix4.identity();
+      } else {
+        // If at default, zoom to 2x at the tap location
+        final tapPosition = details.localPosition;
+        final zoomScale = 2.0;
+        
+        // Calculate the transformation matrix to zoom at the tap point
+        // First translate so the tap point is at origin, then scale, then translate back
+        final matrix = Matrix4.identity()
+          ..translate(-tapPosition.dx * (zoomScale - 1), -tapPosition.dy * (zoomScale - 1))
+          ..scale(zoomScale);
+        
+        _transformationController.value = matrix;
+      }
+    },
+    child: InteractiveViewer(
+      transformationController: _transformationController,
+      minScale: 0.9,
+      maxScale: 5.0, // Allow up to 5x zoom for detailed analysis
+      boundaryMargin: const EdgeInsets.all(20.0),
+      panEnabled: true,
+      scaleEnabled: true,
+      onInteractionEnd: (ScaleEndDetails details) {
+        // Auto-snap to default position when zoomed out to 90% or below
+        if (details.velocity.pixelsPerSecond.distance < 50) {
+          final currentScale = _transformationController.value.getMaxScaleOnAxis();
+          if (currentScale <= 1.0) {
+            // Animate back to default position and scale
+            _transformationController.value = Matrix4.identity();
+          }
+        }
+      },
+      child: Stack(
+      fit: StackFit.expand,
+      children: [
+      // Base layer: Captured image
+      Image.file(
         File(_capturedImage!.path),
         fit: BoxFit.cover,
         errorBuilder: (context, error, stackTrace) {
@@ -648,11 +847,121 @@ void _evaluateAlignment() {
             ),
           );
         },
-      );
-    }
-    return const SizedBox.shrink();
-  }
-
+      ),
+      
+      // Shimmer layer: Show when loading annotated image
+      if (_isLoadingAnnotatedImage && !_annotatedImageLoaded) ...[
+        _buildShimmerOverlay(),
+        // Debug indicator - remove this later
+        Positioned(
+          top: 20,
+          right: 20,
+          child: Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.green,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              'SHIMMER ACTIVE\nPreload: $_imagePreloadComplete',
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
+      
+      // Final layer: Annotated image (when fully loaded)
+      if (_reportImageUrl != null && _annotatedImageLoaded)
+        FutureBuilder<String?>(
+          future: _getAuthToken(),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              return Image.network(
+                _reportImageUrl!,
+                fit: BoxFit.cover,
+                headers: {
+                  'Authorization': 'Bearer ${snapshot.data}',
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  debugPrint('Error displaying processed image: $error');
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    if (mounted) {
+                      setState(() {
+                        _annotatedImageLoaded = false;
+                        _isLoadingAnnotatedImage = false;
+                      });
+                      _stopShimmerEffect();
+                    }
+                  });
+                  return const SizedBox.shrink();
+                },
+              );
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      
+      // Invisible image loader to track when annotated image is ready
+      if (_reportImageUrl != null && _isLoadingAnnotatedImage && !_annotatedImageLoaded)
+        Positioned(
+          left: -1000, // Hide offscreen
+          child: FutureBuilder<String?>(
+            future: _getAuthToken(),
+            builder: (context, snapshot) {
+              if (snapshot.hasData) {
+                return Image.network(
+                  _reportImageUrl!,
+                  headers: {
+                    'Authorization': 'Bearer ${snapshot.data}',
+                  },
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) {
+                      debugPrint('Annotated image preloaded successfully');
+                      // Mark preload as complete
+                      WidgetsBinding.instance.addPostFrameCallback((_) {
+                        if (mounted) {
+                          setState(() {
+                            _imagePreloadComplete = true;
+                          });
+                          // Check if minimum time has passed, then stop shimmer
+                          _checkAndStopShimmer();
+                        }
+                      });
+                      return child;
+                    } else {
+                      debugPrint('Annotated image loading progress: ${loadingProgress.cumulativeBytesLoaded}/${loadingProgress.expectedTotalBytes ?? 'unknown'}');
+                    }
+                    return const SizedBox.shrink();
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    debugPrint('Error preloading annotated image: $error');
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (mounted) {
+                        setState(() {
+                          _annotatedImageLoaded = false;
+                          _isLoadingAnnotatedImage = false;
+                        });
+                        _stopShimmerEffect();
+                      }
+                    });
+                    return const SizedBox.shrink();
+                  },
+                );
+              }
+              return const SizedBox.shrink();
+            },
+          ),
+        ),
+      ],
+    ),
+    ),
+  );
+}
   Widget _buildProcessingOverlay() {
     if (!_isProcessingAPI && _apiError == null) return const SizedBox.shrink();
 
@@ -702,9 +1011,143 @@ void _evaluateAlignment() {
   @override
   void dispose() {
     _faceDetector.close();
+    _shimmerController.dispose();
     _disposeController();
     super.dispose();
   }
+
+Widget _buildShimmerOverlay() {
+  return AnimatedBuilder(
+    animation: _shimmerAnimation,
+    builder: (context, child) {
+      return Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: const Alignment(-1.0, -1.0),
+            end: const Alignment(1.0, 1.0),
+            stops: [
+              (_shimmerAnimation.value - 0.5).clamp(0.0, 1.0),
+              (_shimmerAnimation.value - 0.3).clamp(0.0, 1.0),
+              (_shimmerAnimation.value - 0.1).clamp(0.0, 1.0),
+              _shimmerAnimation.value.clamp(0.0, 1.0),
+              (_shimmerAnimation.value + 0.1).clamp(0.0, 1.0),
+              (_shimmerAnimation.value + 0.3).clamp(0.0, 1.0),
+              (_shimmerAnimation.value + 0.5).clamp(0.0, 1.0),
+            ],
+            colors: [
+              Colors.transparent,
+              Colors.white.withOpacity(0.05), // Very subtle start
+              Colors.white.withOpacity(0.2), // Building up
+              Colors.white.withOpacity(0.4), // Bright center
+              Colors.white.withOpacity(0.2), // Fading out
+              Colors.white.withOpacity(0.05), // Very subtle end
+              Colors.transparent,
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+void _startShimmerEffect() {
+  debugPrint('_startShimmerEffect called - mounted: $mounted, isAnimating: ${_shimmerController.isAnimating}');
+  if (mounted && !_shimmerController.isAnimating) {
+    debugPrint('Starting shimmer animation for report image URL: $_reportImageUrl');
+    _shimmerStartTime = DateTime.now();
+    _shimmerController.repeat();
+  } else {
+    debugPrint('Shimmer not started - mounted: $mounted, isAnimating: ${_shimmerController.isAnimating}');
+  }
+}
+
+void _stopShimmerEffect() {
+  debugPrint('_stopShimmerEffect called - mounted: $mounted, isAnimating: ${_shimmerController.isAnimating}');
+  
+  // Ensure minimum shimmer duration of 3 seconds for better UX
+  if (_shimmerStartTime != null) {
+    final elapsed = DateTime.now().difference(_shimmerStartTime!);
+    const minDuration = Duration(seconds: 3);
+    
+    if (elapsed < minDuration) {
+      final remainingTime = minDuration - elapsed;
+      debugPrint('Shimmer running for ${elapsed.inMilliseconds}ms, waiting ${remainingTime.inMilliseconds}ms more...');
+      
+      Timer(remainingTime, () {
+        if (mounted && _shimmerController.isAnimating) {
+          debugPrint('Minimum duration reached, stopping shimmer...');
+          _shimmerController.stop();
+          _shimmerController.reset();
+          _shimmerStartTime = null;
+          // Update state to show final image
+          if (mounted) {
+            setState(() {
+              _annotatedImageLoaded = true;
+              _isLoadingAnnotatedImage = false;
+            });
+          }
+        }
+      });
+      return;
+    }
+  }
+  
+  if (mounted && _shimmerController.isAnimating) {
+    debugPrint('Stopping shimmer animation immediately...');
+    _shimmerController.stop();
+    _shimmerController.reset();
+    _shimmerStartTime = null;
+  } else {
+    debugPrint('Shimmer not stopped - mounted: $mounted, isAnimating: ${_shimmerController.isAnimating}');
+  }
+}
+
+void _checkAndStopShimmer() {
+  debugPrint('_checkAndStopShimmer called - imagePreloadComplete: $_imagePreloadComplete');
+  
+  if (!_imagePreloadComplete) {
+    debugPrint('Image not preloaded yet, keeping shimmer running');
+    return;
+  }
+  
+  // Check if minimum time has elapsed
+  if (_shimmerStartTime != null) {
+    final elapsed = DateTime.now().difference(_shimmerStartTime!);
+    const minDuration = Duration(seconds: 2); // Reduced to 2 seconds
+    
+    if (elapsed >= minDuration) {
+      debugPrint('Minimum duration passed and image ready, stopping shimmer...');
+      _stopShimmerImmediately();
+    } else {
+      final remainingTime = minDuration - elapsed;
+      debugPrint('Image ready but waiting ${remainingTime.inMilliseconds}ms more for minimum duration...');
+      
+      Timer(remainingTime, () {
+        if (mounted) {
+          debugPrint('Minimum duration reached, stopping shimmer now...');
+          _stopShimmerImmediately();
+        }
+      });
+    }
+  } else {
+    debugPrint('No shimmer start time, stopping immediately...');
+    _stopShimmerImmediately();
+  }
+}
+
+void _stopShimmerImmediately() {
+  if (mounted && _shimmerController.isAnimating) {
+    debugPrint('Stopping shimmer animation and showing final image...');
+    _shimmerController.stop();
+    _shimmerController.reset();
+    _shimmerStartTime = null;
+    
+    setState(() {
+      _annotatedImageLoaded = true;
+      _isLoadingAnnotatedImage = false;
+    });
+  }
+}
 
   Widget _buildConditionChip(String label) {
     // Capitalize each word
@@ -729,7 +1172,21 @@ void _evaluateAlignment() {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (!didPop) {
+          // Dispose camera before popping
+          debugPrint('Face scan page: User navigating back, disposing camera...');
+          final navigator = Navigator.of(context);
+          await _disposeController();
+          debugPrint('Face scan page: Camera disposed, navigating back');
+          if (mounted) {
+            navigator.pop();
+          }
+        }
+      },
+      child: Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Padding(
@@ -740,7 +1197,7 @@ void _evaluateAlignment() {
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  if (_capturedImage != null || _apiResponseImageBytes != null)
+                  if (_capturedImage != null || _reportImageUrl != null || _controller == null)
                     IconButton(
                       icon: const Icon(
                         Icons.refresh,
@@ -752,6 +1209,7 @@ void _evaluateAlignment() {
                   const SizedBox(width: 16),
                   GestureDetector(
                     onTap: () async {
+                      debugPrint('Face scan: Close button pressed, disposing camera...');
                       final navigator = Navigator.of(context);
                       await _disposeController();
                       if (mounted) navigator.pop();
@@ -966,6 +1424,7 @@ void _evaluateAlignment() {
             ],
           ),
         ),
+      ),
       ),
     );
   }

@@ -202,6 +202,7 @@ class BaseQuestionPage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
         backgroundColor: Theme.of(context).colorScheme.surface,
+        resizeToAvoidBottomInset: false,
         body: SafeArea(
           child: Column(
             children: [
@@ -237,7 +238,7 @@ class BaseQuestionPage extends StatelessWidget {
                       ),
                       const SizedBox(height: 40),
                       content,
-                      const SizedBox(height: 20),
+                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
                     ],
                   ),
                 ),

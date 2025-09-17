@@ -40,3 +40,31 @@ class ProductsError extends ProductsState {
   @override
   List<Object> get props => [message];
 }
+
+class ProductToggling extends ProductsState {
+  final String productId;
+  final List<Product> products;
+
+  const ProductToggling({
+    required this.productId,
+    required this.products,
+  });
+
+  @override
+  List<Object> get props => [productId, products];
+}
+
+class ProductToggled extends ProductsState {
+  final String productId;
+  final String message;
+  final List<Product> products;
+
+  const ProductToggled({
+    required this.productId,
+    required this.message,
+    required this.products,
+  });
+
+  @override
+  List<Object> get props => [productId, message, products];
+}

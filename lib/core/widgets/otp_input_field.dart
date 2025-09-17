@@ -17,16 +17,38 @@ class _OtpInputFormatter extends TextInputFormatter {
   }
 }
 
+class OtpController {
+  _OtpInputFieldState? _state;
+  
+  void _attach(_OtpInputFieldState state) {
+    _state = state;
+  }
+  
+  void _detach() {
+    _state = null;
+  }
+  
+  void clear() {
+    _state?.clearOtp();
+  }
+  
+  void setText(String text) {
+    _state?.setOtp(text);
+  }
+}
+
 class OtpInputField extends StatefulWidget {
   final int length;
   final Function(String) onCompleted;
   final Function(String)? onChanged;
+  final OtpController? controller;
   
   const OtpInputField({
     super.key,
     this.length = 6,
     required this.onCompleted,
     this.onChanged,
+    this.controller,
   });
 
   @override
@@ -50,10 +72,12 @@ class _OtpInputFieldState extends State<OtpInputField> {
       widget.length,
       (index) => FocusNode(),
     );
+    widget.controller?._attach(this);
   }
 
   @override
   void dispose() {
+    widget.controller?._detach();
     for (var controller in _controllers) {
       controller.dispose();
     }
@@ -131,6 +155,38 @@ class _OtpInputFieldState extends State<OtpInputField> {
     // Check if OTP is complete
     if (_otp.length == widget.length) {
       widget.onCompleted(_otp);
+    }
+  }
+
+  void clearOtp() {
+    for (var controller in _controllers) {
+      controller.clear();
+    }
+    _otp = '';
+    widget.onChanged?.call(_otp);
+    if (_focusNodes.isNotEmpty) {
+      _focusNodes[0].requestFocus();
+    }
+  }
+  
+  void setOtp(String otp) {
+    // Clear all fields first
+    for (var controller in _controllers) {
+      controller.clear();
+    }
+    
+    // Fill fields with the OTP digits
+    String digits = otp.replaceAll(RegExp(r'[^0-9]'), '');
+    for (int i = 0; i < digits.length && i < widget.length; i++) {
+      _controllers[i].text = digits[i];
+    }
+    
+    // Update the internal OTP state and trigger callbacks
+    _updateOtp();
+    
+    // Unfocus all fields
+    for (var focusNode in _focusNodes) {
+      focusNode.unfocus();
     }
   }
 

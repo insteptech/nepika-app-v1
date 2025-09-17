@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/domain/community/entities/community_entities.dart';
-import 'package:nepika/presentation/community/pages/user_profile.dart';
 
 class UserNameWithNavigation extends StatelessWidget {
   final PostEntity? post;
@@ -11,8 +10,8 @@ class UserNameWithNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final fullName =
-        post?.author.fullName ?? postDetail?.author.fullName ?? 'User';
+    final fullName = post?.username ?? postDetail?.author.fullName ?? 'User';
+    final userId = post?.userId ?? postDetail?.author.id;
 
     return Expanded(
       child: GestureDetector(
@@ -20,11 +19,12 @@ class UserNameWithNavigation extends StatelessWidget {
           Navigator.pushNamed(
             context,
             AppRoutes.communityUserProfile,
-            arguments: {'userId': post?.author.id ?? postDetail?.author.id},
+            arguments: {'userId': userId},
           );
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Text(
               fullName,

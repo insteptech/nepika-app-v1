@@ -4,9 +4,11 @@ import 'package:nepika/core/config/env.dart';
 class ImageGallerySection extends StatelessWidget {
   final List<Map<String, dynamic>> imageGallery;
   final bool isLoading;
+  final String token;
 
   const ImageGallerySection({
     Key? key,
+    required this.token,
     required this.imageGallery,
     this.isLoading = false, // default not loading
   }) : super(key: key);
@@ -57,11 +59,14 @@ class ImageGallerySection extends StatelessWidget {
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
           final img = imageGallery[index];
-          final imageUrl = img['url'];
+          final imageUrl =  '${Env.baseUrl}/reports/${img['id']}/image';
           return ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Image.network(
               imageUrl,
+              headers: {
+                'Authorization': 'Bearer $token'
+              },
               width: 125,
               height: 130,
               fit: BoxFit.cover,

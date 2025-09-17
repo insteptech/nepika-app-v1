@@ -28,3 +28,16 @@ class GetProductInfoRequested extends ProductsEvent {
   @override
   List<Object> get props => [token, productId];
 }
+
+class ToggleProductRequested extends ProductsEvent {
+  final String token;
+  final String productId;
+
+  const ToggleProductRequested({
+    required this.token,
+    required this.productId,
+  });
+
+  @override
+  List<Object> get props => [token, productId];
+}

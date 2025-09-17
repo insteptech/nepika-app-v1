@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/core/utils/secure_storage.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
+import 'package:nepika/presentation/community/pages/user_profile.dart';
 import 'package:nepika/presentation/pages/dashboard/skin_condition_details_page.dart';
 import 'core/di/injection_container.dart' as di;
 import 'package:nepika/presentation/community/pages/authenticated_community_page.dart';
-import 'package:nepika/presentation/community/pages/user_profile.dart';
+import 'package:nepika/presentation/community/pages/threads_profile_page.dart';
 import 'package:nepika/presentation/community/pages/user_search_page.dart';
 import 'package:nepika/presentation/pages/onboarding/main.dart';
 import 'package:nepika/presentation/pages/terms_and_policy/privacy_policy_page.dart';
@@ -19,6 +21,7 @@ import 'package:nepika/presentation/pages/dashboard/main.dart';
 import 'package:nepika/presentation/pages/pricing_and_error/pricing_page.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
+import 'core/services/navigation_service.dart';
 import 'data/auth/datasources/auth_remote_data_source_impl.dart';
 import 'data/auth/datasources/auth_local_data_source_impl.dart';
 import 'data/auth/repositories/auth_repository_impl.dart';
@@ -35,6 +38,13 @@ import 'package:provider/provider.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  
+  // Lock orientation to portrait mode
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+  
   final sharedPreferences = await SharedPreferences.getInstance();
   await SharedPrefsHelper.init();
   await di.ServiceLocator.init();
@@ -84,7 +94,9 @@ class MyApp extends StatelessWidget {
         darkTheme: AppTheme.darkTheme,
         themeMode: themeNotifier.themeMode,
         debugShowCheckedModeBanner: false,
+        navigatorKey: NavigationService.navigatorKey,
         initialRoute: AppRoutes.splash,
+        navigatorObservers: [RouteObserver<PageRoute>()],
         onGenerateRoute: (RouteSettings settings) {
           switch (settings.name) {
             case AppRoutes.splash:

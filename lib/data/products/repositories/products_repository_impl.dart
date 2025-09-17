@@ -32,6 +32,16 @@ class ProductsRepositoryImpl implements ProductsRepository {
     }
   }
 
+  @override
+  Future<Result<void>> toggleProduct({required String token, required String productId}) async {
+    try {
+      await remoteDataSource.toggleProduct(token: token, productId: productId);
+      return success(null);
+    } catch (e) {
+      return failure(ServerFailure(message: 'Failed to toggle product: ${e.toString()}'));
+    }
+  }
+
   Product _mapToEntity(ProductModel model) {
     return Product(
       id: model.id,

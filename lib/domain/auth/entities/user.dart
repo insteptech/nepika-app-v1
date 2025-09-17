@@ -13,7 +13,7 @@ class User {
   final bool? isEmailVerified;
   final bool? isPhoneVerified;
   final bool onboardingCompleted;
-  final String activeStep;
+  final int activeStep;
   final bool isNewUser;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -60,7 +60,7 @@ class User {
       isEmailVerified: json['is_email_verified'] as bool?,
       isPhoneVerified: json['is_phone_verified'] as bool?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
-      activeStep: json['active_step'] as String? ?? 'user_info',
+      activeStep: json['active_step'] as int? ?? 0,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -131,12 +131,15 @@ class AuthResponse {
       );
     }
     
+    final refreshToken = data['refreshToken'] as String? ?? data['refresh_token'] as String? ?? json['refreshToken'] as String? ?? json['refresh_token'] as String? ?? '';
+    debugPrint('🔍 AuthResponse: Parsed refresh token: ${refreshToken.isEmpty ? "EMPTY" : "${refreshToken.substring(0, 20)}..."}');
+    
     return AuthResponse(
       otp: data['otp'] as String? ?? '',
       phone: data['phone'] as String? ?? '',
       user: user,
       token: data['token'] as String? ?? json['token'] as String? ?? '',
-      refreshToken: data['refresh_token'] as String? ?? json['refresh_token'] as String? ?? '',
+      refreshToken: refreshToken,
     );
   }
 }

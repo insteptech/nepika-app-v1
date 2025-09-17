@@ -178,7 +178,9 @@ class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
       );
     } else {
       // Dispose camera when going back to previous screen
+      debugPrint('Guidance page: Going back, disposing camera...');
       _cameraController?.dispose();
+      debugPrint('Guidance page: Camera disposed, navigating back');
       Navigator.of(context).pop();
     }
   }
@@ -230,7 +232,19 @@ class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (!didPop) {
+          debugPrint('Guidance page: Back gesture detected, disposing camera...');
+          _cameraController?.dispose();
+          debugPrint('Guidance page: Camera disposed via back gesture');
+          if (mounted) {
+            Navigator.of(context).pop();
+          }
+        }
+      },
+      child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: Padding(
@@ -417,6 +431,7 @@ class _ScanGuidenceScreenState extends State<ScanGuidenceScreen> {
             ],
           ),
         ),
+      ),
       ),
     );
   }

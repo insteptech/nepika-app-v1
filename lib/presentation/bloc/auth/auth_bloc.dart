@@ -67,20 +67,27 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     VerifyOtpRequested event,
     Emitter<AuthState> emit,
   ) async {
+    print('AuthBloc: Starting OTP verification');
     emit(const VerifyingOtp());
     final phone = event.phone ?? '';
     final otp = event.otp;
     final otpId = event.otpId;
+    print('AuthBloc: Calling verifyOtpUseCase with phone: $phone, otp: $otp, otpId: $otpId');
     final result = await verifyOtpUseCase.call(VerifyOtpParams(
       phone: phone,
       otp: otp,
       otpId: otpId,
     ));
     result.fold(
-      (failure) => emit(ErrorWhileOtpVerification(message: failure.message)),
+      (failure) {
+        print('AuthBloc: OTP verification failed: ${failure.message}');
+        emit(ErrorWhileOtpVerification(message: failure.message));
+      },
       (authResponse) {
-         emit(OtpVerified(authResponse: authResponse));
-         }
+        print('AuthBloc: OTP verification successful, emitting OtpVerified');
+        print('AuthBloc: AuthResponse user activeStep: ${authResponse.user.activeStep}');
+        emit(OtpVerified(authResponse: authResponse));
+      }
     );
 
   }

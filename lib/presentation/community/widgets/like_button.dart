@@ -19,6 +19,7 @@ class LikeButton extends StatefulWidget {
   final Color? activeColor;
   final Color? inactiveColor;
   final bool showCount;
+  final Function(bool isLiked, int newLikeCount)? onLikeStatusChanged;
 
   const LikeButton({
     super.key,
@@ -29,31 +30,50 @@ class LikeButton extends StatefulWidget {
     this.activeColor = Colors.red,
     this.inactiveColor,
     this.showCount = false,
+    this.onLikeStatusChanged,
   });
 
   @override
   State<LikeButton> createState() => _LikeButtonState();
 }
 
-class _LikeButtonState extends State<LikeButton> {
+class _LikeButtonState extends State<LikeButton> with TickerProviderStateMixin {
   bool _isLiked = false;
   int _likeCount = 0;
-  bool _isLoading = false;
   Timer? _debounceTimer;
   String? _token;
   String? _userId;
+  late AnimationController _animationController;
+  late Animation<double> _scaleAnimation;
 
   @override
   void initState() {
     super.initState();
     _isLiked = widget.initialLikeStatus;
     _likeCount = widget.initialLikeCount;
+    debugPrint('LikeButton: Initialized with postId: ${widget.postId}, initialLikeStatus: ${widget.initialLikeStatus}, initialLikeCount: ${widget.initialLikeCount}');
     _loadUserData();
+    
+    // Initialize animation controller
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 500),
+      vsync: this,
+    );
+    
+    // Create pump animation (scale up then down)
+    _scaleAnimation = Tween<double>(
+      begin: 1.0,
+      end: 1.3,
+    ).animate(CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.elasticOut,
+    ));
   }
 
   @override
   void dispose() {
     _debounceTimer?.cancel();
+    _animationController.dispose();
     super.dispose();
   }
 
@@ -79,26 +99,35 @@ class _LikeButtonState extends State<LikeButton> {
   }
 
   void _toggleLike() {
-    if (_isLoading || _token == null || _userId == null) {
-      debugPrint('LikeButton: Cannot toggle like - missing data or loading');
+    if (_token == null || _userId == null) {
+      debugPrint('LikeButton: Cannot toggle like - missing data');
       return;
     }
 
     // Cancel any existing timer
     _debounceTimer?.cancel();
 
-    // Optimistically update UI
+    // Optimistically update UI with instant feedback
     final wasLiked = _isLiked;
     final previousCount = _likeCount;
 
     setState(() {
       _isLiked = !_isLiked;
       _likeCount = _isLiked ? _likeCount + 1 : _likeCount - 1;
-      _isLoading = true;
     });
 
-    // Debounce the API call
-    _debounceTimer = Timer(const Duration(seconds: 1), () async {
+    // Notify parent widget about the like status change
+    widget.onLikeStatusChanged?.call(_isLiked, _likeCount);
+
+    // Trigger pump animation only when liking
+    if (_isLiked) {
+      _animationController.forward().then((_) {
+        _animationController.reverse();
+      });
+    }
+
+    // Debounce the API call (background operation)
+    _debounceTimer = Timer(const Duration(milliseconds: 500), () async {
       if (!mounted) return;
 
       try {
@@ -110,14 +139,6 @@ class _LikeButtonState extends State<LikeButton> {
           // Unlike the post
           bloc.add(UnlikePost(token: _token!, postId: widget.postId));
         }
-
-        // Wait a bit for the API call, then reset loading state
-        await Future.delayed(const Duration(seconds: 2));
-        if (mounted) {
-          setState(() {
-            _isLoading = false;
-          });
-        }
       } catch (e) {
         debugPrint('LikeButton: Error dispatching event: $e');
         // Revert optimistic update on error
@@ -125,16 +146,29 @@ class _LikeButtonState extends State<LikeButton> {
           setState(() {
             _isLiked = wasLiked;
             _likeCount = previousCount;
-            _isLoading = false;
           });
+
+          // Notify parent widget about the reverted status
+          widget.onLikeStatusChanged?.call(_isLiked, _likeCount);
 
           // Show error message if possible
           try {
+            String errorMessage = 'Failed to update like status';
+            
+            // Check for specific error types
+            if (e.toString().contains('500')) {
+              errorMessage = 'Please create your community profile first to like posts';
+            } else if (e.toString().contains('401') || e.toString().contains('403')) {
+              errorMessage = 'Authentication error. Please log in again';
+            } else if (e.toString().contains('404')) {
+              errorMessage = 'Post not found';
+            }
+            
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
-                content: Text('Failed to ${_isLiked ? 'like' : 'unlike'} post'),
+                content: Text(errorMessage),
                 backgroundColor: Colors.red,
-                duration: const Duration(seconds: 2),
+                duration: const Duration(seconds: 3),
               ),
             );
           } catch (snackbarError) {
@@ -147,18 +181,19 @@ class _LikeButtonState extends State<LikeButton> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
+    return InkWell(
       onTap: _toggleLike,
-      child: Container(
-        padding: const EdgeInsets.all(0),
+      borderRadius: BorderRadius.circular(20),
+      child: Padding(
+        padding: const EdgeInsets.all(8),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Stack(
-              alignment: Alignment.center,
-              children: [
-                Opacity(
-                  opacity: _isLoading ? 0.5 : 1.0,
+            AnimatedBuilder(
+              animation: _scaleAnimation,
+              builder: (context, child) {
+                return Transform.scale(
+                  scale: _scaleAnimation.value,
                   child: _isLiked
                       ? Image.asset(
                           'assets/icons/filled/heart_icon.png',
@@ -174,19 +209,8 @@ class _LikeButtonState extends State<LikeButton> {
                             context,
                           ).textTheme.bodyMedium!.primary(context).color,
                         ),
-                ),
-                if (_isLoading)
-                  SizedBox(
-                    width: widget.size! * 0.6,
-                    height: widget.size! * 0.6,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 1.5,
-                      valueColor: AlwaysStoppedAnimation<Color>(
-                        widget.activeColor ?? Colors.red,
-                      ),
-                    ),
-                  ),
-              ],
+                );
+              },
             ),
             if (widget.showCount) ...[
               const SizedBox(width: 4),

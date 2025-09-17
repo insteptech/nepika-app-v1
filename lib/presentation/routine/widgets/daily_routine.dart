@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 
-class DailyRoutineSection extends StatelessWidget {
+class DailyRoutineSection extends StatefulWidget {
   final Map<String, dynamic>? dailyRoutine;
   final bool isLoading;
 
@@ -11,9 +12,76 @@ class DailyRoutineSection extends StatelessWidget {
   });
 
   @override
+  State<DailyRoutineSection> createState() => _DailyRoutineSectionState();
+}
+
+class _DailyRoutineSectionState extends State<DailyRoutineSection>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _tickAnimation;
+  bool _showTickAnimation = false;
+  bool _previousCompletedState = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      duration: const Duration(milliseconds: 600),
+      vsync: this,
+    );
+    _tickAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didUpdateWidget(DailyRoutineSection oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _checkForCompletionChange();
+  }
+
+  void _checkForCompletionChange() {
+    if (widget.dailyRoutine != null) {
+      final bool currentCompleted = widget.dailyRoutine!['completed'] == true;
+      
+      // If routine was just completed (transitioned from false to true)
+      if (!_previousCompletedState && currentCompleted) {
+        _triggerCompletionAnimation();
+      }
+      
+      _previousCompletedState = currentCompleted;
+    }
+  }
+
+  void _triggerCompletionAnimation() {
+    setState(() {
+      _showTickAnimation = true;
+    });
+    
+    // Start the tick animation
+    _animationController.forward();
+    
+    // Hide the tick animation after 2-3 seconds
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (mounted) {
+        setState(() {
+          _showTickAnimation = false;
+        });
+        _animationController.reset();
+      }
+    });
+  }
+
+  @override
   Widget build(BuildContext context) {
     // Handle all possible race conditions and invalid states
-    if (isLoading || !_isValidDailyRoutineData(dailyRoutine)) {
+    if (widget.isLoading || !_isValidDailyRoutineData(widget.dailyRoutine)) {
       return _buildSkeletonCard(context: context);
     }
 
@@ -35,16 +103,17 @@ class DailyRoutineSection extends StatelessWidget {
 
   Widget _buildDailyRoutineCard({required BuildContext context}) {
     // Safely extract and validate progress data
-    final dynamic rawProgress = dailyRoutine!['progress'];
+    final dynamic rawProgress = widget.dailyRoutine!['progress'];
+    final bool hasRoutines = widget.dailyRoutine!['has_routines'];
     final double progress = _sanitizeProgress(rawProgress);
-    final String unit = dailyRoutine!['unit']?.toString() ?? '%';
-    final bool completed = dailyRoutine!['completed'] == true;
+    final String unit = widget.dailyRoutine!['unit']?.toString() ?? '%';
+    final bool completed = widget.dailyRoutine!['completed'] == true;
     final theme = Theme.of(context);
     
     // Calculate display values
-    final bool hasProgress = progress != 0;
-    final String displayText = _getDisplayText(progress, unit, completed, hasProgress);
+    final String displayText = _getDisplayText(progress, unit, completed, hasRoutines);
     final double progressValue = _calculateProgressValue(progress, completed);
+    final bool showProgress = progress > 0 || completed;
 
     return Container(
       decoration: BoxDecoration(
@@ -55,39 +124,81 @@ class DailyRoutineSection extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          // const SizedBox(width: 12),
+          // Calendar icon
           Image.asset(
             'assets/icons/calender_icon.png',
             width: 37,
             height: 37,
-            color: Theme.of(context).colorScheme.primary,
+            color: theme.colorScheme.primary,
           ),
-          // const SizedBox(width: 20),
+          
+          // Text section
           Flexible(
             child: Text(
               displayText,
-              style: Theme.of(context).textTheme.bodyLarge,
-              // overflow: TextOverflow.,
+              style: theme.textTheme.bodyLarge,
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           ),
-          // Spacer(),
-          // const SizedBox(width: 30),
-          // Only show progress bar if there's actual progress or completion
-          if (completed || hasProgress)
-            Expanded(
-              child: LinearProgressIndicator(
-                value: progressValue,
-                backgroundColor: Colors.grey[300],
-                valueColor: AlwaysStoppedAnimation<Color>(
-                  _getProgressColor(completed, hasProgress, theme),
-                ),
-                minHeight: 8,
-                borderRadius: BorderRadius.circular(6),
+          
+          // Progress and tick section
+          Row(
+            children: [
+              // Progress bar
+if (!completed && !_showTickAnimation)
+              SizedBox(
+                width: 100,
+                child:AnimatedOpacity(
+                  opacity: showProgress ? 1.0 : 0.3,
+                  duration: const Duration(milliseconds: 300),
+                  child: LinearProgressIndicator(
+                    value: progressValue,
+                    backgroundColor: Colors.grey[300],
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      _getProgressColor(completed, theme),
+                    ),
+                    minHeight: 8,
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                )
               ),
-            )
-          // else
-          //   // Show empty space when no progress to maintain layout
-          //   const Expanded(child: SizedBox()),
+
+              // const SizedBox(width: 12),
+
+              // Completion tick animation - always present for consistent layout
+              if (completed && hasRoutines)
+                Container(
+                  width: 22,
+                  height: 22,
+                  decoration: const BoxDecoration(
+                    color: Colors.green,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.check,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                ),
+
+              if (!hasRoutines)
+                GestureDetector(  
+                  onTap: () {
+                    Navigator.pushNamed(
+                        context,
+                        AppRoutes.dashboardAddRoutine,
+                      );
+                  },
+                  child:  Image.asset(
+                          'assets/icons/add_icon.png',
+                          width: 20,
+                          height: 20,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                )
+            ],
+          ),
         ],
       ),
     );
@@ -110,10 +221,12 @@ class DailyRoutineSection extends StatelessWidget {
   }
 
   /// Gets appropriate display text based on progress state
-  String _getDisplayText(double progress, String unit, bool completed, bool hasProgress) {
-    if (completed && hasProgress) {
+  String _getDisplayText(double progress, String unit, bool completed, bool hasRoutines) {
+    if (completed && hasRoutines) {
       return 'Completed';
-    } else if (hasProgress) {
+    } else if (!hasRoutines) {
+      return 'Setup Routine Steps';
+    }else if (progress > 0) {
       // Format progress to remove unnecessary decimal places
       String formattedProgress = progress % 1 == 0 
         ? progress.toInt().toString() 
@@ -137,8 +250,8 @@ class DailyRoutineSection extends StatelessWidget {
   }
 
   /// Gets appropriate color for progress indicator
-  Color _getProgressColor(bool completed, bool hasProgress, ThemeData theme) {
-    if (completed && hasProgress) {
+  Color _getProgressColor(bool completed, ThemeData theme) {
+    if (completed) {
       return Colors.green;
     } else {
       return theme.colorScheme.primary;

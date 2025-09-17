@@ -9,6 +9,7 @@ class ProductCard extends StatelessWidget {
   final String maxRating;
   final bool showCheckmark;
   final bool isSelected;
+  final bool isToggling;
   final VoidCallback? onTap;
   final VoidCallback? onCheckmarkTap;
   final double? width;
@@ -25,6 +26,7 @@ class ProductCard extends StatelessWidget {
     this.maxRating = '100',
     this.showCheckmark = true,
     this.isSelected = false,
+    this.isToggling = false,
     this.onTap,
     this.onCheckmarkTap,
     this.width,
@@ -140,7 +142,7 @@ class ProductCard extends StatelessWidget {
                 // Checkmark
                 if (showCheckmark)
                   GestureDetector(
-                    onTap: onCheckmarkTap,
+                    onTap: isToggling ? null : onCheckmarkTap,
                     child: Container(
                       width: 22,
                       height: 22,
@@ -153,13 +155,24 @@ class ProductCard extends StatelessWidget {
                         ),
                         borderRadius: BorderRadius.circular(100),
                       ),
-                      child: isSelected
-                          ? Icon(
-                              Icons.check,
-                              color: Colors.white,
-                              size: 14,
+                      child: isToggling
+                          ? SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  colorScheme.primary,
+                                ),
+                              ),
                             )
-                          : null,
+                          : isSelected
+                              ? Icon(
+                                  Icons.check,
+                                  color: Colors.white,
+                                  size: 14,
+                                )
+                              : null,
                     ),
                   ),
               ],

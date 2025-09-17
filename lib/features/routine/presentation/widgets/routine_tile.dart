@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../core/config/constants/theme.dart';
-import '../../../../core/config/env.dart';
+import '../../../../core/widgets/routine_image.dart';
 import '../../../../domain/routine/entities/routine.dart';
 
 enum RoutineTileType {
@@ -61,59 +61,13 @@ class RoutineTile extends StatelessWidget {
   }
 
   Widget _buildIcon(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final color = routine.timing == 'morning'
-        ? colorScheme.onSecondary
-        : colorScheme.primary;
-
-    return SizedBox(
-      width: 44,
-      height: 44,
-      child: routine.routineIcon.isNotEmpty
-          ? Image.network(
-              '${Env.baseUrl}${routine.routineIcon}',
-              fit: BoxFit.cover,
-              loadingBuilder: (context, child, progress) {
-                if (progress == null) return child;
-                return Container(
-                  width: 44,
-                  height: 44,
-                  decoration: BoxDecoration(
-                    color: color,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Center(
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  ),
-                );
-              },
-              errorBuilder: (_, __, ___) => _buildFallbackIcon(context, color),
-            )
-          : _buildFallbackIcon(context, color),
+    return RoutineImageWidget(
+      imageUrl: routine.routineIcon.isNotEmpty ? routine.routineIcon : null,
+      size: 44,
+      timing: routine.timing,
     );
   }
 
-  Widget _buildFallbackIcon(BuildContext context, Color color) {
-    return Container(
-      width: 44,
-      height: 44,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        routine.timing == 'morning' ? Icons.wb_sunny : Icons.nightlight,
-        color: routine.timing == 'morning'
-            ? Theme.of(context).colorScheme.primary
-            : Theme.of(context).colorScheme.surface,
-        size: 24,
-      ),
-    );
-  }
 
   Widget _buildContent(BuildContext context) {
     final timing = routine.timing == 'morning' ? 'Morning Routine' : 'Night Routine';
@@ -221,8 +175,21 @@ class RoutineTile extends StatelessWidget {
       );
     }
     
+    if (isLoading) {
+      return SizedBox(
+        width: 28,
+        height: 28,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(
+            Theme.of(context).colorScheme.primary,
+          ),
+        ),
+      );
+    }
+    
     return GestureDetector(
-      onTap: onAdd,
+      onTap: isLoading ? null : onAdd,
       child: SizedBox(
         width: 28,
         height: 28,
@@ -238,20 +205,31 @@ class RoutineTile extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     
     return GestureDetector(
-      onTap: onDelete,
+      onTap: isLoading ? null : onDelete, // Disable tap when loading
       child: Container(
         width: 36,
         height: 36,
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: colorScheme.error.withValues(alpha: 0.2),
+          color: colorScheme.error.withValues(alpha: isLoading ? 0.1 : 0.2),
           borderRadius: BorderRadius.circular(50),
         ),
-        child: Image.asset(
-          'assets/icons/delete_icon.png',
-          width: 20,
-          height: 20,
-        ),
+        child: isLoading
+            ? SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    colorScheme.error,
+                  ),
+                ),
+              )
+            : Image.asset(
+                'assets/icons/delete_icon.png',
+                width: 20,
+                height: 20,
+              ),
       ),
     );
   }
