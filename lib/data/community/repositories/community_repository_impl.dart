@@ -1,8 +1,9 @@
-import 'dart:convert';
+import 'dart:async';
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
+import 'package:mime/mime.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/core/config/constants/app_constants.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/constants/api_endpoints.dart';
 import '../../../domain/community/entities/community_entities.dart';
 import '../../../domain/community/repositories/community_repository.dart';
@@ -12,17 +13,22 @@ class CommunityRepositoryImpl implements CommunityRepository {
   final ApiBase apiBase;
   final CommunityLocalDataSource localDataSource;
   
+  // Request deduplication and caching
+  final Map<String, Completer<dynamic>> _activeRequests = {};
+  final Map<String, DateTime> _lastRequestTimes = {};
+  final Map<String, dynamic> _responseCache = {};
+  static const Duration _cacheDuration = Duration(minutes: 5);
+  static const Duration _requestDelay = Duration(milliseconds: 100);
+  
   CommunityRepositoryImpl(this.apiBase, this.localDataSource);
 
-  // Helper method to get user ID from preferences
-  Future<String> _getUserId() async {
-    final sharedPreferences = await SharedPreferences.getInstance();
-    final user = sharedPreferences.getString(AppConstants.userDataKey);
-    if (user != null) {
-      final userMap = jsonDecode(user);
-      return userMap['id'];
-    }
-    throw Exception('User not found');
+  // Clear all caches (useful for logout or cache invalidation)
+  void clearAllCaches() {
+    _responseCache.clear();
+    _lastRequestTimes.clear();
+    _activeRequests.clear();
+    // Note: Clear local cache if method is available
+    debugPrint('Repository: All caches cleared');
   }
 
   @override
@@ -33,23 +39,45 @@ class CommunityRepositoryImpl implements CommunityRepository {
     String? userId,
     bool? followingOnly,
   }) async {
-    try {
-      // Try to load from cache first for better UX
-      if (page == 1) {
-        final cachedPosts = await localDataSource.getCachedPosts();
-        if (cachedPosts.isNotEmpty) {
-          debugPrint('Repository: Returning ${cachedPosts.length} cached posts');
-          // Return cached data immediately, then fetch fresh data
-          _fetchAndUpdateCache(token, page, pageSize, userId, followingOnly);
-          return CommunityPostEntity(
-            posts: cachedPosts,
-            total: cachedPosts.length,
-            page: page,
-            pageSize: pageSize,
-            hasMore: true, // Assume more for UX
-          );
-        }
+    final requestKey = 'posts_${page}_${pageSize}_${userId ?? 'all'}_${followingOnly ?? false}';
+    
+    // Check for active request
+    if (_activeRequests.containsKey(requestKey)) {
+      return await _activeRequests[requestKey]!.future;
+    }
+    
+    // Check cache first
+    if (_isCacheValid(requestKey)) {
+      debugPrint('Repository: Returning cached posts for $requestKey');
+      return _responseCache[requestKey] as CommunityPostEntity;
+    }
+    
+    // Try to load from local cache for first page
+    if (page == 1) {
+      final cachedPosts = await localDataSource.getCachedPosts();
+      if (cachedPosts.isNotEmpty) {
+        debugPrint('Repository: Returning ${cachedPosts.length} local cached posts');
+        final result = CommunityPostEntity(
+          posts: cachedPosts,
+          total: cachedPosts.length,
+          page: page,
+          pageSize: pageSize,
+          hasMore: true,
+        );
+        
+        // Update in background
+        _fetchAndUpdateCacheInBackground(token, page, pageSize, userId, followingOnly, requestKey);
+        return result;
       }
+    }
+    
+    final completer = Completer<CommunityPostEntity>();
+    _activeRequests[requestKey] = completer;
+    
+    try {
+      
+      // Rate limiting
+      await _ensureRequestDelay();
       
       final queryParams = <String, String>{
         'page': page.toString(),
@@ -71,23 +99,31 @@ class CommunityRepositoryImpl implements CommunityRepository {
       if (response.statusCode == 200 && response.data['success'] == true) {
         final communityPost = CommunityPostEntity.fromJson(response.data);
         
-        // Cache the posts
+        // Cache the response
+        _cacheResponse(requestKey, communityPost);
+        
+        // Cache posts locally
         if (page == 1) {
           await localDataSource.cachePosts(communityPost.posts);
         } else {
-          // Add to existing cache for pagination
           for (final post in communityPost.posts) {
             await localDataSource.cachePost(post);
           }
         }
         
+        completer.complete(communityPost);
         return communityPost;
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to fetch community posts');
+        final error = Exception(response.data['message'] ?? 'Failed to fetch community posts');
+        completer.completeError(error);
+        throw error;
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('Repository: Error in fetchCommunityPosts: $e');
-      debugPrint('Repository: Stack trace: $stackTrace');
+      
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
       
       // Fall back to cache if network fails
       if (page == 1) {
@@ -105,34 +141,98 @@ class CommunityRepositoryImpl implements CommunityRepository {
       }
       
       rethrow;
+    } finally {
+      _activeRequests.remove(requestKey);
     }
   }
 
-  // Background cache update
-  void _fetchAndUpdateCache(String token, int page, int pageSize, String? userId, bool? followingOnly) async {
-    try {
-      final queryParams = <String, String>{
-        'page': page.toString(),
-        'page_size': pageSize.toString(),
-      };
-      
-      if (userId != null) queryParams['user_id'] = userId;
-      if (followingOnly != null) queryParams['following_only'] = followingOnly.toString();
+  // Optimized background cache update
+  void _fetchAndUpdateCacheInBackground(
+    String token, 
+    int page, 
+    int pageSize, 
+    String? userId, 
+    bool? followingOnly,
+    String requestKey,
+  ) {
+    // Run in microtask to avoid blocking
+    Future.microtask(() async {
+      try {
+        await _ensureRequestDelay();
+        
+        final queryParams = <String, String>{
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        };
+        
+        if (userId != null) queryParams['user_id'] = userId;
+        if (followingOnly != null) queryParams['following_only'] = followingOnly.toString();
 
-      final response = await apiBase.request(
-        path: ApiEndpoints.communityPosts,
-        method: 'GET',
-        headers: {'Authorization': 'Bearer $token'},
-        query: queryParams,
-      );
-      
-      if (response.statusCode == 200 && response.data['success'] == true) {
-        final communityPost = CommunityPostEntity.fromJson(response.data);
-        await localDataSource.cachePosts(communityPost.posts);
-        debugPrint('Repository: Background cache updated with ${communityPost.posts.length} posts');
+        final response = await apiBase.request(
+          path: ApiEndpoints.communityPosts,
+          method: 'GET',
+          headers: {'Authorization': 'Bearer $token'},
+          query: queryParams,
+        );
+        
+        if (response.statusCode == 200 && response.data['success'] == true) {
+          final communityPost = CommunityPostEntity.fromJson(response.data);
+          
+          // Update both caches
+          _cacheResponse(requestKey, communityPost);
+          await localDataSource.cachePosts(communityPost.posts);
+          
+          debugPrint('Repository: Background cache updated with ${communityPost.posts.length} posts');
+        }
+      } catch (e) {
+        debugPrint('Repository: Background cache update failed: $e');
       }
-    } catch (e) {
-      debugPrint('Repository: Background cache update failed: $e');
+    });
+  }
+  
+  // Cache management utilities
+  bool _isCacheValid(String key) {
+    if (!_responseCache.containsKey(key) || !_lastRequestTimes.containsKey(key)) {
+      return false;
+    }
+    
+    final lastRequest = _lastRequestTimes[key]!;
+    return DateTime.now().difference(lastRequest) < _cacheDuration;
+  }
+  
+  void _cacheResponse(String key, dynamic response) {
+    _responseCache[key] = response;
+    _lastRequestTimes[key] = DateTime.now();
+    
+    // Clean old cache entries
+    _cleanOldCacheEntries();
+  }
+  
+  void _cleanOldCacheEntries() {
+    final now = DateTime.now();
+    final keysToRemove = <String>[];
+    
+    _lastRequestTimes.forEach((key, timestamp) {
+      if (now.difference(timestamp) > _cacheDuration) {
+        keysToRemove.add(key);
+      }
+    });
+    
+    for (final key in keysToRemove) {
+      _responseCache.remove(key);
+      _lastRequestTimes.remove(key);
+    }
+  }
+  
+  Future<void> _ensureRequestDelay() async {
+    final now = DateTime.now();
+    final lastRequest = _lastRequestTimes.values.isNotEmpty 
+        ? _lastRequestTimes.values.reduce((a, b) => a.isAfter(b) ? a : b)
+        : DateTime(2020);
+    
+    final timeSinceLastRequest = now.difference(lastRequest);
+    if (timeSinceLastRequest < _requestDelay) {
+      await Future.delayed(_requestDelay - timeSinceLastRequest);
     }
   }
 
@@ -167,26 +267,61 @@ class CommunityRepositoryImpl implements CommunityRepository {
   Future<PostEntity> fetchSinglePost({
     required String token,
     required String postId,
+    int? cacheBuster,
   }) async {
+    final requestKey = cacheBuster != null 
+        ? 'single_post_${postId}_$cacheBuster' 
+        : 'single_post_$postId';
+    
+    // Check for active request
+    if (_activeRequests.containsKey(requestKey)) {
+      return await _activeRequests[requestKey]!.future;
+    }
+    
+    // Check cache (skip cache when cacheBuster is provided for fresh data)
+    if (cacheBuster == null && _isCacheValid(requestKey)) {
+      debugPrint('Repository: Returning cached post $postId');
+      return _responseCache[requestKey] as PostEntity;
+    }
+    
+    final completer = Completer<PostEntity>();
+    _activeRequests[requestKey] = completer;
+    
     try {
-      debugPrint('Repository: Fetching single post with ID: $postId');
+      await _ensureRequestDelay();
+      
+      debugPrint('Repository: Fetching single post with ID: $postId${cacheBuster != null ? ' (cache-buster: $cacheBuster)' : ''}');
+      
+      // Build query parameters for cache-busting
+      final queryParams = cacheBuster != null ? {'_t': cacheBuster.toString()} : <String, String>{};
+      
       final response = await apiBase.request(
         path: '${ApiEndpoints.getSinglePost}/$postId',
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
+        query: queryParams,
       );
       
       debugPrint('Repository: fetchSinglePost response: ${response.statusCode}');
       
       if (response.statusCode == 200 && response.data['success'] == true) {
-        return PostEntity.fromJson(response.data['data']);
+        final post = PostEntity.fromJson(response.data['data']);
+        _cacheResponse(requestKey, post);
+        completer.complete(post);
+        return post;
       } else {
-        throw Exception(response.data['message'] ?? 'Failed to fetch post');
+        final error = Exception(response.data['message'] ?? 'Failed to fetch post');
+        completer.completeError(error);
+        throw error;
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('Repository: Error in fetchSinglePost: $e');
-      debugPrint('Repository: Stack trace: $stackTrace');
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
       rethrow;
+    } finally {
+      _activeRequests.remove(requestKey);
     }
   }
 
@@ -279,6 +414,16 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String token,
     required String postId,
   }) async {
+    final requestKey = 'like_$postId';
+    
+    // Prevent duplicate like requests
+    if (_activeRequests.containsKey(requestKey)) {
+      return await _activeRequests[requestKey]!.future;
+    }
+    
+    final completer = Completer<Map<String, dynamic>>();
+    _activeRequests[requestKey] = completer;
+    
     try {
       debugPrint('Repository: Toggling like for post: $postId');
       
@@ -314,6 +459,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
         await localDataSource.updateCachedPost(updatedPost);
       }
       
+      await _ensureRequestDelay();
+      
       final response = await apiBase.request(
         path: '${ApiEndpoints.likePost}/$postId/like',
         method: 'PUT',
@@ -321,7 +468,6 @@ class CommunityRepositoryImpl implements CommunityRepository {
       );
       
       debugPrint('Repository: toggleLikePost response: ${response.statusCode}');
-      debugPrint('Repository: toggleLikePost data: ${response.data}');
       
       if (response.statusCode == 200 && response.data['success'] == true) {
         final responseData = response.data['data'] as Map<String, dynamic>;
@@ -352,6 +498,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
           await localDataSource.updateCachedPost(updatedPost);
         }
         
+        completer.complete(responseData);
         return responseData;
       } else {
         // Revert optimistic update on error
@@ -359,12 +506,18 @@ class CommunityRepositoryImpl implements CommunityRepository {
         if (cachedPost != null) {
           await localDataSource.updateCachedPost(cachedPost);
         }
-        throw Exception(response.data['message'] ?? 'Failed to toggle like');
+        final error = Exception(response.data['message'] ?? 'Failed to toggle like');
+        completer.completeError(error);
+        throw error;
       }
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('Repository: Error in toggleLikePost: $e');
-      debugPrint('Repository: Stack trace: $stackTrace');
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
       rethrow;
+    } finally {
+      _activeRequests.remove(requestKey);
     }
   }
 
@@ -479,6 +632,133 @@ class CommunityRepositoryImpl implements CommunityRepository {
       }
     } catch (e, stackTrace) {
       debugPrint('Repository: Error in updateProfile: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  // Image Management
+  @override
+  Future<Map<String, dynamic>> uploadProfileImage({
+    required String token,
+    required String imagePath,
+    String? userId,
+  }) async {
+    try {
+      debugPrint('Repository: uploadProfileImage called');
+      debugPrint('Repository: Image path: $imagePath');
+      debugPrint('Repository: User ID: $userId');
+      
+      // Determine the correct MIME type from file
+      final mimeType = lookupMimeType(imagePath) ?? 'image/jpeg';
+      final extension = imagePath.toLowerCase().split('.').last;
+      final filename = 'profile_image_${DateTime.now().millisecondsSinceEpoch}.$extension';
+      
+      debugPrint('Repository: Using MIME type: $mimeType for file: $filename');
+      
+      // Create multipart form data with correct content type using the bytes approach
+      final file = File(imagePath);
+      final bytes = await file.readAsBytes();
+      
+      // Create MultipartFile with explicit content type
+      late MultipartFile multipartFile;
+      
+      // Validate MIME type and create MultipartFile accordingly
+      if (mimeType == 'image/jpeg' || mimeType == 'image/jpg') {
+        multipartFile = MultipartFile.fromBytes(
+          bytes,
+          filename: filename.endsWith('.jpg') ? filename : '$filename.jpg',
+          contentType: DioMediaType('image', 'jpeg'),
+        );
+      } else if (mimeType == 'image/png') {
+        multipartFile = MultipartFile.fromBytes(
+          bytes,
+          filename: filename.endsWith('.png') ? filename : '$filename.png',
+          contentType: DioMediaType('image', 'png'),
+        );
+      } else if (mimeType == 'image/gif') {
+        multipartFile = MultipartFile.fromBytes(
+          bytes,
+          filename: filename.endsWith('.gif') ? filename : '$filename.gif',
+          contentType: DioMediaType('image', 'gif'),
+        );
+      } else if (mimeType == 'image/webp') {
+        multipartFile = MultipartFile.fromBytes(
+          bytes,
+          filename: filename.endsWith('.webp') ? filename : '$filename.webp',
+          contentType: DioMediaType('image', 'webp'),
+        );
+      } else {
+        // Default to JPEG for any other format
+        debugPrint('Repository: Unknown MIME type $mimeType, defaulting to JPEG');
+        multipartFile = MultipartFile.fromBytes(
+          bytes,
+          filename: 'profile_image_${DateTime.now().millisecondsSinceEpoch}.jpg',
+          contentType: DioMediaType('image', 'jpeg'),
+        );
+      }
+      
+      final formData = FormData.fromMap({
+        'file': multipartFile,
+        if (userId != null) 'user_id': userId,
+      });
+      
+      final response = await apiBase.uploadMultipart(
+        path: ApiEndpoints.uploadProfileImage,
+        formData: formData,
+        headers: {
+          'Authorization': 'Bearer $token',
+          'Content-Type': 'multipart/form-data',
+        },
+      );
+      
+      debugPrint('Repository: uploadProfileImage response: ${response.statusCode}');
+      debugPrint('Repository: uploadProfileImage response data: ${response.data}');
+      
+      if (response.statusCode == 201 && response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to upload profile image');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in uploadProfileImage: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<Map<String, dynamic>> getSecureImageUrl({
+    required String token,
+    required String s3Url,
+    int? expiresIn,
+  }) async {
+    try {
+      debugPrint('Repository: getSecureImageUrl called');
+      debugPrint('Repository: S3 URL: $s3Url');
+      debugPrint('Repository: Expires in: $expiresIn');
+      
+      final queryParams = <String, String>{
+        's3_url': s3Url,
+        if (expiresIn != null) 'expires_in': expiresIn.toString(),
+      };
+      
+      final response = await apiBase.request(
+        path: ApiEndpoints.getSecureImageUrl,
+        method: 'GET',
+        headers: {'Authorization': 'Bearer $token'},
+        query: queryParams,
+      );
+      
+      debugPrint('Repository: getSecureImageUrl response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        return response.data['data'] as Map<String, dynamic>;
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to get secure image URL');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in getSecureImageUrl: $e');
       debugPrint('Repository: Stack trace: $stackTrace');
       rethrow;
     }

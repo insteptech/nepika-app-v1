@@ -7,7 +7,7 @@ abstract class OnboardingRepository {
     required String token,
   });
 
-  Future<void> submitAnswers({
+  Future<OnboardingSubmissionResponseEntity> submitAnswers({
     required String userId,
     required String screenSlug,
     required String token,

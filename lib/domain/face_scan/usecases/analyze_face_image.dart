@@ -28,6 +28,7 @@ class AnalyzeFaceImageUseCase extends UseCase<FaceScanResult, AnalyzeFaceImagePa
         imageBytes: params.imageBytes,
         userId: params.userId,
         sessionId: params.sessionId,
+        accessToken: params.accessToken,
         includeAnnotatedImage: params.includeAnnotatedImage,
       );
     } catch (e) {
@@ -53,6 +54,10 @@ class AnalyzeFaceImageUseCase extends UseCase<FaceScanResult, AnalyzeFaceImagePa
       return const FaceScanFailure(message: 'Session ID is required');
     }
 
+    if (params.accessToken.trim().isEmpty) {
+      return const FaceScanFailure(message: 'Access token is required');
+    }
+
     // Validate image size (e.g., not too large for API)
     const maxImageSize = 10 * 1024 * 1024; // 10MB
     if (params.imageBytes.length > maxImageSize) {
@@ -76,6 +81,9 @@ class AnalyzeFaceImageParams extends Equatable {
   /// Unique session identifier
   final String sessionId;
   
+  /// Authentication token for API access
+  final String accessToken;
+  
   /// Whether to include annotated image in response
   final bool includeAnnotatedImage;
   
@@ -86,6 +94,7 @@ class AnalyzeFaceImageParams extends Equatable {
     required this.imageBytes,
     required this.userId,
     required this.sessionId,
+    required this.accessToken,
     this.includeAnnotatedImage = true,
     this.metadata,
   });
@@ -95,6 +104,7 @@ class AnalyzeFaceImageParams extends Equatable {
     Uint8List? imageBytes,
     String? userId,
     String? sessionId,
+    String? accessToken,
     bool? includeAnnotatedImage,
     Map<String, dynamic>? metadata,
   }) {
@@ -102,13 +112,14 @@ class AnalyzeFaceImageParams extends Equatable {
       imageBytes: imageBytes ?? this.imageBytes,
       userId: userId ?? this.userId,
       sessionId: sessionId ?? this.sessionId,
+      accessToken: accessToken ?? this.accessToken,
       includeAnnotatedImage: includeAnnotatedImage ?? this.includeAnnotatedImage,
       metadata: metadata ?? this.metadata,
     );
   }
 
   @override
-  List<Object?> get props => [imageBytes, userId, sessionId, includeAnnotatedImage, metadata];
+  List<Object?> get props => [imageBytes, userId, sessionId, accessToken, includeAnnotatedImage, metadata];
 
   @override
   String toString() {
@@ -116,6 +127,7 @@ class AnalyzeFaceImageParams extends Equatable {
         'imageSize: ${imageBytes.length} bytes, '
         'userId: $userId, '
         'sessionId: $sessionId, '
+        'accessToken: ${accessToken.length > 10 ? "${accessToken.substring(0, 10)}..." : accessToken}, '
         'includeAnnotatedImage: $includeAnnotatedImage, '
         'metadata: $metadata'
         ')';

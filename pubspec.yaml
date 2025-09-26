@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   intl: ^0.20.2
-
+  image: ^4.5.4
   # UI & Icons
   # cupertino_icons: ^1.0.8
   # flutter_svg: ^2.0.9
@@ -50,6 +50,12 @@ dependencies:
   
   # SMS Auto-read
   sms_autofill: ^2.4.0
+  
+  # Package Info
+  package_info_plus: ^8.0.2
+  
+  # File type detection
+  mime: ^1.0.6
 
 
 dev_dependencies:

@@ -101,3 +101,15 @@ class OnboardingStepEntity {
     this.buttonText,
   });
 }
+
+class OnboardingSubmissionResponseEntity {
+  final String message;
+  final int? activeStep;
+  final bool onboardingCompleted;
+
+  OnboardingSubmissionResponseEntity({
+    required this.message,
+    this.activeStep,
+    required this.onboardingCompleted,
+  });
+}

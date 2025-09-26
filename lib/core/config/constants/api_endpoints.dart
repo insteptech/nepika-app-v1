@@ -47,6 +47,10 @@ class ApiEndpoints {
   static const String getUserProfile = '/community/profiles'; // GET /:user_id
   static const String updateProfile = '/community/profiles';
   
+  // Image Management Endpoints
+  static const String uploadProfileImage = '/auth/users/profile/upload-picture';
+  static const String getSecureImageUrl = '/community/images/secure-url';
+  
   // Follow System Endpoints
   static const String followUser = '/community/follow';
   static const String unfollowUser = '/community/follow'; // DELETE /:user_id

@@ -26,8 +26,9 @@ class SecureApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: Env.baseUrl,
-        connectTimeout: const Duration(seconds: 10),
-        receiveTimeout: const Duration(seconds: 10),
+        connectTimeout: const Duration(seconds: 15), // Increased timeout
+        receiveTimeout: const Duration(seconds: 30), // Increased timeout
+        sendTimeout: const Duration(seconds: 15),   // Added send timeout
         headers: {
           'Content-Type': 'application/json',
         },
@@ -139,7 +140,24 @@ class SecureApiClient {
       
       return response;
     } on DioException catch (e) {
-      debugPrint('\n\n\n❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌\n\n\n');
+      debugPrint('\n\n\n❌❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌❌');
+      debugPrint('❌❌ Dio error type: ${e.type}');
+      debugPrint('❌❌ Request URL: ${e.requestOptions.uri}');
+      debugPrint('❌❌ Error details: ${e.toString()}\n\n\n');
+      
+      // Provide more specific error messages
+      if (e.type == DioExceptionType.connectionTimeout) {
+        throw Exception('Connection timeout. Please check your internet connection and try again.');
+      } else if (e.type == DioExceptionType.sendTimeout) {
+        throw Exception('Request timeout. Please try again.');
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        throw Exception('Server response timeout. Please try again.');
+      } else if (e.type == DioExceptionType.connectionError) {
+        throw Exception('Connection error. Please check your internet connection.');
+      } else if (e.response?.statusCode == null) {
+        throw Exception('Failed to connect to server. Please check your internet connection.');
+      }
+      
       rethrow;
     } catch (e) {
       debugPrint('\n❌❌ Unexpected error: $e ❌❌\n');

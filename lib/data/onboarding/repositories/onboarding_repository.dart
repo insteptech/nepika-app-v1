@@ -31,7 +31,7 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
   }
 
   @override
-  Future<void> submitAnswers({
+  Future<OnboardingSubmissionResponseEntity> submitAnswers({
     required String userId,
     required String screenSlug,
     required String token,
@@ -42,7 +42,20 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
       final accessToken =
           sharedPrefs.getString(AppConstants.accessTokenKey) ?? token;
 
-      await dataSource.submitAnswers(userId, screenSlug, accessToken, answers);
+      final responseData = await dataSource.submitAnswers(userId, screenSlug, accessToken, answers);
+      
+      // Parse the response to extract active_step
+      final data = responseData['data'] as Map<String, dynamic>?;
+      final progress = data?['progress'] as Map<String, dynamic>?;
+      final activeStep = progress?['active_step'] as int?;
+      final onboardingCompleted = progress?['onboarding_completed'] as bool? ?? false;
+      final message = responseData['message'] as String? ?? 'Data saved successfully!';
+      
+      return OnboardingSubmissionResponseEntity(
+        message: message,
+        activeStep: activeStep,
+        onboardingCompleted: onboardingCompleted,
+      );
     } catch (e) {
       throw Exception("Failed to submit onboarding answers: $e");
     }

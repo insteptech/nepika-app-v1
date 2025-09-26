@@ -1,14 +1,14 @@
 import 'package:injectable/injectable.dart';
-import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/network/secure_api_client.dart';
 import '../../../core/config/constants/api_endpoints.dart';
 // import '../models/user_model.dart';
 import 'auth_remote_data_source.dart';
 
 @Injectable(as: AuthRemoteDataSource)
 class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
-  final ApiBase apiBase;
+  final SecureApiClient _apiClient;
   
-  const AuthRemoteDataSourceImpl(this.apiBase);
+  AuthRemoteDataSourceImpl() : _apiClient = SecureApiClient.instance;
   
   @override
   Future<Map<String, dynamic>> sendOtp({
@@ -19,7 +19,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     final data = <String, dynamic>{
       'mobile_number': phone,
     };
-    final result = await apiBase.request(
+    final result = await _apiClient.request(
       path: ApiEndpoints.sendOtp,
       method: 'POST',
       body: data,
@@ -46,7 +46,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'otp_id': otpId,
     };
 
-    final result = await apiBase.request(
+    final result = await _apiClient.request(
       path: ApiEndpoints.resendOtp,
       method: 'POST',
       body: data,
@@ -69,7 +69,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       'otp_code': otp,
       'otp_id': otpId,
     };
-    final response = await apiBase.request(
+    final response = await _apiClient.request(
       path: ApiEndpoints.verifyOtp,
       method: 'POST',
       body: data,

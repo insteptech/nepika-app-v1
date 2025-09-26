@@ -41,6 +41,10 @@
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>This app needs camera access for face scanning functionality.</string>
+	<string>Nepika uses your camera to perform advanced skin analysis and provide personalized skincare recommendations. Your photos are processed securely and never stored without your permission.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Nepika may access your photo library to save analysis results and skincare progress photos for your personal tracking.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Nepika uses your location to provide relevant skincare recommendations based on your local climate and environmental conditions.</string>
 </dict>
 </plist>

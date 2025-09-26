@@ -3,22 +3,20 @@ import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
-import 'package:nepika/core/utils/secure_storage.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
-import 'package:nepika/presentation/community/pages/user_profile.dart';
-import 'package:nepika/presentation/pages/dashboard/skin_condition_details_page.dart';
+import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
+import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
+import 'package:nepika/features/face_scan/main.dart';
 import 'core/di/injection_container.dart' as di;
-import 'package:nepika/presentation/community/pages/authenticated_community_page.dart';
-import 'package:nepika/presentation/community/pages/threads_profile_page.dart';
-import 'package:nepika/presentation/community/pages/user_search_page.dart';
-import 'package:nepika/presentation/pages/onboarding/main.dart';
-import 'package:nepika/presentation/pages/terms_and_policy/privacy_policy_page.dart';
-import 'package:nepika/presentation/pages/terms_and_policy/terms_of_use_page.dart';
-import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
-import 'package:nepika/presentation/pages/first_scan/scan_guidence_page.dart';
-import 'package:nepika/presentation/pages/first_scan/face_scan.dart';
-import 'package:nepika/presentation/pages/dashboard/main.dart';
-import 'package:nepika/presentation/pages/pricing_and_error/pricing_page.dart';
+import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
+import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
+import 'package:nepika/features/dashboard/main.dart';
+import 'package:nepika/features/products/main.dart';
+import 'package:nepika/features/error_pricing/main.dart';
+import 'package:nepika/features/auth/auth_module.dart' as auth_feature;
+import 'package:nepika/features/auth/screens/phone_entry_screen.dart';
+import 'package:nepika/features/auth/screens/otp_verification_screen.dart';
+import 'package:nepika/features/community/main.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
@@ -28,12 +26,8 @@ import 'data/auth/repositories/auth_repository_impl.dart';
 import 'domain/auth/usecases/send_otp.dart';
 import 'domain/auth/usecases/verify_otp.dart';
 import 'domain/auth/usecases/resend_otp.dart' as resend;
-import 'core/api_base.dart';
-import 'presentation/bloc/auth/auth_bloc.dart';
-import 'presentation/pages/splash/splash_screen.dart';
-import 'presentation/pages/welcome/welcome_screen.dart';
-import 'presentation/pages/auth/phone_entry_page.dart';
-import 'presentation/pages/auth/otp_verification_page.dart'; 
+import 'features/splash/main.dart';
+import 'features/welcome/main.dart'; 
 import 'package:provider/provider.dart';
 
 void main() async {
@@ -67,8 +61,7 @@ class MyApp extends StatelessWidget {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
 
-    final apiBase = ApiBase();
-    final remoteDataSource = AuthRemoteDataSourceImpl(apiBase);
+    final remoteDataSource = AuthRemoteDataSourceImpl();
     final localDataSource = AuthLocalDataSourceImpl(sharedPreferences);
     final authRepository = AuthRepositoryImpl(
       remoteDataSource,
@@ -80,7 +73,7 @@ class MyApp extends StatelessWidget {
     final verifyOtpUseCase = VerifyOtp(authRepository);
     final resendOtpUseCase = resend.ResendOtp(authRepository);
 
-    final authBloc = AuthBloc(
+    final authBloc = auth_feature.AuthBloc(
       sendOtpUseCase: sendOtpUseCase,
       verifyOtpUseCase: verifyOtpUseCase,
       resendOtpUseCase: resendOtpUseCase,
@@ -107,22 +100,26 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.login:
             case AppRoutes.phoneEntry:
-              return MaterialPageRoute(builder: (_) => const PhoneEntryPage());
+              return MaterialPageRoute(builder: (_) => const PhoneEntryScreen());
             case AppRoutes.otpVerification:
               return MaterialPageRoute(
-                builder: (_) => const OtpVerificationPage(),
+                builder: (_) => const OtpVerificationScreen(),
               );
             case AppRoutes.userInfo:
-              return MaterialPageRoute(builder: (_) => const OnboardingMapper());
+              return MaterialPageRoute(builder: (_) => const OnboardingScreen());
             case AppRoutes.onboarding:
-              return MaterialPageRoute(builder: (_) => const OnboardingMapper());
+              return MaterialPageRoute(builder: (_) => const OnboardingScreen());
             case AppRoutes.cameraScanGuidence:
               return MaterialPageRoute(
-                builder: (_) => const ScanGuidenceScreen(),
+                builder: (_) => const FaceScanGuidanceScreen(),
+              );
+            case AppRoutes.faceScanOnboarding:
+              return MaterialPageRoute(
+                builder: (_) => const FaceScanMainScreen(),
               );
             case AppRoutes.faceScanResult:
               return MaterialPageRoute(
-                builder: (_) => FaceScanResultPage(),
+                builder: (_) => const FaceScanResultScreen(),
               );
             case AppRoutes.dashboardHome:
               return MaterialPageRoute(builder: (_) => const Dashboard());
@@ -133,29 +130,41 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.communityHome:
               return MaterialPageRoute(
-                builder: (_) => const AuthenticatedCommunityPage(),
+                builder: (_) => CommunityFeature.create(),
               );
             case AppRoutes.communitySearch:
               return MaterialPageRoute(
-                builder: (_) => UserSearchPage(),
+                builder: (_) => CommunityFactory.createSearchScreen(),
               );
             case AppRoutes.communityUserProfile:
               return MaterialPageRoute(
-                builder: (_) => const UserProfilePage(),
+                builder: (_) => CommunityFactory.createUserProfileScreen(),
                 settings: settings,
               );
+            case AppRoutes.dashboardAllProducts:
+              return MaterialPageRoute(
+                builder: (_) => const ProductsScreen(),
+              );
+            case AppRoutes.dashboardSpecificProduct:
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) {
+                  final String productId = settings.arguments as String? ?? '';
+                  return ProductInfoScreen(productId: productId);
+                },
+              );
             case AppRoutes.subscription:
-              return MaterialPageRoute(builder: (_) => const PricingPage());
+              return MaterialPageRoute(builder: (_) => const PricingScreen());
             case AppRoutes.privacyPolicy:
               return MaterialPageRoute(
-                builder: (_) => const PrivacyPolicyPage(),
+                builder: (_) => const PrivacyPolicyScreen(),
               );
             case AppRoutes.termsOfUse:
-              return MaterialPageRoute(builder: (_) => const TermsOfUsePage());
+              return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
             case AppRoutes.notFound:
-              return MaterialPageRoute(builder: (_) => const NotFound());
+              return MaterialPageRoute(builder: (_) => const NotFoundScreen());
             default:
-              return MaterialPageRoute(builder: (_) => const NotFound());
+              return MaterialPageRoute(builder: (_) => const NotFoundScreen());
           }
         },
       ),

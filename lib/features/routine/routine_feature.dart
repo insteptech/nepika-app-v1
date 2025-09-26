@@ -1,41 +1,30 @@
-// Routine Feature Exports
+// Routine Feature - Legacy Export File
+// This file is maintained for backward compatibility
+// New imports should use the main.dart file
 
-// Presentation Layer
-export 'presentation/providers/routine_bloc_provider.dart';
-export 'presentation/widgets/routine_tile.dart';
-export 'presentation/widgets/routine_list.dart';
-export 'presentation/widgets/routine_empty_states.dart';
+// Re-export everything from the main feature file
+export 'main.dart';
 
-// BLoC
-export '../../presentation/routine/bloc/routine_bloc.dart';
-export '../../presentation/routine/bloc/routine_event.dart';
-export '../../presentation/routine/bloc/routine_state.dart';
+// Legacy exports for backward compatibility
+export 'providers/routine_bloc_provider.dart';
 
-// Domain Layer (already exported from main domain)
-export '../../domain/routine/entities/routine.dart';
+// Import for using helper
+import 'main.dart';
 
-// Common Types
+// Legacy utility classes for backward compatibility
+class RoutineHelpers {
+  static String getTimingDisplayText(String timing) {
+    return RoutineTimingHelper.getDisplayText(timing);
+  }
+  
+  static bool isMorningRoutine(String timing) {
+    return RoutineTimingHelper.isMorningRoutine(timing);
+  }
+}
+
+// Legacy enum for backward compatibility
 enum RoutinePageType {
   daily,
   selection,
   edit,
-}
-
-// Utility Classes
-class RoutineHelpers {
-  static String getTimingDisplayText(String timing) {
-    switch (timing.toLowerCase()) {
-      case 'morning':
-        return 'Morning Routine';
-      case 'night':
-      case 'evening':
-        return 'Night Routine';
-      default:
-        return 'Routine';
-    }
-  }
-  
-  static bool isMorningRoutine(String timing) {
-    return timing.toLowerCase() == 'morning';
-  }
 }

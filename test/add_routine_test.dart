@@ -1,25 +1,25 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:nepika/domain/routine/entities/routine.dart';
 import 'package:nepika/domain/routine/usecases/add_routine_step.dart';
 import 'package:nepika/domain/routine/repositories/routine_repository.dart';
-import 'package:nepika/presentation/routine/bloc/routine_bloc.dart';
-import 'package:nepika/presentation/routine/bloc/routine_event.dart';
-import 'package:nepika/presentation/routine/bloc/routine_state.dart';
+import 'package:nepika/features/routine/main.dart';
 import 'package:nepika/domain/routine/usecases/get_todays_routine.dart';
 import 'package:nepika/domain/routine/usecases/update_routine_step.dart';
 import 'package:nepika/domain/routine/usecases/delete_routine_step.dart';
+import 'package:nepika/core/error/failures.dart';
+import 'package:nepika/core/utils/either.dart';
 
 class MockRoutineRepository implements RoutineRepository {
   final List<String> addedRoutineIds = [];
   
   @override
-  Future<List<Routine>> getTodaysRoutine(String token, String type) async {
-    return [
+  Future<Result<List<Routine>>> getTodaysRoutine(String token, String type) async {
+    return success([
       Routine(
         id: '1',
         name: 'Morning Face Wash',
         timing: 'morning',
         isCompleted: false,
+        routineIcon: 'icon_wash',
         description: 'Cleanse your face with gentle cleanser',
       ),
       Routine(
@@ -27,6 +27,7 @@ class MockRoutineRepository implements RoutineRepository {
         name: 'Apply Moisturizer',
         timing: 'morning',
         isCompleted: false,
+        routineIcon: 'icon_moisturizer',
         description: 'Apply moisturizer to keep skin hydrated',
       ),
       Routine(
@@ -34,25 +35,24 @@ class MockRoutineRepository implements RoutineRepository {
         name: 'Night Serum',
         timing: 'night',
         isCompleted: false,
+        routineIcon: 'icon_serum',
         description: 'Apply anti-aging serum',
       ),
-    ];
+    ]);
   }
 
   @override
-  Future<void> updateRoutineStep(String token, String routineId, bool isCompleted) async {
-    // Mock implementation
-    return;
+  Future<Result<void>> updateRoutineStep(String token, String routineId, bool isCompleted) async {
+    return success(null);
   }
 
   @override
-  Future<void> deleteRoutineStep(String token, String routineId) async {
-    // Mock implementation
-    return;
+  Future<Result<void>> deleteRoutineStep(String token, String routineId) async {
+    return success(null);
   }
 
   @override
-  Future<void> addRoutineStep(String token, String masterRoutineId) async {
+  Future<Result<void>> addRoutineStep(String token, String masterRoutineId) async {
     // Simulate API call delay
     await Future.delayed(const Duration(milliseconds: 100));
     
@@ -60,7 +60,7 @@ class MockRoutineRepository implements RoutineRepository {
     addedRoutineIds.add(masterRoutineId);
     
     // Simulate API success
-    return;
+    return success(null);
   }
 }
 
@@ -90,9 +90,10 @@ void main() {
 
       // act
       final addUseCase = AddRoutineStep(mockRepository);
-      await addUseCase(token, masterRoutineId);
+      final result = await addUseCase(token, masterRoutineId);
 
       // assert
+      expect(result.isRight, true);
       expect(mockRepository.addedRoutineIds, contains(masterRoutineId));
     });
 
@@ -102,7 +103,7 @@ void main() {
       const masterRoutineId = '1';
 
       // Load initial routines first
-      routineBloc.add(GetAllRoutinesEvent(token: token));
+      routineBloc.add(const LoadAllRoutinesEvent(token: token));
       
       // Wait for initial load to complete
       await Future.delayed(const Duration(milliseconds: 50));
@@ -111,8 +112,8 @@ void main() {
       final expectedStates = [
         isA<RoutineLoading>(),
         isA<RoutineLoaded>(),
-        isA<RoutineAddLoading>(),
-        isA<RoutineAddSuccess>(),
+        isA<RoutineOperationLoading>(),
+        isA<RoutineOperationSuccess>(),
       ];
 
       // act
@@ -122,7 +123,7 @@ void main() {
       );
 
       // Add routine step
-      routineBloc.add(AddRoutineStepEvent(
+      routineBloc.add(const AddRoutineStepEvent(
         token: token,
         masterRoutineId: masterRoutineId,
       ));
@@ -145,7 +146,7 @@ void main() {
       const masterRoutineId = '1';
 
       // Load initial routines first
-      errorBloc.add(GetAllRoutinesEvent(token: token));
+      errorBloc.add(const LoadAllRoutinesEvent(token: token));
       await Future.delayed(const Duration(milliseconds: 50));
 
       // Expect error state
@@ -154,13 +155,13 @@ void main() {
         emitsInOrder([
           isA<RoutineLoading>(),
           isA<RoutineLoaded>(),
-          isA<RoutineAddLoading>(),
+          isA<RoutineOperationLoading>(),
           isA<RoutineError>(),
         ]),
       );
 
       // act
-      errorBloc.add(AddRoutineStepEvent(
+      errorBloc.add(const AddRoutineStepEvent(
         token: token,
         masterRoutineId: masterRoutineId,
       ));
@@ -177,7 +178,7 @@ void main() {
       const masterRoutineId = '123';
 
       // act
-      final event = AddRoutineStepEvent(
+      const event = AddRoutineStepEvent(
         token: token,
         masterRoutineId: masterRoutineId,
       );
@@ -187,7 +188,7 @@ void main() {
       expect(event.masterRoutineId, equals(masterRoutineId));
     });
 
-    test('RoutineAddLoading state should contain correct properties', () {
+    test('RoutineOperationLoading state should contain correct properties', () {
       // arrange
       final routines = [
         Routine(
@@ -195,20 +196,24 @@ void main() {
           name: 'Test Routine',
           timing: 'morning',
           isCompleted: false,
+          routineIcon: 'test_icon',
           description: 'Test',
         ),
       ];
-      const loadingRoutineId = '1';
+      const operationId = '1';
 
       // act
-      final state = RoutineAddLoading(routines, loadingRoutineId);
+      final state = RoutineOperationLoading(
+        currentRoutines: routines,
+        operationId: operationId,
+      );
 
       // assert
-      expect(state.routines, equals(routines));
-      expect(state.loadingRoutineId, equals(loadingRoutineId));
+      expect(state.currentRoutines, equals(routines));
+      expect(state.operationId, equals(operationId));
     });
 
-    test('RoutineAddSuccess state should contain correct properties', () {
+    test('RoutineOperationSuccess state should contain correct properties', () {
       // arrange
       final routines = [
         Routine(
@@ -216,47 +221,55 @@ void main() {
           name: 'Test Routine',
           timing: 'morning',
           isCompleted: false,
+          routineIcon: 'test_icon',
           description: 'Test',
         ),
       ];
-      const addedRoutineId = '1';
+      const message = 'Operation successful';
+      const operationId = '1';
 
       // act
-      final state = RoutineAddSuccess(routines, addedRoutineId);
+      final state = RoutineOperationSuccess(
+        routines: routines,
+        message: message,
+        operationId: operationId,
+      );
 
       // assert
       expect(state.routines, equals(routines));
-      expect(state.addedRoutineId, equals(addedRoutineId));
+      expect(state.message, equals(message));
+      expect(state.operationId, equals(operationId));
     });
   });
 }
 
 class MockErrorRoutineRepository implements RoutineRepository {
   @override
-  Future<List<Routine>> getTodaysRoutine(String token, String type) async {
-    return [
+  Future<Result<List<Routine>>> getTodaysRoutine(String token, String type) async {
+    return success([
       Routine(
         id: '1',
         name: 'Test Routine',
         timing: 'morning',
         isCompleted: false,
+        routineIcon: 'test_icon',
         description: 'Test',
       ),
-    ];
+    ]);
   }
 
   @override
-  Future<void> updateRoutineStep(String token, String routineId, bool isCompleted) async {
-    throw Exception('Update failed');
+  Future<Result<void>> updateRoutineStep(String token, String routineId, bool isCompleted) async {
+    return failure(ServerFailure(message: 'Update failed'));
   }
 
   @override
-  Future<void> deleteRoutineStep(String token, String routineId) async {
-    throw Exception('Delete failed');
+  Future<Result<void>> deleteRoutineStep(String token, String routineId) async {
+    return failure(ServerFailure(message: 'Delete failed'));
   }
 
   @override
-  Future<void> addRoutineStep(String token, String masterRoutineId) async {
-    throw Exception('Add routine failed - server error');
+  Future<Result<void>> addRoutineStep(String token, String masterRoutineId) async {
+    return failure(ServerFailure(message: 'Add routine failed - server error'));
   }
 }

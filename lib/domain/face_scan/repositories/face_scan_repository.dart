@@ -23,6 +23,7 @@ abstract class FaceScanRepository {
   /// - [imageBytes]: Raw image data to analyze
   /// - [userId]: ID of the user requesting analysis
   /// - [sessionId]: Unique session identifier for tracking
+  /// - [accessToken]: Authentication token for API access
   /// - [includeAnnotatedImage]: Whether to include processed/annotated image
   /// 
   /// Returns:
@@ -32,6 +33,7 @@ abstract class FaceScanRepository {
     required Uint8List imageBytes,
     required String userId,
     required String sessionId,
+    required String accessToken,
     bool includeAnnotatedImage = true,
   });
 

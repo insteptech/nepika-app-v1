@@ -19,7 +19,7 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
   final Dio _dio;
 
   /// API endpoint for complete face analysis
-  static const String _analysisEndpoint = '/model/face-scan/analyze_face_complete';
+  static const String _analysisEndpoint = '/training/face-analyze';
   
   /// API endpoint for health checks
   static const String _healthEndpoint = '/health';
@@ -58,6 +58,7 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
   Future<FaceScanResultModel> analyzeFaceImage({
     required Uint8List imageBytes,
     required String userId,
+    required String accessToken,
     bool includeAnnotatedImage = true,
     DateTime? processingStartTime,
   }) async {
@@ -94,6 +95,9 @@ class FaceScanRemoteDataSourceImpl implements FaceScanRemoteDataSource {
         options: Options(
           contentType: 'multipart/form-data',
           responseType: ResponseType.json,
+          headers: {
+            'Authorization': 'Bearer $accessToken',
+          },
         ),
       );
 

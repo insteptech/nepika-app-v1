@@ -12,7 +12,7 @@ abstract class IOnboardingRemoteDataSource {
     String lang = 'en',
   });
 
-  Future<void> submitAnswers(
+  Future<Map<String, dynamic>> submitAnswers(
     String userId,
     String screenSlug,
     String token,
@@ -47,7 +47,7 @@ class OnboardingRemoteDataSource implements IOnboardingRemoteDataSource {
   }
 
   @override
-  Future<void> submitAnswers(
+  Future<Map<String, dynamic>> submitAnswers(
     String userId,
     String screenSlug,
     String token,
@@ -68,6 +68,8 @@ class OnboardingRemoteDataSource implements IOnboardingRemoteDataSource {
       if (data['success'] != true) {
         throw Exception(data['message'] ?? 'Failed to submit answers');
       }
+      
+      return data;
     } catch (e) {
       throw Exception("Failed to submit answers: $e");
     }

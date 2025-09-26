@@ -14,7 +14,7 @@ import '../../domain/routine/usecases/get_todays_routine.dart';
 import '../../domain/routine/usecases/update_routine_step.dart';
 import '../../domain/routine/usecases/delete_routine_step.dart';
 import '../../domain/routine/usecases/add_routine_step.dart';
-import '../../presentation/routine/bloc/routine_bloc.dart';
+import '../../features/routine/main.dart';
 
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};

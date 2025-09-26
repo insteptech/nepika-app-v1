@@ -13,6 +13,7 @@ abstract class FaceScanRemoteDataSource {
   /// Parameters:
   /// - [imageBytes]: Raw image data to analyze
   /// - [userId]: ID of the user requesting analysis
+  /// - [accessToken]: Authentication token for API access
   /// - [includeAnnotatedImage]: Whether to include processed/annotated image in response
   /// - [processingStartTime]: When processing began (for timing calculation)
   /// 
@@ -26,6 +27,7 @@ abstract class FaceScanRemoteDataSource {
   Future<FaceScanResultModel> analyzeFaceImage({
     required Uint8List imageBytes,
     required String userId,
+    required String accessToken,
     bool includeAnnotatedImage = true,
     DateTime? processingStartTime,
   });

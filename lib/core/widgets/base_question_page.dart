@@ -3,7 +3,6 @@ import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/utils/debug_logger.dart';
 import 'question_header.dart';
 import 'custom_button.dart';
-import 'package:flutter/foundation.dart';
 
 class QuestionPageData {
   final String? name;
@@ -152,7 +151,7 @@ class QuestionPageData {
   }
 }
 
-class BaseQuestionPage extends StatelessWidget {
+class BaseQuestionPage extends StatefulWidget {
   final int currentStep;
   final int totalSteps;
   final String title;
@@ -165,6 +164,7 @@ class BaseQuestionPage extends StatelessWidget {
   final VoidCallback? onSkip;
   final bool showBackButton;
   final bool showSkipButton;
+  final bool showProgressBar;
 
   // Universal list of question routes (update as needed)
   // static final List<String> questionRoutes = [
@@ -190,77 +190,87 @@ class BaseQuestionPage extends StatelessWidget {
     this.onSkip,
     this.showBackButton = true,
     this.showSkipButton = true,
+    this.showProgressBar = true,
   });
 
-  // void _defaultNavigate(BuildContext context) {
-  //   if (currentStep < questionRoutes.length - 1) {
-  //     Navigator.of(context).pushNamed(questionRoutes[currentStep + 1]);
-  //   }
-  // }
+  @override
+  State<BaseQuestionPage> createState() => _BaseQuestionPageState();
+}
 
+class _BaseQuestionPageState extends State<BaseQuestionPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        resizeToAvoidBottomInset: false,
-        body: SafeArea(
-          child: Column(
-            children: [
-              // Header
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
-                child: QuestionHeader(
-                  currentStep: currentStep,
-                  totalSteps: totalSteps,
-                  onBack: onBack,
-                  onSkip: onSkip,
-                  showBackButton: showBackButton,
-                  showSkipButton: showSkipButton,
-                ),
-              ),
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      resizeToAvoidBottomInset: false,
+      body: SafeArea(
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTap: () => FocusScope.of(context).unfocus(),
+          child: _buildFixedLayout(),
+        ),
+      ),
+    );
+  }
 
-              // Scrollable content
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 24),
-                      Text(
-                        title,
-                        style: Theme.of(context).textTheme.displaySmall
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        subtitle,
-                        style: Theme.of(context).textTheme.headlineMedium!.secondary(context)
-                      ),
-                      const SizedBox(height: 40),
-                      content,
-                      SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 20),
-                    ],
-                  ),
-                ),
-              ),
-
-              // Bottom button
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10.0),
-                child: SizedBox(
-                  width: double.infinity,
-                  child: CustomButton(
-                    text: buttonText,
-                    onPressed: isFormValid
-                        ? onNext
-                        : null,
-                    isDisabled: !isFormValid,
-                  ),
-                ),
-              ),
-            ],
+  // Simple fixed layout with button always at bottom
+  Widget _buildFixedLayout() {
+    return Column(
+      children: [
+        // Header
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 10),
+          child: QuestionHeader(
+            currentStep: widget.currentStep,
+            totalSteps: widget.totalSteps,
+            onBack: widget.onBack,
+            onSkip: widget.onSkip,
+            showBackButton: widget.showBackButton,
+            showSkipButton: widget.showSkipButton,
+            showProgressBar: widget.showProgressBar,
           ),
         ),
+
+        // Scrollable content
+        Expanded(
+          child: SingleChildScrollView(
+            padding: EdgeInsets.only(
+              left: 20.0,
+              right: 20.0,
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 24),
+                Text(
+                  widget.title,
+                  style: Theme.of(context).textTheme.displaySmall
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  widget.subtitle,
+                  style: Theme.of(context).textTheme.headlineMedium!.secondary(context)
+                ),
+                const SizedBox(height: 40),
+                widget.content,
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ),
+
+        // Fixed bottom button - always stays at bottom
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 15),
+          width: double.infinity,
+          child: CustomButton(
+            text: widget.buttonText,
+            onPressed: widget.isFormValid ? widget.onNext : null,
+            isDisabled: !widget.isFormValid,
+          ),
+        )
+      ],
     );
   }
 }

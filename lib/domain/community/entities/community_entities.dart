@@ -602,6 +602,8 @@ class CommunityProfileEntity {
   final int followingCount;
   final int postsCount;
   final Map<String, dynamic>? settings;
+  final bool isSelf;
+  final bool isFollowing;
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -619,6 +621,8 @@ class CommunityProfileEntity {
     required this.followingCount,
     required this.postsCount,
     this.settings,
+    this.isSelf = false,
+    this.isFollowing = false,
     required this.createdAt,
     this.updatedAt,
   });
@@ -638,6 +642,8 @@ class CommunityProfileEntity {
       followingCount: (json['following_count'] as num?)?.toInt() ?? 0,
       postsCount: (json['posts_count'] as num?)?.toInt() ?? 0,
       settings: json['settings'] as Map<String, dynamic>?,
+      isSelf: json['is_self'] as bool? ?? false,
+      isFollowing: json['is_following'] as bool? ?? false,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'].toString())
           : DateTime.now(),
@@ -884,6 +890,7 @@ class UserSearchResultEntity {
   final DateTime createdAt;
   final bool isFollowing;
   final bool isBlocked;
+  final bool isSelf;
 
   UserSearchResultEntity({
     required this.id,
@@ -894,6 +901,7 @@ class UserSearchResultEntity {
     required this.createdAt,
     this.isFollowing = false,
     this.isBlocked = false,
+    this.isSelf = false,
   });
 
   factory UserSearchResultEntity.fromJson(Map<String, dynamic> json) {
@@ -906,6 +914,7 @@ class UserSearchResultEntity {
       createdAt: DateTime.tryParse(json['created_at'] ?? '') ?? DateTime.now(),
       isFollowing: json['is_following'] ?? false,
       isBlocked: json['is_blocked'] ?? false,
+      isSelf: json['is_self'] ?? false,
     );
   }
 
@@ -918,6 +927,7 @@ class UserSearchResultEntity {
     DateTime? createdAt,
     bool? isFollowing,
     bool? isBlocked,
+    bool? isSelf,
   }) {
     return UserSearchResultEntity(
       id: id ?? this.id,
@@ -928,6 +938,7 @@ class UserSearchResultEntity {
       createdAt: createdAt ?? this.createdAt,
       isFollowing: isFollowing ?? this.isFollowing,
       isBlocked: isBlocked ?? this.isBlocked,
+      isSelf: isSelf ?? this.isSelf,
     );
   }
 }

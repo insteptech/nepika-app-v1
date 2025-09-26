@@ -18,6 +18,11 @@ class TokenRefreshInterceptor extends Interceptor {
     debugPrint('🔍 Request URL: ${err.requestOptions.uri}');
     debugPrint('🔍 Request Headers: ${err.requestOptions.headers}');
     
+    // Special logging for validation endpoint
+    if (err.requestOptions.path.contains('/auth/users/validate')) {
+      debugPrint('🔐 TokenRefreshInterceptor: This is a token validation request from splash screen');
+    }
+    
     if (err.response?.statusCode == 401) {
       debugPrint('🔄 TokenRefreshInterceptor: 401 Unauthorized detected, attempting token refresh');
       debugPrint('🔍 TokenRefreshInterceptor: Failed request details:');

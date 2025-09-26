@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/features/face_scan/screens/face_scan_onboarding_screen.dart';
 import 'back_button.dart';
-import '../../presentation/pages/first_scan/scan_onboarding_page.dart';
+// import '../../presentation/pages/first_scan/scan_onboarding_page.dart';
 
 class QuestionHeader extends StatelessWidget {
   final int currentStep;
@@ -11,6 +12,7 @@ class QuestionHeader extends StatelessWidget {
   final bool showBackButton;
   final bool showSkipButton;
   final bool showOnlyCurrentStep;
+  final bool showProgressBar;
 
   const QuestionHeader({
     super.key,
@@ -21,6 +23,7 @@ class QuestionHeader extends StatelessWidget {
     this.showBackButton = true,
     this.showSkipButton = true,
     this.showOnlyCurrentStep = true,
+    this.showProgressBar = true,
   });
 
   @override
@@ -49,7 +52,7 @@ class QuestionHeader extends StatelessWidget {
                     } else {
                       Navigator.of(context).push(
                         MaterialPageRoute(
-                          builder: (context) => const FaceScanPage(),
+                          builder: (context) => const FaceScanOnboardingScreen(),
                         ),
                       );
                     }
@@ -64,32 +67,34 @@ class QuestionHeader extends StatelessWidget {
             ],
           ),
 
+
+          /// Progress Bar (conditionally shown)
+          if (showProgressBar) ...[
           const SizedBox(height: 26),
+            Row(
+              children: List.generate(totalSteps, (index) {
+                final isActive = showOnlyCurrentStep
+                    ? index == currentStep - 1
+                    : index < currentStep;
 
-          /// Progress Bar
-          Row(
-            children: List.generate(totalSteps, (index) {
-              final isActive = showOnlyCurrentStep
-                  ? index == currentStep - 1
-                  : index < currentStep;
-
-              return Expanded(
-                child: Container(
-                  height: 4,
-                  margin: EdgeInsets.only(
-                    right: index < totalSteps - 1 ? 8 : 0,
+                return Expanded(
+                  child: Container(
+                    height: 4,
+                    margin: EdgeInsets.only(
+                      right: index < totalSteps - 1 ? 8 : 0,
+                    ),
+                    decoration: BoxDecoration(
+                      color: isActive
+                          ? Theme.of(context).colorScheme.primary
+                          : Theme.of(context).colorScheme.primary.withAlpha(80),
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                  decoration: BoxDecoration(
-                    color: isActive
-                        ? Theme.of(context).colorScheme.primary
-                        : Theme.of(context).colorScheme.primary.withAlpha(80),
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              );
-            }),
-          ),
-          SizedBox(height: 10)
+                );
+              }),
+            ),
+            const SizedBox(height: 10),
+          ]
         ],
       ),
     );

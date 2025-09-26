@@ -18,6 +18,7 @@ abstract class CommunityRepository {
   Future<PostEntity> fetchSinglePost({
     required String token,
     required String postId,
+    int? cacheBuster,
   });
 
   Future<CommentListEntity> getPostComments({
@@ -62,6 +63,19 @@ abstract class CommunityRepository {
   Future<CommunityProfileEntity> updateProfile({
     required String token,
     required UpdateProfileEntity profileData,
+  });
+
+  // Image Management
+  Future<Map<String, dynamic>> uploadProfileImage({
+    required String token,
+    required String imagePath,
+    String? userId,
+  });
+
+  Future<Map<String, dynamic>> getSecureImageUrl({
+    required String token,
+    required String s3Url,
+    int? expiresIn,
   });
 
   // Follow System

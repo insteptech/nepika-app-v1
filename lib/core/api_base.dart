@@ -10,8 +10,9 @@ class ApiBase {
   static final Dio _dio = Dio(
     BaseOptions(
       baseUrl: Env.baseUrl,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 10),
+      connectTimeout: const Duration(seconds: 30),
+      receiveTimeout: const Duration(seconds: 30),
+      sendTimeout: const Duration(seconds: 30),
       headers: {
         'Content-Type': 'application/json',
       },
@@ -113,6 +114,33 @@ class ApiBase {
       return response;
     } on DioException catch (e) {
       debugPrint('\n❌ Dio error: ${e.response?.statusCode} - ${e.message} ❌\n');
+      rethrow;
+    }
+  }
+
+  /// Multipart form data upload method for image uploads
+  Future<Response> uploadMultipart({
+    required String path,
+    required FormData formData,
+    Map<String, String>? headers,
+    Map<String, dynamic>? query,
+  }) async {
+    debugPrint('🚀📁 Uploading multipart to: ${Env.baseUrl}$path 🚀📁');
+    try {
+      final response = await _dio.request(
+        path,
+        data: formData,
+        queryParameters: query,
+        options: Options(
+          method: 'POST',
+          contentType: 'multipart/form-data',
+          headers: headers,
+        ),
+      );
+      debugPrint('\n✅📁 Upload Response [${response.statusCode}] ✅📁\n');
+      return response;
+    } on DioException catch (e) {
+      debugPrint('\n❌📁 Upload Dio error: ${e.response?.statusCode} - ${e.message} ❌📁\n');
       rethrow;
     }
   }

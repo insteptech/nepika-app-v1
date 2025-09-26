@@ -40,6 +40,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
     required Uint8List imageBytes,
     required String userId,
     required String sessionId,
+    required String accessToken,
     bool includeAnnotatedImage = true,
   }) async {
     try {
@@ -57,6 +58,7 @@ class FaceScanRepositoryImpl implements FaceScanRepository {
       final analysisResult = await _remoteDataSource.analyzeFaceImage(
         imageBytes: imageBytes,
         userId: userId,
+        accessToken: accessToken,
         includeAnnotatedImage: includeAnnotatedImage,
         processingStartTime: processingStartTime,
       );

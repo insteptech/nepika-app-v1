@@ -1,0 +1,37 @@
+Start refactoring with the products feature and use flutter-code-refactorer agenet.  
+
+Steps you must follow automatically:
+1. Analyze all files related to this feature in my Flutter project.
+2. Refactor them while maintaining **original functionality**.
+3. Apply **SOLID principles** and clean architecture (Presentation, Domain, Data layers).
+4. Reorganize into a **feature-first modular structure**:
+   <feature>/
+     ├── bloc/          (only bloc layer in feature module keep data and domain layers outside the feature module)  
+     │    ├── <feature>_bloc.dart
+     │    ├── <feature>_event.dart
+     │    └── <feature>_state.dart
+     ├── widgets/       (reusable UI widgets if needed)
+     ├── components/    (for shared complex parts if needed)
+     ├── screens/       (for feature screens)
+     └── main.dart      (entry point if required)
+5. Eliminate any **duplicate code** by extracting reusable components.
+6. Break down large files into **smaller, maintainable files**.
+7. Use clean Flutter best practices:
+   - `const` constructors where possible
+   - prefer `final` over `var`
+   - clean widget build methods
+   - avoid mixing business logic & UI
+   - consistent naming & formatting
+8. Show me:
+   - The new **refactored folder structure**.
+   - The **clean, modular code** in small chunks.
+
+Do not invent new functionality. Only make the codebase cleaner, modular, and more reusable.
+
+Feature to start with: lib/presentation/pages/products
+
+Make sure you keep the functionality working exactly like its working now 
+while refrecting no need to write the logics and fucntion just copy the exact function from presentation module of first_scan and use that exact copied logic in features module 
+
+
+make sure you name files correctly so that it will be easy for understing the use of that file
