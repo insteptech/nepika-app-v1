@@ -190,11 +190,37 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         userId: event.userId,
       );
       
-      final s3ImageUrl = uploadResult['s3_url'] as String?;
+      final s3ImageUrl = uploadResult['profile_image_url'] as String?;
       debugPrint('ProfileBloc: Image uploaded successfully, S3 URL: $s3ImageUrl');
       
       if (s3ImageUrl != null) {
         emit(ImageUploadSuccess(s3Url: s3ImageUrl));
+        
+        // Update the current profile state with the new image URL
+        // Check if we have a current profile loaded and update it
+        if (state is CommunityProfileLoaded) {
+          final currentProfile = (state as CommunityProfileLoaded).profile;
+          final updatedProfile = CommunityProfileEntity(
+            id: currentProfile.id,
+            userId: currentProfile.userId,
+            username: currentProfile.username,
+            bio: currentProfile.bio,
+            profileImageUrl: s3ImageUrl, // Update with new URL
+            bannerImageUrl: currentProfile.bannerImageUrl,
+            isPrivate: currentProfile.isPrivate,
+            isVerified: currentProfile.isVerified,
+            followersCount: currentProfile.followersCount,
+            followingCount: currentProfile.followingCount,
+            postsCount: currentProfile.postsCount,
+            isSelf: currentProfile.isSelf,
+            isFollowing: currentProfile.isFollowing,
+            createdAt: currentProfile.createdAt,
+            updatedAt: DateTime.now(),
+          );
+          
+          // Emit updated profile state
+          emit(CommunityProfileLoaded(profile: updatedProfile));
+        }
       } else {
         throw Exception('Image upload succeeded but no S3 URL returned');
       }

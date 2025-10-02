@@ -164,20 +164,20 @@ class _EditRoutineScreenState extends State<EditRoutineScreen> with WidgetsBindi
                   SliverPersistentHeader(
                     pinned: true,
                     delegate: StickyHeaderDelegate(
-                      minHeight: 40,
-                      maxHeight: 40,
-                      showAnimatedBackButton: true,
-                      title: "Edit routine",
-                      child: Container(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        padding: const EdgeInsets.symmetric(horizontal: 20),
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          "Edit routine",
-                          style: Theme.of(context).textTheme.displaySmall,
-                        ),
+                    minHeight: 40,
+                    maxHeight: 40,
+                    isFirstHeader: true,
+                    title: "Edit Routine",
+                    child: Container(
+                      color: Theme.of(context).scaffoldBackgroundColor,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        "Edit Routine",
+                        style: Theme.of(context).textTheme.displaySmall,
                       ),
                     ),
+                  ),
                   ),
                   SliverToBoxAdapter(
                     child: Padding(

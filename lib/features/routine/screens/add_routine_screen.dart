@@ -174,10 +174,10 @@ class _AddRoutineScreenState extends State<AddRoutineScreen> {
                 ),
                 SliverPersistentHeader(
                   pinned: true,
-                  delegate: StickyHeaderDelegate(
+                    delegate: StickyHeaderDelegate(
                     minHeight: 40,
                     maxHeight: 40,
-                    showAnimatedBackButton: true,
+                    isFirstHeader: true,
                     title: "Add new routine",
                     child: Container(
                       color: Theme.of(context).scaffoldBackgroundColor,

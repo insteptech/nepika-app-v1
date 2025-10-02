@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';
 import 'package:nepika/features/products/main.dart';
 import 'package:nepika/features/settings/main.dart';
-// import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
 import 'package:nepika/features/routine/main.dart';
+import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
+import 'package:nepika/features/notifications/bloc/notification_event.dart';
 
 import 'screens/dashboard_screen.dart';
 import 'screens/set_reminder_screen.dart';
@@ -29,6 +31,18 @@ class Dashboard extends StatefulWidget {
 
   @override
   State<Dashboard> createState() => _DashboardState();
+}
+
+class DashboardWithNotifications extends StatelessWidget {
+  const DashboardWithNotifications({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+      child: const Dashboard(),
+    );
+  }
 }
 
 class _DashboardState extends State<Dashboard> 
@@ -90,6 +104,39 @@ class _DashboardState extends State<Dashboard>
     WidgetsBinding.instance.removeObserver(this);
     _navBarAnimationController.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    
+    // Try to get the NotificationBloc if available
+    try {
+      final notificationBloc = context.read<NotificationBloc>();
+      
+      switch (state) {
+        case AppLifecycleState.resumed:
+          // App is in foreground - connect to SSE
+          notificationBloc.add(const ConnectToNotificationStream());
+          break;
+        case AppLifecycleState.paused:
+        case AppLifecycleState.inactive:
+          // App is in background or inactive - disconnect to save battery
+          notificationBloc.add(const DisconnectFromNotificationStream());
+          break;
+        case AppLifecycleState.detached:
+          // App is being terminated
+          notificationBloc.add(const DisconnectFromNotificationStream());
+          break;
+        case AppLifecycleState.hidden:
+          // App is hidden - disconnect to save battery
+          notificationBloc.add(const DisconnectFromNotificationStream());
+          break;
+      }
+    } catch (e) {
+      // NotificationBloc not found in context, which is fine for some routes
+      // Do nothing
+    }
   }
 
   void _onNavBarTap(int index, String route) {

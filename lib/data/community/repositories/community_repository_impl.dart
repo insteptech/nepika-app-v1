@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:mime/mime.dart';
 import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import '../../../core/config/constants/api_endpoints.dart';
 import '../../../domain/community/entities/community_entities.dart';
 import '../../../domain/community/repositories/community_repository.dart';
@@ -712,10 +713,12 @@ class CommunityRepositoryImpl implements CommunityRepository {
         },
       );
       
-      debugPrint('Repository: uploadProfileImage response: ${response.statusCode}');
-      debugPrint('Repository: uploadProfileImage response data: ${response.data}');
+      debugPrint('\n\nRepository: uploadProfileImage response: ${response.statusCode}');
+      debugPrint('Repository: uploadProfileImage response data:\n');
+      logJson(response.data);
+      debugPrint('\n');
       
-      if (response.statusCode == 201 && response.data['success'] == true) {
+      if (response.statusCode == 200 && response.data['success'] == true) {
         return response.data['data'] as Map<String, dynamic>;
       } else {
         throw Exception(response.data['message'] ?? 'Failed to upload profile image');

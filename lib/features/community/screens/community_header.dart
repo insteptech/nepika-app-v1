@@ -1,7 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/widgets/back_button.dart';
+import '../../notifications/widgets/notification_badge.dart';
+import '../../notifications/bloc/notification_bloc.dart';
+import '../../notifications/bloc/notification_event.dart';
 
-/// Community header component with logo, back button, and search
+/// Community header component with logo, back button, search, and notifications
 /// Follows Single Responsibility Principle - only handles header display
 class CommunityHeader extends SliverPersistentHeaderDelegate {
   final VoidCallback onSearchTap;
@@ -42,19 +46,39 @@ class CommunityHeader extends SliverPersistentHeaderDelegate {
             child: CustomBackButton(),
           ),
 
-          // Search Icon
+          // Search and Notification Icons
           Positioned(
             right: 0,
-            child: GestureDetector(
-              onTap: onSearchTap,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 100),
-                padding: const EdgeInsets.all(8),
-                child: Image.asset(
-                  'assets/icons/search_icon.png',
-                  height: searchHeight,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Search Icon
+                GestureDetector(
+                  onTap: onSearchTap,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 100),
+                    padding: const EdgeInsets.all(8),
+                    child: Image.asset(
+                      'assets/icons/search_icon.png',
+                      height: searchHeight,
+                    ),
+                  ),
                 ),
-              ),
+                
+                const SizedBox(width: 9),
+                
+                // Notification Badge
+                BlocProvider(
+                  create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+                  child: Padding(
+                    padding: const EdgeInsets.all(8),
+                    child: NotificationBadge(
+                      iconSize: searchHeight,
+                      iconColor: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ),
         ],

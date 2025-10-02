@@ -95,6 +95,9 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
     final currentlyFollowing = event.currentlyFollowing;
     final newFollowingState = !currentlyFollowing;
     
+    // Cancel any existing timer for this user
+    _followDebounceTimers[userId]?.cancel();
+    
     // Store current follow state for this user
     _currentFollowStates[userId] = newFollowingState;
     
@@ -105,65 +108,51 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
       message: newFollowingState ? 'Following' : 'Unfollowing',
     ));
     
-    // Cancel any existing timer for this user
-    _followDebounceTimers[userId]?.cancel();
-    
-    // Store the pending state
-    _pendingFollowStates[userId] = newFollowingState;
-    
-    // Start new debounce timer
-    _followDebounceTimers[userId] = Timer(const Duration(milliseconds: 800), () async {
-      final finalState = _pendingFollowStates[userId] ?? newFollowingState;
+    try {
+      // Show loading state
+      emit(UserFollowToggling(userId: userId));
       
-      try {
-        emit(UserFollowToggling(userId: userId));
-        
-        if (finalState) {
-          // Follow user
-          final response = await repository.followUser(
-            token: event.token,
-            userId: userId,
-          );
-          emit(UserFollowToggled(
-            userId: userId,
-            isFollowing: response.isFollowing,
-            message: response.message,
-          ));
-        } else {
-          // Unfollow user
-          final response = await repository.unfollowUser(
-            token: event.token,
-            userId: userId,
-          );
-          emit(UserFollowToggled(
-            userId: userId,
-            isFollowing: response.isFollowing,
-            message: response.message,
-          ));
-        }
-        
-        // Update the current state
-        _currentFollowStates[userId] = finalState;
-        
-      } catch (e) {
-        // Revert the UI state on error
-        _currentFollowStates[userId] = currentlyFollowing;
-        emit(UserFollowError(
+      if (newFollowingState) {
+        // Follow user
+        final response = await repository.followUser(
+          token: event.token,
           userId: userId,
-          message: e.toString(),
-        ));
-        // Emit the reverted state
+        );
         emit(UserFollowToggled(
           userId: userId,
-          isFollowing: currentlyFollowing,
-          message: currentlyFollowing ? 'Following' : 'Follow',
+          isFollowing: response.isFollowing,
+          message: response.message,
         ));
-      } finally {
-        // Clean up
-        _followDebounceTimers.remove(userId);
-        _pendingFollowStates.remove(userId);
+      } else {
+        // Unfollow user
+        final response = await repository.unfollowUser(
+          token: event.token,
+          userId: userId,
+        );
+        emit(UserFollowToggled(
+          userId: userId,
+          isFollowing: response.isFollowing,
+          message: response.message,
+        ));
       }
-    });
+      
+      // Update the current state
+      _currentFollowStates[userId] = newFollowingState;
+      
+    } catch (e) {
+      // Revert the UI state on error
+      _currentFollowStates[userId] = currentlyFollowing;
+      emit(UserFollowError(
+        userId: userId,
+        message: e.toString(),
+      ));
+      // Emit the reverted state
+      emit(UserFollowToggled(
+        userId: userId,
+        isFollowing: currentlyFollowing,
+        message: currentlyFollowing ? 'Following' : 'Follow',
+      ));
+    }
   }
 
   // Getters for accessing current state

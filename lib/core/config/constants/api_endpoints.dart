@@ -48,7 +48,7 @@ class ApiEndpoints {
   static const String updateProfile = '/community/profiles';
   
   // Image Management Endpoints
-  static const String uploadProfileImage = '/auth/users/profile/upload-picture';
+  static const String uploadProfileImage = '/community/profiles/upload-picture';
   static const String getSecureImageUrl = '/community/images/secure-url';
   
   // Follow System Endpoints
@@ -69,4 +69,9 @@ class ApiEndpoints {
   static const String getUserCommentPosts = '/community/users/posts'; // GET /:user_id/comments
   
   // Question Endpoints
+  
+  // Notification Endpoints (SSE)
+  static const String notificationStream = '/community/notifications/stream';
+  static const String unreadCount = '/community/notifications/unread-count';
+  static const String markSeen = '/community/notifications/mark-seen';
 }

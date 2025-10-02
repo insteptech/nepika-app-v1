@@ -290,7 +290,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       pinned: true,
       delegate: _SliverAppBarDelegate(
         minHeight: 55,
-        maxHeight: 56,
+        maxHeight: 62,
         child: Container(
           color: Theme.of(context).scaffoldBackgroundColor,
           child: SafeArea(
@@ -343,7 +343,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             _buildProgressSummarySection(progressSummary),
             _buildDailyRoutineSection(dailyRoutine, isLoading),
             _buildImageGallerySection(imageGallery, isLoading),
-            _buildRecommendedProductsSection(recommendedProducts, isLoading),
+            // _buildRecommendedProductsSection(recommendedProducts, isLoading),
           ],
         ),
       ),
@@ -368,8 +368,11 @@ class _DashboardScreenState extends State<DashboardScreen>
     return Row(
       children: [
         Expanded(
-          child: SizedBox(
-            height: 170,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: 170,
+              maxHeight: 210,
+            ),
             child: FaceScanCard(
               faceScan: faceScan,
               onTap: widget.onFaceScanTap,
@@ -378,8 +381,11 @@ class _DashboardScreenState extends State<DashboardScreen>
         ),
         const SizedBox(width: 16),
         Expanded(
-          child: SizedBox(
-            height: 170,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: 170,
+              maxHeight: 210,
+            ),
             child: SkinScoreCard(skinScore: skinScore),
           ),
         ),

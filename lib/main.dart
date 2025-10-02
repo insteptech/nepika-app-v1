@@ -17,6 +17,10 @@ import 'package:nepika/features/auth/auth_module.dart' as auth_feature;
 import 'package:nepika/features/auth/screens/phone_entry_screen.dart';
 import 'package:nepika/features/auth/screens/otp_verification_screen.dart';
 import 'package:nepika/features/community/main.dart';
+import 'package:nepika/features/notifications/screens/notifications_screen.dart';
+import 'package:nepika/features/notifications/screens/notification_debug_screen.dart';
+import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
+import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
@@ -122,7 +126,7 @@ class MyApp extends StatelessWidget {
                 builder: (_) => const FaceScanResultScreen(),
               );
             case AppRoutes.dashboardHome:
-              return MaterialPageRoute(builder: (_) => const Dashboard());
+              return MaterialPageRoute(builder: (_) => const DashboardWithNotifications());
             case AppRoutes.conditionDetailsPage:
               return MaterialPageRoute(
                 settings: settings,
@@ -155,6 +159,20 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.subscription:
               return MaterialPageRoute(builder: (_) => const PricingScreen());
+            case AppRoutes.notifications:
+              return MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+                  child: const NotificationsScreen(),
+                ),
+              );
+            case AppRoutes.notificationDebug:
+              return MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+                  child: const NotificationDebugScreen(),
+                ),
+              );
             case AppRoutes.privacyPolicy:
               return MaterialPageRoute(
                 builder: (_) => const PrivacyPolicyScreen(),

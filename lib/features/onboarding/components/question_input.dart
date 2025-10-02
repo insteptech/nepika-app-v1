@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:nepika/core/widgets/custom_text_field.dart';
 import 'package:nepika/core/widgets/selection_button.dart';
 import 'package:nepika/domain/onboarding/entities/onboarding_entites.dart';
+import 'package:nepika/features/onboarding/widgets/slider_button.dart';
 
 class OptionItem {
   final String label;
@@ -45,6 +46,7 @@ class _QuestionInputState extends State<QuestionInput> {
   DateTime? _selectedDate;
   RangeValues _rangeValues = const RangeValues(0, 10);
   bool _userModified = false;
+  bool _sliderCompleted = false;
 
   @override
   void initState() {
@@ -73,6 +75,10 @@ class _QuestionInputState extends State<QuestionInput> {
       _initializeDateController(initialValue);
     } else if (widget.question.inputType == "range" && initialValue != null) {
       _initializeRangeController(initialValue);
+    } else if (widget.question.inputType == "slider") {
+      // Initialize slider state based on existing value
+      _sliderCompleted = initialValue != null && initialValue.toString().isNotEmpty;
+      _textController = TextEditingController();
     } else {
       _textController = TextEditingController(text: initialValue?.toString() ?? '');
     }
@@ -167,6 +173,8 @@ class _QuestionInputState extends State<QuestionInput> {
     switch (widget.question.keyboardType?.toLowerCase()) {
       case 'numeric':
         return TextInputType.number;
+      case 'slider':
+        return TextInputType.none;
       case 'email':
         return TextInputType.emailAddress;
       case 'phone':
@@ -185,7 +193,9 @@ class _QuestionInputState extends State<QuestionInput> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return SizedBox(
+      width: double.infinity,
+      child: Column(
       key: ValueKey('${widget.question.slug}-${widget.question.inputType}'),
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -196,6 +206,7 @@ class _QuestionInputState extends State<QuestionInput> {
         const SizedBox(height: 12),
         _buildInputWidget(),
       ],
+    ),
     );
   }
 
@@ -216,6 +227,7 @@ class _QuestionInputState extends State<QuestionInput> {
         return UnderlinedTextField(
           controller: _textController,
           readOnly: true,
+          hint: widget.question.inputPlaceholder,
           onTap: _selectDate,
           keyboardType: _getKeyboardType(),
           validator: (value) => value == null || value.isEmpty ? 'Please select a date' : null,
@@ -240,6 +252,67 @@ class _QuestionInputState extends State<QuestionInput> {
                 widget.onValueChanged(widget.question.slug, [values.start, values.end]);
               },
             ),
+          ],
+        );
+      case "slider":
+        return Column(
+          children: [
+            AnimatedOpacity(
+              opacity: _sliderCompleted ? 1.0 : 0.6,
+              duration: const Duration(milliseconds: 300),
+              child: SliderButton(
+                // text: "Slide to confirm",
+                enabled: true,
+                isCompleted: _sliderCompleted,
+                onSlideComplete: () {
+                  setState(() {
+                    _sliderCompleted = true;
+                  });
+                  // Find the first option value to use as the completed state
+                  final sliderValue = widget.question.options.isNotEmpty 
+                      ? widget.question.options.first.value 
+                      : "completed";
+                  
+                  widget.onValueChanged(widget.question.slug, sliderValue);
+                },
+                onSlideReset: () {
+                  setState(() {
+                    _sliderCompleted = false;
+                  });
+                  // Reset the value
+                  widget.onValueChanged(widget.question.slug, null);
+                },
+              ),
+            ),
+            // const SizedBox(height: 16),
+            // if (_sliderCompleted)
+            //   Container(
+            //     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+            //     decoration: BoxDecoration(
+            //       color: Colors.green.withValues(alpha: 0.1),
+            //       borderRadius: BorderRadius.circular(20),
+            //       border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
+            //     ),
+            //     child: Row(
+            //       mainAxisSize: MainAxisSize.min,
+            //       children: [
+            //         Icon(
+            //           Icons.check_circle,
+            //           color: Colors.green,
+            //           size: 16,
+            //         ),
+            //         const SizedBox(width: 8),
+            //         Text(
+            //           'Completed',
+            //           style: TextStyle(
+            //             color: Colors.green,
+            //             fontSize: 14,
+            //             fontWeight: FontWeight.w500,
+            //           ),
+            //         ),
+            //       ],
+            //     ),
+            //   ),
           ],
         );
 
@@ -457,18 +530,27 @@ class CheckboxInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedSet = _getSelectedSet();
     
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Wrap(
+      spacing: 12.0, // Horizontal spacing between items
+      runSpacing: 12.0, // Vertical spacing between rows
       children: question.options.map((option) {
         final isSelected = selectedSet.contains(option.id);
-        return Container(
-          width: double.infinity,
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Row(
-            children: [
-                  GestureDetector(
-                    onTap: () => _toggleOption(option.id),
-                    child: Container(
+        
+        return IntrinsicWidth(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minWidth: 100, // Minimum width for consistency
+              maxWidth: 150, // Maximum width to prevent too long items
+            ),
+            child: GestureDetector(
+              onTap: () => _toggleOption(option.id),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.start,
+                  children: [
+                    Container(
                       width: 20,
                       height: 20,
                       decoration: BoxDecoration(
@@ -490,19 +572,28 @@ class CheckboxInput extends StatelessWidget {
                             )
                           : null,
                     ),
-                  ),
-                  const SizedBox(width: 12),
-                  Text(
-                    option.text,
-                    style: Theme.of(context)
-                        .textTheme
-                        .bodyLarge
-                        ?.copyWith(fontWeight: FontWeight.w400),
-                  ),
-                ],
+                    const SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        option.text,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyLarge
+                            ?.copyWith(
+                              fontWeight: FontWeight.w400,
+                              fontSize: 14,
+                            ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            );
-          }).toList(),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 
@@ -744,17 +835,25 @@ class OptionButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
+    return SizedBox(
+      width: double.infinity,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
         const spacing = 10.0;
         final hasExplicitOptionsPerRow = optionsPerRow != null;
         
         if (hasExplicitOptionsPerRow) {
           return _buildGridLayout(constraints, spacing);
         } else {
-          return _buildAdaptiveLayout(constraints, spacing);
+          // Use simple wrap layout for better stability
+          return Wrap(
+            spacing: spacing,
+            runSpacing: 12.0,
+            children: options.map((option) => _buildOptionButton(option)).toList(),
+          );
         }
-      },
+        },
+      ),
     );
   }
 
@@ -765,26 +864,27 @@ class OptionButtons extends StatelessWidget {
     for (int i = 0; i < options.length; i += perRow) {
       List<Widget> rowChildren = [];
       int itemsInThisRow = (i + perRow <= options.length) ? perRow : options.length - i;
-      final totalSpacing = (itemsInThisRow - 1) * spacing;
-      final itemWidth = (constraints.maxWidth - totalSpacing) / itemsInThisRow;
       
       for (int j = 0; j < perRow && (i + j) < options.length; j++) {
         final option = options[i + j];
-        rowChildren.add(
-          Container(
-            width: itemWidth,
-            margin: EdgeInsets.only(
-              right: j < itemsInThisRow - 1 ? spacing : 0,
-            ),
-            child: _buildOptionButton(option),
-          ),
-        );
+        rowChildren.add(_buildOptionButton(option));
+        
+        // Add spacing between buttons (except for the last one)
+        if (j < perRow - 1 && (i + j + 1) < options.length) {
+          rowChildren.add(const SizedBox(width: 10));
+        }
       }
       
+      // Use left alignment for all rows
+      const alignment = MainAxisAlignment.start;
+      
       rows.add(
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: rowChildren,
+        SizedBox(
+          width: double.infinity,
+          child: Row(
+            mainAxisAlignment: alignment,
+            children: rowChildren,
+          ),
         ),
       );
     }
@@ -797,76 +897,6 @@ class OptionButtons extends StatelessWidget {
     );
   }
 
-  Widget _buildAdaptiveLayout(BoxConstraints constraints, double spacing) {
-    if (options.length <= 3) {
-      return _buildEqualWidthRow(constraints, spacing);
-    } else {
-      return _buildMixedLayout(constraints, spacing);
-    }
-  }
-
-  Widget _buildEqualWidthRow(BoxConstraints constraints, double spacing) {
-    final totalSpacing = (options.length - 1) * spacing;
-    final itemWidth = (constraints.maxWidth - totalSpacing) / options.length;
-
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: options.asMap().entries.map((entry) {
-        final index = entry.key;
-        final option = entry.value;
-
-        return Container(
-          width: itemWidth,
-          margin: EdgeInsets.only(
-            right: index < options.length - 1 ? spacing : 0,
-          ),
-          child: _buildOptionButton(option),
-        );
-      }).toList(),
-    );
-  }
-
-  Widget _buildMixedLayout(BoxConstraints constraints, double spacing) {
-    final first3Options = options.take(3).toList();
-    final remainingOptions = options.skip(3).toList();
-    
-    final totalSpacing = 2 * spacing;
-    final itemWidth = (constraints.maxWidth - totalSpacing) / 3;
-    
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.start,
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.start,
-          children: first3Options.asMap().entries.map((entry) {
-            final index = entry.key;
-            final option = entry.value;
-
-            return Container(
-              width: itemWidth,
-              margin: EdgeInsets.only(
-                right: index < 2 ? spacing : 0,
-              ),
-              child: _buildOptionButton(option),
-            );
-          }).toList(),
-        ),
-        
-        if (remainingOptions.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: spacing,
-            runSpacing: 12,
-            children: remainingOptions
-                .map((option) => _buildOptionButton(option))
-                .toList(),
-          ),
-        ],
-      ],
-    );
-  }
 
   Widget _buildOptionButton(OnboardingOptionEntity option) {
     final isSelected = selectedValues.contains(option.id);

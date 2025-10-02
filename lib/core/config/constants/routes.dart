@@ -77,6 +77,7 @@ class AppRoutes {
   
   // Settings Routes
   static const String notifications = '/notifications';
+  static const String notificationDebug = '/notification-debug';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';
   static const String about = '/about';

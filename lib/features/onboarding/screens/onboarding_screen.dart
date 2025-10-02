@@ -234,7 +234,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _bloc.add(const NavigateToPreviousStep());
       _loadCurrentStep();
     } else {
-      Navigator.of(context).pop();
+      if (mounted) {
+        Navigator.of(context).pop();
+      }
     }
   }
 
@@ -290,13 +292,17 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       } else {
         debugPrint('📱 Normal onboarding flow - showing snackbar and moving to next step');
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              duration: const Duration(milliseconds: 1300),
-              backgroundColor: Colors.green,
-            ),
-          );
+          try {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                duration: const Duration(milliseconds: 1300),
+                backgroundColor: Colors.green,
+              ),
+            );
+          } catch (e) {
+            debugPrint('❌ Error showing success snackbar: $e');
+          }
         }
         debugPrint('🚀 About to call _moveToNextStep()');
         _moveToNextStep();
@@ -306,9 +312,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _navigateToCompletion();
     } else if (state is OnboardingError) {
       debugPrint('❌ Onboarding error: ${state.message}');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        try {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
+          );
+        } catch (e) {
+          debugPrint('❌ Error showing error snackbar: $e');
+        }
+      }
     }
   }
 
