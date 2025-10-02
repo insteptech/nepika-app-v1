@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- Open Graph tags for rich previews -->
+    <meta property="og:site_name" content="NEPIKA">
+    <meta property="og:type" content="website">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@nepika">
+    <meta name="twitter:creator" content="@nepika">
+    
+    <!-- SEO -->
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#FF6B9D">
+    
+    <!-- App Links -->
+    <meta property="al:ios:app_store_id" content="123456789">
+    <meta property="al:ios:app_name" content="NEPIKA">
+    <meta property="al:ios:url" content="nepika://{{DEEP_LINK_PATH}}">
+    
+    <meta property="al:android:package" content="com.assisted.nepika">
+    <meta property="al:android:app_name" content="NEPIKA">
+    <meta property="al:android:url" content="nepika://{{DEEP_LINK_PATH}}">
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <title>{{PAGE_TITLE}} | NEPIKA</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #FF6B9D 0%, #C147E9 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #FF6B9D;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+        
+        .content-preview {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        
+        .preview-header {
+            display: flex;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+        
+        .preview-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            margin-right: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+        
+        .preview-name {
+            font-weight: 600;
+            font-size: 16px;
+        }
+        
+        .preview-content {
+            font-size: 14px;
+            line-height: 1.5;
+            opacity: 0.95;
+        }
+        
+        .cta-section {
+            margin-top: 30px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #FF6B9D;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cta-button.secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .app-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .app-link {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .app-link:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .app-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            opacity: 0.7;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .app-links {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .app-link {
+                width: 100%;
+                max-width: 200px;
+                justify-content: center;
+            }
+        }
+        
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">N</div>
+        <h1>{{PAGE_TITLE}}</h1>
+        <p class="subtitle">{{PAGE_DESCRIPTION}}</p>
+        
+        {{CONTENT_PREVIEW}}
+        
+        <div class="cta-section">
+            <a href="#" class="cta-button" id="openApp">
+                Open in NEPIKA App
+                <span class="loading" id="loadingSpinner" style="display: none;"></span>
+            </a>
+            <br>
+            <a href="#" class="cta-button secondary" id="continueWeb">Continue on Web</a>
+        </div>
+        
+        <div class="app-links">
+            <a href="https://apps.apple.com/app/nepika/id123456789" class="app-link">
+                <div class="app-icon">🍎</div>
+                Download for iOS
+            </a>
+            <a href="https://play.google.com/store/apps/details?id=com.assisted.nepika" class="app-link">
+                <div class="app-icon">🤖</div>
+                Download for Android
+            </a>
+        </div>
+        
+        <div class="footer">
+            © 2024 NEPIKA. Beauty & Skincare Community
+        </div>
+    </div>
+
+    <script>
+        // App detection and deep linking logic
+        const deepLinkPath = '{{DEEP_LINK_PATH}}';
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const isMobile = isIOS || isAndroid;
+        
+        // Generate app links
+        const appSchemeUrl = `nepika://${deepLinkPath}`;
+        const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.assisted.nepika';
+        const appStoreUrl = 'https://apps.apple.com/app/nepika/id123456789';
+        
+        document.getElementById('openApp').addEventListener('click', function(e) {
+            e.preventDefault();
+            openApp();
+        });
+        
+        document.getElementById('continueWeb').addEventListener('click', function(e) {
+            e.preventDefault();
+            // Redirect to web version (could be a progressive web app)
+            window.location.href = `https://nepika.com/web${deepLinkPath}`;
+        });
+        
+        function openApp() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            loadingSpinner.style.display = 'inline-block';
+            
+            if (isMobile) {
+                // Try to open the app
+                const startTime = Date.now();
+                
+                // Create an invisible iframe to trigger the app
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = appSchemeUrl;
+                document.body.appendChild(iframe);
+                
+                // Fallback to app store if app doesn't open
+                setTimeout(() => {
+                    const elapsedTime = Date.now() - startTime;
+                    
+                    // If we're still on the page after attempting to open the app
+                    if (elapsedTime < 2000) {
+                        loadingSpinner.style.display = 'none';
+                        
+                        if (isIOS) {
+                            window.location.href = appStoreUrl;
+                        } else if (isAndroid) {
+                            window.location.href = playStoreUrl;
+                        }
+                    }
+                    
+                    // Clean up
+                    document.body.removeChild(iframe);
+                }, 1500);
+                
+                // Also try opening via window.location as a backup
+                setTimeout(() => {
+                    try {
+                        window.location.href = appSchemeUrl;
+                    } catch (e) {
+                        console.log('Unable to open app via window.location');
+                    }
+                }, 100);
+                
+            } else {
+                // Desktop: show QR code or redirect to web version
+                loadingSpinner.style.display = 'none';
+                alert('NEPIKA is a mobile app. Please open this link on your phone or download the app from the app store.');
+            }
+        }
+        
+        // Auto-attempt to open app if coming from a share
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auto_open') === 'true' && isMobile) {
+            setTimeout(openApp, 500);
+        }
+        
+        // Page visibility API to handle app switching
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page became hidden, likely app opened successfully
+                const loadingSpinner = document.getElementById('loadingSpinner');
+                if (loadingSpinner) {
+                    loadingSpinner.style.display = 'none';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

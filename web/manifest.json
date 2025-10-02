@@ -1,13 +1,29 @@
 {
-    "name": "nepika_app",
-    "short_name": "nepika_app",
-    "start_url": ".",
+    "name": "NEPIKA - Beauty & Skincare Community",
+    "short_name": "NEPIKA",
+    "description": "Join the ultimate beauty and skincare community. Share tips, discover products, and connect with like-minded enthusiasts.",
+    "start_url": "/",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
-    "orientation": "portrait-primary",
-    "prefer_related_applications": false,
+    "background_color": "#FFFFFF",
+    "theme_color": "#FF6B9D",
+    "orientation": "portrait",
+    "scope": "/",
+    "lang": "en",
+    "categories": ["beauty", "lifestyle", "social"],
+    "screenshots": [
+        {
+            "src": "/assets/screenshots/mobile-home.png",
+            "sizes": "390x844",
+            "type": "image/png",
+            "platform": "narrow"
+        },
+        {
+            "src": "/assets/screenshots/mobile-community.png", 
+            "sizes": "390x844",
+            "type": "image/png",
+            "platform": "narrow"
+        }
+    ],
     "icons": [
         {
             "src": "icons/Icon-192.png",
@@ -31,5 +47,44 @@
             "type": "image/png",
             "purpose": "maskable"
         }
-    ]
+    ],
+    "shortcuts": [
+        {
+            "name": "Community Feed",
+            "short_name": "Feed",
+            "description": "View the latest posts from the community",
+            "url": "/community",
+            "icons": [
+                {
+                    "src": "/assets/icons/feed-icon.png",
+                    "sizes": "96x96"
+                }
+            ]
+        },
+        {
+            "name": "Create Post",
+            "short_name": "Post",
+            "description": "Share your beauty tips and experiences",
+            "url": "/community/create",
+            "icons": [
+                {
+                    "src": "/assets/icons/create-icon.png",
+                    "sizes": "96x96"
+                }
+            ]
+        }
+    ],
+    "related_applications": [
+        {
+            "platform": "itunes",
+            "url": "https://apps.apple.com/app/nepika/id123456789",
+            "id": "123456789"
+        },
+        {
+            "platform": "play",
+            "url": "https://play.google.com/store/apps/details?id=com.assisted.nepika",
+            "id": "com.assisted.nepika"
+        }
+    ],
+    "prefer_related_applications": true
 }

@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    
+    <!-- Dynamic Open Graph tags for profiles -->
+    <meta property="og:site_name" content="NEPIKA">
+    <meta property="og:type" content="profile">
+    <meta property="og:locale" content="en_US">
+    <meta property="og:title" content="{{PROFILE_USERNAME}} on NEPIKA">
+    <meta property="og:description" content="{{PROFILE_BIO}}">
+    <meta property="og:image" content="{{PROFILE_IMAGE_URL}}">
+    <meta property="og:image:width" content="1200">
+    <meta property="og:image:height" content="630">
+    <meta property="og:url" content="https://nepika.com/community/profile/{{PROFILE_ID}}">
+    <meta property="profile:username" content="{{PROFILE_USERNAME}}">
+    
+    <!-- Twitter Card tags -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:site" content="@nepika">
+    <meta name="twitter:creator" content="@{{PROFILE_USERNAME}}">
+    <meta name="twitter:title" content="{{PROFILE_USERNAME}} on NEPIKA">
+    <meta name="twitter:description" content="{{PROFILE_BIO}}">
+    <meta name="twitter:image" content="{{PROFILE_IMAGE_URL}}">
+    
+    <!-- WhatsApp specific -->
+    <meta property="og:image:alt" content="{{PROFILE_USERNAME}}'s profile on NEPIKA">
+    
+    <!-- SEO -->
+    <meta name="description" content="Follow {{PROFILE_USERNAME}} on NEPIKA for beauty and skincare tips. {{PROFILE_BIO}}">
+    <meta name="keywords" content="beauty, skincare, {{PROFILE_USERNAME}}, NEPIKA, community, profile">
+    <meta name="robots" content="index, follow">
+    <meta name="theme-color" content="#FF6B9D">
+    
+    <!-- App Links -->
+    <meta property="al:ios:app_store_id" content="123456789">
+    <meta property="al:ios:app_name" content="NEPIKA">
+    <meta property="al:ios:url" content="nepika://community/profile/{{PROFILE_ID}}">
+    
+    <meta property="al:android:package" content="com.assisted.nepika">
+    <meta property="al:android:app_name" content="NEPIKA">
+    <meta property="al:android:url" content="nepika://community/profile/{{PROFILE_ID}}">
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://nepika.com/community/profile/{{PROFILE_ID}}">
+    
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="/manifest.json">
+    <link rel="icon" type="image/png" href="/favicon.png">
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    
+    <title>{{PROFILE_USERNAME}} on NEPIKA</title>
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #FF6B9D 0%, #C147E9 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 500px;
+            width: 100%;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+        }
+        
+        .logo {
+            width: 80px;
+            height: 80px;
+            margin: 0 auto 20px;
+            background: white;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #FF6B9D;
+        }
+        
+        h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            line-height: 1.2;
+        }
+        
+        .subtitle {
+            font-size: 16px;
+            opacity: 0.9;
+            margin-bottom: 30px;
+            line-height: 1.4;
+        }
+        
+        .profile-preview {
+            background: rgba(255, 255, 255, 0.15);
+            border-radius: 15px;
+            padding: 30px 20px;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .profile-avatar {
+            width: 120px;
+            height: 120px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.3);
+            margin: 0 auto 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            background-image: url('{{PROFILE_IMAGE_URL}}');
+            background-size: cover;
+            background-position: center;
+            border: 4px solid rgba(255, 255, 255, 0.3);
+        }
+        
+        .profile-username {
+            font-weight: 700;
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+        
+        .profile-handle {
+            font-size: 16px;
+            opacity: 0.7;
+            margin-bottom: 15px;
+        }
+        
+        .profile-bio {
+            font-size: 16px;
+            line-height: 1.5;
+            margin-bottom: 20px;
+            opacity: 0.95;
+        }
+        
+        .profile-stats {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-bottom: 20px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.8;
+        }
+        
+        .profile-badges {
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .badge {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+        
+        .badge.verified {
+            background: rgba(52, 152, 219, 0.3);
+        }
+        
+        .badge.expert {
+            background: rgba(241, 196, 15, 0.3);
+        }
+        
+        .cta-section {
+            margin-top: 30px;
+        }
+        
+        .cta-button {
+            display: inline-block;
+            background: white;
+            color: #FF6B9D;
+            padding: 16px 32px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-weight: 700;
+            font-size: 16px;
+            margin: 10px;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
+        }
+        
+        .cta-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        .cta-button.secondary {
+            background: transparent;
+            color: white;
+            border: 2px solid white;
+        }
+        
+        .app-links {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .app-link {
+            display: flex;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 12px 20px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: white;
+            font-size: 14px;
+            transition: all 0.3s ease;
+        }
+        
+        .app-link:hover {
+            background: rgba(0, 0, 0, 0.5);
+        }
+        
+        .app-icon {
+            width: 24px;
+            height: 24px;
+            margin-right: 8px;
+            background: white;
+            border-radius: 4px;
+        }
+        
+        .footer {
+            margin-top: 40px;
+            opacity: 0.7;
+            font-size: 12px;
+        }
+        
+        @media (max-width: 480px) {
+            .container {
+                padding: 30px 20px;
+            }
+            
+            h1 {
+                font-size: 24px;
+            }
+            
+            .profile-avatar {
+                width: 100px;
+                height: 100px;
+                font-size: 40px;
+            }
+            
+            .profile-username {
+                font-size: 20px;
+            }
+            
+            .profile-stats {
+                gap: 20px;
+            }
+            
+            .stat-number {
+                font-size: 20px;
+            }
+            
+            .app-links {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .app-link {
+                width: 100%;
+                max-width: 200px;
+                justify-content: center;
+            }
+        }
+        
+        /* Loading animation */
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+            margin-left: 10px;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">N</div>
+        <h1>Check out this profile</h1>
+        <p class="subtitle">Join the beauty & skincare community on NEPIKA</p>
+        
+        <div class="profile-preview">
+            <div class="profile-avatar">{{PROFILE_AVATAR_INITIAL}}</div>
+            
+            <div class="profile-username">{{PROFILE_USERNAME}}</div>
+            <div class="profile-handle">@{{PROFILE_HANDLE}}</div>
+            
+            <div class="profile-bio">{{PROFILE_BIO}}</div>
+            
+            <div class="profile-stats">
+                <div class="stat-item">
+                    <span class="stat-number">{{PROFILE_POSTS}}</span>
+                    <span class="stat-label">Posts</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{PROFILE_FOLLOWERS}}</span>
+                    <span class="stat-label">Followers</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-number">{{PROFILE_FOLLOWING}}</span>
+                    <span class="stat-label">Following</span>
+                </div>
+            </div>
+            
+            <div class="profile-badges">
+                {{PROFILE_BADGES}}
+            </div>
+        </div>
+        
+        <div class="cta-section">
+            <a href="#" class="cta-button" id="openApp">
+                Follow in App
+                <span class="loading" id="loadingSpinner" style="display: none;"></span>
+            </a>
+            <br>
+            <a href="#" class="cta-button secondary" id="continueWeb">View Profile on Web</a>
+        </div>
+        
+        <div class="app-links">
+            <a href="https://apps.apple.com/app/nepika/id123456789" class="app-link">
+                <div class="app-icon">🍎</div>
+                Download for iOS
+            </a>
+            <a href="https://play.google.com/store/apps/details?id=com.assisted.nepika" class="app-link">
+                <div class="app-icon">🤖</div>
+                Download for Android
+            </a>
+        </div>
+        
+        <div class="footer">
+            © 2024 NEPIKA. Beauty & Skincare Community
+        </div>
+    </div>
+
+    <script>
+        // App detection and deep linking logic
+        const profileId = '{{PROFILE_ID}}';
+        const deepLinkPath = `community/profile/${profileId}`;
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+        const isAndroid = /Android/.test(navigator.userAgent);
+        const isMobile = isIOS || isAndroid;
+        
+        // Generate app links
+        const appSchemeUrl = `nepika://${deepLinkPath}`;
+        const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.assisted.nepika';
+        const appStoreUrl = 'https://apps.apple.com/app/nepika/id123456789';
+        
+        document.getElementById('openApp').addEventListener('click', function(e) {
+            e.preventDefault();
+            openApp();
+        });
+        
+        document.getElementById('continueWeb').addEventListener('click', function(e) {
+            e.preventDefault();
+            // Redirect to web version of the profile
+            window.location.href = `https://nepika.com/web/community/profile/${profileId}`;
+        });
+        
+        function openApp() {
+            const loadingSpinner = document.getElementById('loadingSpinner');
+            loadingSpinner.style.display = 'inline-block';
+            
+            if (isMobile) {
+                // Try to open the app
+                const startTime = Date.now();
+                
+                // Create an invisible iframe to trigger the app
+                const iframe = document.createElement('iframe');
+                iframe.style.display = 'none';
+                iframe.src = appSchemeUrl;
+                document.body.appendChild(iframe);
+                
+                // Fallback to app store if app doesn't open
+                setTimeout(() => {
+                    const elapsedTime = Date.now() - startTime;
+                    
+                    // If we're still on the page after attempting to open the app
+                    if (elapsedTime < 2000) {
+                        loadingSpinner.style.display = 'none';
+                        
+                        if (isIOS) {
+                            window.location.href = appStoreUrl;
+                        } else if (isAndroid) {
+                            window.location.href = playStoreUrl;
+                        }
+                    }
+                    
+                    // Clean up
+                    if (iframe.parentNode) {
+                        document.body.removeChild(iframe);
+                    }
+                }, 1500);
+                
+                // Also try opening via window.location as a backup
+                setTimeout(() => {
+                    try {
+                        window.location.href = appSchemeUrl;
+                    } catch (e) {
+                        console.log('Unable to open app via window.location');
+                    }
+                }, 100);
+                
+            } else {
+                // Desktop: show QR code or redirect to web version
+                loadingSpinner.style.display = 'none';
+                alert('NEPIKA is a mobile app. Please open this link on your phone or download the app from the app store.');
+            }
+        }
+        
+        // Auto-attempt to open app if coming from a share
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('auto_open') === 'true' && isMobile) {
+            setTimeout(openApp, 500);
+        }
+        
+        // Page visibility API to handle app switching
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                // Page became hidden, likely app opened successfully
+                const loadingSpinner = document.getElementById('loadingSpinner');
+                if (loadingSpinner) {
+                    loadingSpinner.style.display = 'none';
+                }
+            }
+        });
+        
+        // Social sharing
+        function shareProfile() {
+            if (navigator.share) {
+                navigator.share({
+                    title: '{{PROFILE_USERNAME}} on NEPIKA',
+                    text: '{{PROFILE_BIO}}',
+                    url: window.location.href
+                });
+            }
+        }
+    </script>
+</body>
+</html>

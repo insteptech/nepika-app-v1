@@ -37,21 +37,23 @@ class NotificationBadge extends StatelessWidget {
           unreadCount = state.unreadCount;
         }
 
-        return GestureDetector(
-          onTap: () {
+        return IconButton(
+          onPressed: () {
             onTap?.call();
             // Navigate to notifications screen and mark as seen
             context.read<NotificationBloc>().add(const MarkAllNotificationsAsSeen());
             Navigator.pushNamed(context, AppRoutes.notifications);
           },
-          child: Stack(
+          splashRadius: 10,
+          icon: Stack(
             children: [
               // Notification bell icon
-              Icon(
-                Icons.notifications_none_outlined,
-                size: iconSize,
-                color: iconColor ?? Theme.of(context).iconTheme.color,
-              ),
+               Image.asset(
+                  'assets/icons/notifications.png',
+                  width: iconSize,
+                  height: iconSize,
+                  color: iconColor ?? Theme.of(context).colorScheme.primary,
+                ),
               
               // Badge for unread count
               if (unreadCount > 0)
@@ -146,10 +148,15 @@ class NotificationBadgeSVG extends StatelessWidget {
                   color: iconColor ?? Theme.of(context).iconTheme.color,
                 ),
                 // TODO: Replace with SvgPicture.asset(iconPath) if using flutter_svg
-                child: Icon(
-                  Icons.notifications_none_outlined,
-                  size: iconSize,
-                  color: iconColor ?? Theme.of(context).iconTheme.color,
+                // child: Icon(
+                //   Icons.notifications_none_outlined,
+                //   size: iconSize,
+                //   color: iconColor ?? Theme.of(context).iconTheme.color,
+                // ),
+                child: Image.asset(
+                  'assets/icons/notifications.png',
+                  width: iconSize,
+                  height: iconSize,
                 ),
               ),
               
