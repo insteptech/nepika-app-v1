@@ -59,6 +59,9 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
     on<ClearAllCaches>(_onClearAllCaches);
     on<RefreshWithCacheClear>(_onRefreshWithCacheClear);
     
+    // Sync events
+    on<SyncLikeStatesEvent>(_onSyncLikeStates);
+    
     // Subscribe to like state changes from LikeStateManager
     _likeStateSubscription = likeStateManager.stateStream.listen((event) {
       _handleLikeStateUpdate(event);
@@ -148,6 +151,23 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
     }
   }
 
+  // Initialize like states from server response data
+  void _initializeLikeStatesFromPosts(List<PostEntity> posts) {
+    final likeStateUpdates = <String, LikeStateData>{};
+    
+    for (final post in posts) {
+      likeStateUpdates[post.id] = LikeStateData(
+        isLiked: post.isLikedByUser,
+        likeCount: post.likeCount,
+      );
+    }
+    
+    if (likeStateUpdates.isNotEmpty) {
+      likeStateManager.bulkUpdate(likeStateUpdates);
+      debugPrint('PostsBloc: Initialized like states for ${likeStateUpdates.length} posts from server response');
+    }
+  }
+
   // Optimized Post Fetching with request deduplication
   Future<void> _onFetchCommunityPosts(
     FetchCommunityPosts event,
@@ -177,11 +197,15 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         pageSize: event.pageSize,
         userId: event.userId,
         followingOnly: event.followingOnly,
+        bypassCache: event.bypassCache,
       );
       
       _allPosts = data.posts;
       _hasMorePosts = data.hasMore;
       _isLoading = false;
+      
+      // Initialize like states from server response data
+      _initializeLikeStatesFromPosts(data.posts);
       
       // Sync with current like states to ensure consistency
       _syncPostsWithLikeStates();
@@ -220,11 +244,15 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         pageSize: event.pageSize,
         userId: event.userId,
         followingOnly: event.followingOnly,
+        bypassCache: event.bypassCache,
       );
       
       _allPosts.addAll(data.posts);
       _currentPage = event.page;
       _hasMorePosts = data.hasMore;
+      
+      // Initialize like states from new posts
+      _initializeLikeStatesFromPosts(data.posts);
       
       emit(PostsLoaded(
         posts: List.from(_allPosts), // Create new list for proper state comparison
@@ -256,6 +284,9 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
       
       _allPosts = data.posts;
       _hasMorePosts = data.hasMore;
+      
+      // Initialize like states from server response data
+      _initializeLikeStatesFromPosts(data.posts);
       
       emit(PostsLoaded(
         posts: _allPosts,
@@ -725,6 +756,36 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
     } catch (e) {
       debugPrint('PostsBloc: Error in refresh with cache clear: $e');
       emit(PostsError('Failed to refresh: ${e.toString()}'));
+    }
+  }
+
+  // Sync like states after navigation from other screens
+  Future<void> _onSyncLikeStates(SyncLikeStatesEvent event, Emitter<PostsState> emit) async {
+    try {
+      debugPrint('PostsBloc: Syncing like states after navigation');
+      
+      // Sync current posts with like state manager
+      _syncPostsWithLikeStates();
+      
+      // Update local cache with current states
+      for (final post in _allPosts) {
+        _updateLocalCache(post);
+      }
+      
+      // Re-emit current state to trigger UI updates
+      if (state is PostsLoaded) {
+        final currentState = state as PostsLoaded;
+        emit(PostsLoaded(
+          posts: List.from(_allPosts),
+          hasMorePosts: currentState.hasMorePosts,
+          currentPage: currentState.currentPage,
+          isLoadingMore: currentState.isLoadingMore,
+        ));
+      }
+      
+      debugPrint('PostsBloc: Like states synchronized successfully');
+    } catch (e) {
+      debugPrint('PostsBloc: Error syncing like states: $e');
     }
   }
 

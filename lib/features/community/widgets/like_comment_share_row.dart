@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'like_button.dart';
 import '../utils/community_navigation.dart';
+import '../bloc/blocs/posts_bloc.dart';
+import '../bloc/events/posts_event.dart';
 
 class LikeCommentShareRow extends StatefulWidget {
   final String postId;
@@ -69,6 +72,16 @@ class _LikeCommentShareRowState extends State<LikeCommentShareRow> {
                 currentLikeStatus: widget.currentLikeStatus ?? widget.initialLikeStatus,
                 currentLikeCount: widget.currentLikeCount ?? widget.initialLikeCount,
               );
+              
+              // Trigger sync after returning from post details
+              if (context.mounted) {
+                try {
+                  final postsBloc = context.read<PostsBloc>();
+                  postsBloc.add(SyncLikeStatesEvent());
+                } catch (e) {
+                  debugPrint('LikeCommentShareRow: Error syncing like states after navigation: $e');
+                }
+              }
             },
             borderRadius: BorderRadius.circular(20),
             child: Padding(

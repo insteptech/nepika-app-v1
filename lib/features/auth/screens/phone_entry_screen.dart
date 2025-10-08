@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:sms_autofill/sms_autofill.dart';
 import '../../../core/config/constants/routes.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../bloc/auth_bloc.dart';
 import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../widgets/phone_input_widget.dart';
+import '../services/app_signature_service.dart';
 import 'otp_verification_screen.dart';
 
 class PhoneEntryScreen extends StatefulWidget {
@@ -23,6 +25,15 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
   bool _isLoading = false;
   bool _isPhoneValid = false;
   String _fullPhoneNumber = '';
+
+  @override
+  void initState() {
+    super.initState();
+    // Start SMS listener immediately when screen loads
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _startSmsListener();
+    });
+  }
 
   @override
   void dispose() {
@@ -140,20 +151,65 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
     );
   }
 
-  void _handleContinue() {
+  void _startSmsListener() {
+    debugPrint('PhoneEntryScreen: _startSmsListener() called');
+    
+    try {
+      // Start listening for SMS directly
+      debugPrint('PhoneEntryScreen: Starting SmsAutoFill listener...');
+      SmsAutoFill().listenForCode();
+      debugPrint('PhoneEntryScreen: SmsAutoFill.listenForCode() called successfully');
+      
+      // Also listen to the stream to verify it's working
+      debugPrint('PhoneEntryScreen: Setting up SMS code stream listener...');
+      SmsAutoFill().code.listen((code) {
+        debugPrint('PhoneEntryScreen: SMS stream received code: $code');
+      }).onError((error) {
+        debugPrint('PhoneEntryScreen: SMS stream error: $error');
+      });
+      
+      debugPrint('PhoneEntryScreen: SMS listener setup completed successfully');
+      
+    } catch (e, stackTrace) {
+      debugPrint('PhoneEntryScreen: Exception in SMS listener setup: $e');
+      debugPrint('PhoneEntryScreen: Stack trace: $stackTrace');
+    }
+  }
+
+  void _handleContinue() async {
+    debugPrint('PhoneEntryScreen: _handleContinue() called');
+    debugPrint('PhoneEntryScreen: Form validation result: ${_formKey.currentState?.validate() ?? false}');
+    
     if (_formKey.currentState?.validate() ?? false) {
       setState(() {
         _isLoading = true;
       });
       
-      debugPrint('Sending OTP to: $_fullPhoneNumber');
-      context.read<AuthBloc>().add(
-        SendOtpRequested(
-          phone: _fullPhoneNumber,
-          email: null,
-          otpId: 'not-initialized-yet',
-        ),
+      debugPrint('PhoneEntryScreen: Starting OTP send process...');
+      debugPrint('PhoneEntryScreen: Phone number: $_fullPhoneNumber');
+      
+      debugPrint('PhoneEntryScreen: Getting app signature for SMS auto-fill...');
+      
+      final appSignature = await AppSignatureService.instance.getAppSignature();
+      
+      debugPrint('PhoneEntryScreen: App signature result: "$appSignature"');
+      debugPrint('PhoneEntryScreen: App signature is null: ${appSignature == null}');
+      debugPrint('PhoneEntryScreen: App signature is empty: ${appSignature?.isEmpty ?? true}');
+      
+      if (!mounted) return;
+      
+      debugPrint('PhoneEntryScreen: Creating SendOtpRequested event...');
+      final event = SendOtpRequested(
+        phone: _fullPhoneNumber,
+        email: null,
+        otpId: 'not-initialized-yet',
+        appSignature: appSignature,
       );
+      
+      debugPrint('PhoneEntryScreen: Event created with appSignature: "${event.appSignature}"');
+      debugPrint('PhoneEntryScreen: Dispatching event to AuthBloc...');
+      
+      context.read<AuthBloc>().add(event);
     }
   }
 

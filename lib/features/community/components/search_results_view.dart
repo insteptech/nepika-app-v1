@@ -6,6 +6,7 @@ import '../bloc/events/user_search_event.dart';
 import '../bloc/states/user_search_state.dart';
 import 'search_skeleton_loader.dart';
 import 'user_search_card.dart';
+import 'recent_searches_view.dart';
 
 /// Search results view component handling different search states
 /// Follows Single Responsibility Principle - only handles search results display
@@ -26,12 +27,25 @@ class SearchResultsView extends StatefulWidget {
 class _SearchResultsViewState extends State<SearchResultsView> {
   List<UserSearchResultEntity>? _lastSearchResults;
 
+  bool get _hasActiveSearch => widget.searchController.text.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: MediaQuery.of(context).size.height - 160,
       child: BlocBuilder<UserSearchBloc, UserSearchState>(
         builder: (context, state) {
+          // Show recent searches when no active search and no current search state
+          if (!_hasActiveSearch && state is! UserSearchV2Loading && state is! UserSearchV2Loaded && state is! UserSearchV2Error) {
+            return RecentSearchesView(
+              token: widget.token,
+              onRecentSearchSelected: () {
+                // Clear search when user selects from recent searches
+                widget.searchController.clear();
+              },
+            );
+          }
+
           if (state is UserSearchV2Loading) {
             return const SearchSkeletonLoader();
           } else if (state is UserSearchV2Loaded) {
@@ -106,7 +120,16 @@ class _SearchResultsViewState extends State<SearchResultsView> {
                 },
               );
             }
-            // If no previous results, show empty state
+            // If no previous results and no active search, show recent searches
+            if (!_hasActiveSearch) {
+              return RecentSearchesView(
+                token: widget.token,
+                onRecentSearchSelected: () {
+                  widget.searchController.clear();
+                },
+              );
+            }
+            // If active search but no results, show empty state
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -121,6 +144,15 @@ class _SearchResultsViewState extends State<SearchResultsView> {
               ),
             );
           } else {
+            // Default state - show recent searches if no active search
+            if (!_hasActiveSearch) {
+              return RecentSearchesView(
+                token: widget.token,
+                onRecentSearchSelected: () {
+                  widget.searchController.clear();
+                },
+              );
+            }
             return const Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,

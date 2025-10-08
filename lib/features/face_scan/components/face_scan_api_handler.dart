@@ -4,40 +4,24 @@ import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
 import 'package:nepika/core/config/env.dart';
 import 'package:nepika/core/utils/secure_storage.dart';
+import 'package:nepika/core/network/secure_api_client.dart';
 
 /// Handles API communication for face scan analysis
 class FaceScanApiHandler {
-  late Dio _dio;
-  
   // API endpoints
-  static const String _apiEndpoint = '${Env.baseUrl}/model/face-scan/analyze_face_complete';
+  static const String _apiEndpoint = '/training/face-analyze';
 
-  /// Initialize Dio client
+  /// Initialize API client (no longer needed as we use SecureApiClient)
   void initialize() {
-    _dio = Dio(
-      BaseOptions(
-        connectTimeout: const Duration(seconds: 30),
-        receiveTimeout: const Duration(seconds: 30),
-        sendTimeout: const Duration(seconds: 30),
-        headers: {'Content-Type': 'multipart/form-data'},
-        responseType: ResponseType.json,
-      ),
-    );
-
-    _dio.interceptors.add(
-      LogInterceptor(
-        requestBody: false,
-        responseBody: false,
-        logPrint: (object) => debugPrint(object.toString()),
-      ),
-    );
+    // Using SecureApiClient - no initialization needed
+    debugPrint('FaceScanApiHandler initialized with SecureApiClient');
   }
 
   /// Send image to API for analysis
   Future<FaceScanApiResult> analyzeImage(XFile imageFile) async {
     try {
-      final secureStorage = SecureStorage();
-      final userId = await secureStorage.getUserId();
+      // final secureStorage = SecureStorage();
+      // final userId = await secureStorage.getUserId();
 
       // Create FormData for multipart upload
       final formData = FormData.fromMap({
@@ -45,19 +29,20 @@ class FaceScanApiHandler {
           imageFile.path,
           filename: 'face_image.jpg',
         ),
-        'include_annotated_image': 'true',
-        'user_id': userId,
+        // 'include_annotated_image': 'true',
+        // 'user_id': userId,
       });
 
       debugPrint('Sending image to API: $_apiEndpoint');
 
-      final response = await _dio.post(
-        _apiEndpoint,
-        data: formData,
-        options: Options(
-          contentType: 'multipart/form-data',
-          responseType: ResponseType.json,
-        ),
+      // Use SecureApiClient for authenticated requests with multipart data
+      final response = await SecureApiClient.instance.request(
+        path: _apiEndpoint,
+        method: 'POST',
+        body: formData,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       );
 
       debugPrint('API Response Status: ${response.statusCode}');
@@ -117,7 +102,8 @@ class FaceScanApiHandler {
 
   /// Cancel any ongoing requests
   void cancelRequests() {
-    _dio.close();
+    // Requests are managed by SecureApiClient
+    debugPrint('FaceScanApiHandler: Request cancellation handled by SecureApiClient');
   }
 }
 

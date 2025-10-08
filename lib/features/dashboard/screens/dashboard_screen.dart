@@ -365,31 +365,22 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildMainCardsRow(
       Map<String, dynamic> faceScan, Map<String, dynamic> skinScore) {
-    return Row(
-      children: [
-        Expanded(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: 170,
-              maxHeight: 210,
-            ),
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Expanded(
             child: FaceScanCard(
               faceScan: faceScan,
               onTap: widget.onFaceScanTap,
             ),
           ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minHeight: 170,
-              maxHeight: 210,
-            ),
+          const SizedBox(width: 16),
+          Expanded(
             child: SkinScoreCard(skinScore: skinScore),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 

@@ -225,6 +225,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     
     // Use backend-provided isFollowing if available, fallback to stored value
     final currentFollowStatus = _profileData?.isFollowing ?? _isFollowing ?? false;
+    final newFollowStatus = !currentFollowStatus;
+    
+    // Optimistic update - immediately update UI
+    setState(() {
+      _isFollowLoading = true;
+      _isFollowing = newFollowStatus;
+      
+      // Also update profile data for immediate UI response
+      if (_profileData != null) {
+        _profileData = CommunityProfileEntity(
+          id: _profileData!.id,
+          userId: _profileData!.userId,
+          tenantId: _profileData!.tenantId,
+          username: _profileData!.username,
+          bio: _profileData!.bio,
+          profileImageUrl: _profileData!.profileImageUrl,
+          bannerImageUrl: _profileData!.bannerImageUrl,
+          isPrivate: _profileData!.isPrivate,
+          followersCount: _profileData!.followersCount,
+          followingCount: _profileData!.followingCount,
+          postsCount: _profileData!.postsCount,
+          settings: _profileData!.settings,
+          isVerified: _profileData!.isVerified,
+          isFollowing: newFollowStatus, // Optimistically update
+          isSelf: _profileData!.isSelf,
+          createdAt: _profileData!.createdAt,
+          updatedAt: _profileData!.updatedAt,
+        );
+      }
+    });
     
     if (currentFollowStatus) {
       _profileBloc!.add(UnfollowUser(
@@ -913,6 +943,29 @@ Join the conversation: $profileUrl''';
       setState(() {
         _isFollowing = state.isFollowing;
         _isFollowLoading = false;
+        
+        // Update the profile data's follow status to sync with the backend
+        if (_profileData != null) {
+          _profileData = CommunityProfileEntity(
+            id: _profileData!.id,
+            userId: _profileData!.userId,
+            tenantId: _profileData!.tenantId,
+            username: _profileData!.username,
+            bio: _profileData!.bio,
+            profileImageUrl: _profileData!.profileImageUrl,
+            bannerImageUrl: _profileData!.bannerImageUrl,
+            isPrivate: _profileData!.isPrivate,
+            followersCount: _profileData!.followersCount,
+            followingCount: _profileData!.followingCount,
+            postsCount: _profileData!.postsCount,
+            settings: _profileData!.settings,
+            isVerified: _profileData!.isVerified,
+            isFollowing: state.isFollowing, // Update the follow status
+            isSelf: _profileData!.isSelf,
+            createdAt: _profileData!.createdAt,
+            updatedAt: _profileData!.updatedAt,
+          );
+        }
       });
       
       _storeFollowStatus(profileUserId!, state.isFollowing);
@@ -927,6 +980,31 @@ Join the conversation: $profileUrl''';
       debugPrint('ProfilePage: Follow operation error: ${state.message}');
       setState(() {
         _isFollowLoading = false;
+        // Revert the optimistic update on error
+        _isFollowing = state.wasFollowing;
+        
+        // Also revert profile data
+        if (_profileData != null) {
+          _profileData = CommunityProfileEntity(
+            id: _profileData!.id,
+            userId: _profileData!.userId,
+            tenantId: _profileData!.tenantId,
+            username: _profileData!.username,
+            bio: _profileData!.bio,
+            profileImageUrl: _profileData!.profileImageUrl,
+            bannerImageUrl: _profileData!.bannerImageUrl,
+            isPrivate: _profileData!.isPrivate,
+            followersCount: _profileData!.followersCount,
+            followingCount: _profileData!.followingCount,
+            postsCount: _profileData!.postsCount,
+            settings: _profileData!.settings,
+            isVerified: _profileData!.isVerified,
+            isFollowing: state.wasFollowing, // Revert to original status
+            isSelf: _profileData!.isSelf,
+            createdAt: _profileData!.createdAt,
+            updatedAt: _profileData!.updatedAt,
+          );
+        }
       });
       
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1141,11 +1219,7 @@ Join the conversation: $profileUrl''';
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Message - Coming Soon!')),
-                      );
-                    },
+                    onPressed: _shareProfile,
                     style: OutlinedButton.styleFrom(
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
@@ -1153,7 +1227,7 @@ Join the conversation: $profileUrl''';
                       ),
                     ),
                     child: Text(
-                      'Message',
+                      'Share Profile',
                       style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                         fontWeight: FontWeight.w500,
                       ),

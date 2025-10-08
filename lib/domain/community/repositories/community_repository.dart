@@ -8,6 +8,7 @@ abstract class CommunityRepository {
     required int pageSize,
     String? userId,
     bool? followingOnly,
+    bool bypassCache = false, // Bypass local client-side cache only
   });
 
   Future<PostEntity> createPost({

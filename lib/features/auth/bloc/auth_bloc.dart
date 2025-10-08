@@ -29,13 +29,25 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     SendOtpRequested event,
     Emitter<AuthState> emit,
   ) async {
+    debugPrint('AuthBloc: _onSendOtpRequested called');
+    debugPrint('AuthBloc: Phone: ${event.phone}');
+    debugPrint('AuthBloc: AppSignature: "${event.appSignature}"');
+    debugPrint('AuthBloc: AppSignature is null: ${event.appSignature == null}');
+    debugPrint('AuthBloc: AppSignature is empty: ${event.appSignature?.isEmpty ?? true}');
+    
     emit(const SendingOtp());
     
-    final result = await _sendOtpUseCase.call(SendOtpParams(
+    final params = SendOtpParams(
       phone: event.phone,
       email: event.email,
       otpId: event.otpId,
-    ));
+      appSignature: event.appSignature,
+    );
+    
+    debugPrint('AuthBloc: SendOtpParams created with appSignature: "${params.appSignature}"');
+    debugPrint('AuthBloc: Calling _sendOtpUseCase...');
+    
+    final result = await _sendOtpUseCase.call(params);
     
     result.fold(
       (failure) => emit(ErrorWhileSendingOtp(message: failure.message)),
@@ -89,7 +101,7 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     emit(const SendingOtp());
     
     final result = await _resendOtpUseCase.call(
-      resend.ResendOtpParams(phone: event.phone, otpId: event.otpId),
+      resend.ResendOtpParams(phone: event.phone, otpId: event.otpId, appSignature: event.appSignature),
     );
     
     result.fold(

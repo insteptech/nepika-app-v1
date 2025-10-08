@@ -97,6 +97,8 @@ class CommunityLocalDataSourceImpl implements CommunityLocalDataSource {
   @override
   Future<void> updateCachedPost(PostEntity post) async {
     await cachePost(post);
+    // Also update like status cache for consistency
+    await cacheLikeStatus(post.id, post.isLikedByUser, post.likeCount);
   }
   
   @override

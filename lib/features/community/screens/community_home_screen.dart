@@ -7,6 +7,9 @@ import '../../../../domain/community/entities/community_entities.dart';
 import '../bloc/blocs/posts_bloc.dart';
 import '../bloc/events/posts_event.dart';
 import '../bloc/states/posts_state.dart';
+import '../bloc/blocs/profile_bloc.dart';
+import '../bloc/events/profile_event.dart';
+import '../bloc/states/profile_state.dart';
 import '../components/posts_loading.dart' as components;
 import '../components/posts_error.dart' as components;
 import '../widgets/user_post_widget.dart';
@@ -31,6 +34,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
   String? _userId;
   bool _isLoading = true;
   DateTime? _lastLoadTime; // Prevent rapid loading requests
+  CommunityProfileEntity? _currentUserProfile;
 
   @override
   void initState() {
@@ -61,6 +65,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
         
         if (_token != null) {
           _loadInitialPosts();
+          _loadUserProfile();
         }
       } else {
         setState(() {
@@ -79,6 +84,14 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     if (_token != null) {
       context.read<PostsBloc>().add(
         FetchCommunityPosts(token: _token!),
+      );
+    }
+  }
+
+  void _loadUserProfile() {
+    if (_token != null && _userId != null) {
+      context.read<ProfileBloc>().add(
+        GetCommunityProfile(token: _token!, userId: _userId!),
       );
     }
   }
@@ -211,13 +224,27 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.onTertiary,
       body: SafeArea(
-        child: BlocBuilder<PostsBloc, PostsState>(
-          buildWhen: (previous, current) {
-            return current is PostsLoading ||
-                   current is PostsLoaded ||
-                   current is PostsError;
-          },
-          builder: (context, state) {
+        child: MultiBlocListener(
+          listeners: [
+            BlocListener<ProfileBloc, ProfileState>(
+              listener: (context, state) {
+                if (state is CommunityProfileLoaded && state.profile.isSelf) {
+                  setState(() {
+                    _currentUserProfile = state.profile;
+                  });
+                } else if (state is CommunityProfileError) {
+                  debugPrint('Error loading user profile: ${state.message}');
+                }
+              },
+            ),
+          ],
+          child: BlocBuilder<PostsBloc, PostsState>(
+            buildWhen: (previous, current) {
+              return current is PostsLoading ||
+                     current is PostsLoaded ||
+                     current is PostsError;
+            },
+            builder: (context, state) {
             if (state is PostsLoading) {
               return const components.PostsLoading(message: 'Loading community posts...');
             }
@@ -262,6 +289,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                         onCreatePostTap: _navigateToCreatePost,
                         token: _token!,
                         userId: _userId!,
+                        currentUserProfile: _currentUserProfile,
                       ),
                     ),
 
@@ -277,7 +305,8 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
             }
 
             return const components.PostsLoading();
-          },
+            },
+          ),
         ),
       ),
     );
@@ -330,11 +359,13 @@ class _CreatePostSection extends SliverPersistentHeaderDelegate {
   final VoidCallback onCreatePostTap;
   final String token;
   final String userId;
+  final CommunityProfileEntity? currentUserProfile;
 
   _CreatePostSection({
     required this.onCreatePostTap,
     required this.token,
     required this.userId,
+    this.currentUserProfile,
   });
 
   @override
@@ -364,6 +395,7 @@ class _CreatePostSection extends SliverPersistentHeaderDelegate {
         child: Center(
           child: CreatePostWidget(
             onCreatePostTap: onCreatePostTap,
+            currentUserProfile: currentUserProfile,
           ),
         ),
       ),

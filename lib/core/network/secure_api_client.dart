@@ -26,9 +26,9 @@ class SecureApiClient {
     _dio = Dio(
       BaseOptions(
         baseUrl: Env.baseUrl,
-        connectTimeout: const Duration(seconds: 15), // Increased timeout
-        receiveTimeout: const Duration(seconds: 30), // Increased timeout
-        sendTimeout: const Duration(seconds: 15),   // Added send timeout
+        connectTimeout: const Duration(seconds: 30), // Increased connection timeout
+        receiveTimeout: const Duration(seconds: 60), // Increased receive timeout for OTP verification
+        sendTimeout: const Duration(seconds: 30),   // Increased send timeout
         headers: {
           'Content-Type': 'application/json',
         },
@@ -110,7 +110,7 @@ class SecureApiClient {
   Future<Response> request({
     required String path,
     String method = 'GET',
-    Map<String, dynamic>? body,
+    dynamic body, // Changed from Map<String, dynamic>? to dynamic for FormData support
     Map<String, String>? headers,
     Map<String, dynamic>? query,
   }) async {
@@ -151,6 +151,10 @@ class SecureApiClient {
       } else if (e.type == DioExceptionType.sendTimeout) {
         throw Exception('Request timeout. Please try again.');
       } else if (e.type == DioExceptionType.receiveTimeout) {
+        // Special handling for OTP verification timeout
+        if (e.requestOptions.path.contains('/auth/users/verify-otp')) {
+          throw Exception('OTP verification is taking longer than expected. Your OTP may have been processed. Please check if you\'ve been logged in or try again.');
+        }
         throw Exception('Server response timeout. Please try again.');
       } else if (e.type == DioExceptionType.connectionError) {
         throw Exception('Connection error. Please check your internet connection.');

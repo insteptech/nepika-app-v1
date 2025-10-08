@@ -306,13 +306,18 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     try {
       if (analysisResults == null) return null;
       
-      final skinAreas = analysisResults['analysis']?['skin_areas'];
-      if (skinAreas == null || skinAreas['success'] != true) return null;
+      // The detection data is in 'area_detection_analysis' based on actual API response
+      final areaDetection = analysisResults['area_detection_analysis'] as Map<String, dynamic>?;
+      if (areaDetection == null) {
+        debugPrint('❌ No area_detection_analysis found in API response');
+        return null;
+      }
 
-      final detectionResultsData = skinAreas['detection_results'] as Map<String, dynamic>?;
-      if (detectionResultsData == null) return null;
+      debugPrint('✅ Found area_detection_analysis: ${areaDetection.keys}');
+      debugPrint('✅ Total detections: ${areaDetection['total_detections']}');
+      debugPrint('✅ Classes found: ${areaDetection['classes_found']}');
 
-      return DetectionResults.fromJson(detectionResultsData);
+      return DetectionResults.fromJson(areaDetection);
     } catch (e) {
       debugPrint('❌ Error parsing detection results: $e');
       return null;
@@ -629,16 +634,16 @@ Widget _buildNavigatingBackView() {
     return Row(
       mainAxisAlignment: MainAxisAlignment.end,
       children: [
-        if (_capturedImage != null || _reportImageUrl != null || _cameraManager.controller == null)
-          IconButton(
-            icon: const Icon(
-              Icons.refresh,
-              size: 28,
-              color: Colors.grey,
-            ),
-            onPressed: _retryInitialization,
-          ),
-        const SizedBox(width: 16),
+        // if (_capturedImage != null || _reportImageUrl != null || _cameraManager.controller == null)
+        //   IconButton(
+        //     icon: const Icon(
+        //       Icons.refresh,
+        //       size: 28,
+        //       color: Colors.grey,
+        //     ),
+        //     onPressed: _retryInitialization,
+        //   ),
+        // const SizedBox(width: 16),
         GestureDetector(
           onTap: () async {
             debugPrint('Face scan: Close button pressed, disposing camera...');

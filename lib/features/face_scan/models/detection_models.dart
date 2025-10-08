@@ -16,11 +16,18 @@ class BoundingBox {
   });
 
   factory BoundingBox.fromJson(Map<String, dynamic> json) {
+    final x1 = (json['x1'] as num?)?.toDouble() ?? 0.0;
+    final y1 = (json['y1'] as num?)?.toDouble() ?? 0.0;
+    final x2 = (json['x2'] as num?)?.toDouble() ?? 0.0;
+    final y2 = (json['y2'] as num?)?.toDouble() ?? 0.0;
+    
+    debugPrint('📦 Parsing bbox: x1=$x1, y1=$y1, x2=$x2, y2=$y2');
+    
     return BoundingBox(
-      x1: (json['x1'] as num?)?.toDouble() ?? 0.0,
-      y1: (json['y1'] as num?)?.toDouble() ?? 0.0,
-      x2: (json['x2'] as num?)?.toDouble() ?? 0.0,
-      y2: (json['y2'] as num?)?.toDouble() ?? 0.0,
+      x1: x1,
+      y1: y1,
+      x2: x2,
+      y2: y2,
     );
   }
 
@@ -60,10 +67,16 @@ class Detection {
   });
 
   factory Detection.fromJson(Map<String, dynamic> json) {
+    final className = json['class'] as String? ?? 'unknown';
+    final confidence = (json['confidence'] as num?)?.toDouble() ?? 0.0;
+    final bboxData = json['bbox'] as Map<String, dynamic>? ?? {};
+    
+    debugPrint('🎯 Parsing detection: class=$className, confidence=$confidence, bbox=$bboxData');
+    
     return Detection(
-      className: json['class'] as String? ?? 'unknown',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
-      bbox: BoundingBox.fromJson(json['bbox'] as Map<String, dynamic>? ?? {}),
+      className: className,
+      confidence: confidence,
+      bbox: BoundingBox.fromJson(bboxData),
     );
   }
 
@@ -82,9 +95,25 @@ class Detection {
         return 'Wrinkles';
       case 'dry':
       case 'dryness':
-        return 'Dryness';
+      case 'dry-skin':
+        return 'Dry Skin';
+      case 'skin-redness':
+        return 'Skin Redness';
+      case 'oily-skin':
+        return 'Oily Skin';
+      case 'blackheads':
+        return 'Blackheads';
+      case 'whiteheads':
+        return 'Whiteheads';
+      case 'dark-spots':
+        return 'Dark Spots';
+      case 'englarged-pores':
+      case 'enlarged-pores':
+        return 'Enlarged Pores';
+      case 'eyebags':
+        return 'Eye Bags';
       default:
-        return className.replaceAll('_', ' ').split(' ')
+        return className.replaceAll('_', ' ').replaceAll('-', ' ').split(' ')
             .map((word) => word.isNotEmpty 
                 ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
                 : word)
@@ -109,11 +138,14 @@ class DetectionResults {
   });
 
   factory DetectionResults.fromJson(Map<String, dynamic> json) {
+    debugPrint('🔍 Parsing DetectionResults from: ${json.keys}');
+    
     // Safely parse detections list
     final detectionsData = json['detections'];
     final List<Detection> detectionsList = [];
     
     if (detectionsData is List) {
+      debugPrint('✅ Found ${detectionsData.length} detections in API response');
       for (final item in detectionsData) {
         if (item is Map<String, dynamic>) {
           try {
@@ -123,6 +155,8 @@ class DetectionResults {
           }
         }
       }
+    } else {
+      debugPrint('❌ No detections array found in API response');
     }
 
     // Safely parse classes found
@@ -134,24 +168,24 @@ class DetectionResults {
           classesFound.add(item);
         }
       }
+      debugPrint('✅ Classes found: $classesFound');
     }
 
-    // Safely parse class counts
-    final classCountsData = json['class_counts'];
+    // Calculate class counts from detections since API doesn't provide class_counts
     final Map<String, int> classCounts = {};
-    if (classCountsData is Map<String, dynamic>) {
-      classCountsData.forEach((key, value) {
-        if (value is int) {
-          classCounts[key] = value;
-        }
-      });
+    for (final detection in detectionsList) {
+      classCounts[detection.className] = (classCounts[detection.className] ?? 0) + 1;
     }
+    debugPrint('✅ Calculated class counts: $classCounts');
 
-    return DetectionResults(
+    final result = DetectionResults(
       detections: detectionsList,
       classesFound: classesFound,
       classCounts: classCounts,
     );
+    
+    debugPrint('🎯 Final DetectionResults: ${detectionsList.length} detections, ${classesFound.length} classes');
+    return result;
   }
 
   /// Get detections filtered by class
@@ -204,6 +238,15 @@ class DetectionColors {
     'wrinkles': Colors.purple,
     'dry': Colors.brown,
     'dryness': Colors.brown,
+    'dry-skin': Colors.brown,
+    'skin-redness': Colors.redAccent,
+    'oily-skin': Colors.yellow,
+    'blackheads': Colors.black87,
+    'whiteheads': Colors.white70,
+    'dark-spots': Colors.deepOrange,
+    'englarged-pores': Colors.grey,
+    'enlarged-pores': Colors.grey,
+    'eyebags': Colors.indigo,
     'normal': Colors.green,
   };
 

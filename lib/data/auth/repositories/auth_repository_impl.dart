@@ -25,12 +25,14 @@ class AuthRepositoryImpl implements AuthRepository {
     String? phone,
     String? email,
     String? otpId,
+    String? appSignature,
   }) async {
     try {
       final response = await remoteDataSource.sendOtp(
         phone: phone,
         email: email,
         otpId: otpId,
+        appSignature: appSignature,
       );
       return success(response);
     } catch (e) {
@@ -44,11 +46,13 @@ class AuthRepositoryImpl implements AuthRepository {
   Future<Result<Map<String, dynamic>>> resendOtp({
     required String phone,
     required String otpId,
+    String? appSignature,
   }) async {
     try {
       final response = await remoteDataSource.resendOtp(
         phone: phone,
         otpId: otpId,
+        appSignature: appSignature,
       );
       return success(response);
     } catch (e) {
@@ -100,6 +104,7 @@ class AuthRepositoryImpl implements AuthRepository {
         
         // Verify token was saved
         final savedToken = await localDataSource.getToken();
+        debugPrint('Token saved verification: ${savedToken != null ? "SUCCESS" : "FAILED"}');
 
         // ✅ Convert to UserModel & save locally
         final userModel = UserModel.fromEntity(authResponse.user);

@@ -15,8 +15,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late AnimationController _animationController;
   late Animation<Offset> _slideAnimation;
   late Animation<double> _fadeAnimation;
-  late Animation<Offset> _contentSlideAnimation;
-  late Animation<double> _contentFadeAnimation;
 
   @override
   void initState() {
@@ -29,8 +27,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
     _slideAnimation = WelcomeAnimationService.createSlideAnimation(_animationController);
     _fadeAnimation = WelcomeAnimationService.createFadeAnimation(_animationController);
-    _contentSlideAnimation = WelcomeAnimationService.createContentSlideAnimation(_animationController);
-    _contentFadeAnimation = WelcomeAnimationService.createContentFadeAnimation(_animationController);
 
     _animationController.forward();
   }
@@ -54,11 +50,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               fadeAnimation: _fadeAnimation,
             ),
 
-            // Animated Content above image
-            WelcomeContent(
-              slideAnimation: _contentSlideAnimation,
-              fadeAnimation: _contentFadeAnimation,
-            ),
+            // Static Content above image (no animation)
+            const WelcomeContent(),
           ],
         ),
       ),

@@ -39,6 +39,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required int pageSize,
     String? userId,
     bool? followingOnly,
+    bool bypassCache = false,
   }) async {
     final requestKey = 'posts_${page}_${pageSize}_${userId ?? 'all'}_${followingOnly ?? false}';
     
@@ -47,14 +48,14 @@ class CommunityRepositoryImpl implements CommunityRepository {
       return await _activeRequests[requestKey]!.future;
     }
     
-    // Check cache first
-    if (_isCacheValid(requestKey)) {
+    // Check cache first (skip if bypassCache is true)
+    if (!bypassCache && _isCacheValid(requestKey)) {
       debugPrint('Repository: Returning cached posts for $requestKey');
       return _responseCache[requestKey] as CommunityPostEntity;
     }
     
-    // Try to load from local cache for first page
-    if (page == 1) {
+    // Try to load from local cache for first page (skip if bypassCache is true)
+    if (!bypassCache && page == 1) {
       final cachedPosts = await localDataSource.getCachedPosts();
       if (cachedPosts.isNotEmpty) {
         debugPrint('Repository: Returning ${cachedPosts.length} local cached posts');
@@ -70,6 +71,11 @@ class CommunityRepositoryImpl implements CommunityRepository {
         _fetchAndUpdateCacheInBackground(token, page, pageSize, userId, followingOnly, requestKey);
         return result;
       }
+    }
+    
+    // Log when bypassing cache
+    if (bypassCache) {
+      debugPrint('Repository: Bypassing cache for home screen - fetching fresh data from server');
     }
     
     final completer = Completer<CommunityPostEntity>();

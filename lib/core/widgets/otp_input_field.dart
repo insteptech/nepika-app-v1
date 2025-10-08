@@ -1,6 +1,8 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+
 
 class _OtpInputFormatter extends TextInputFormatter {
   @override
@@ -17,37 +19,19 @@ class _OtpInputFormatter extends TextInputFormatter {
   }
 }
 
-class OtpController {
-  _OtpInputFieldState? _state;
-  
-  void _attach(_OtpInputFieldState state) {
-    _state = state;
-  }
-  
-  void _detach() {
-    _state = null;
-  }
-  
-  void clear() {
-    _state?.clearOtp();
-  }
-  
-  void setText(String text) {
-    _state?.setOtp(text);
-  }
-}
-
 class OtpInputField extends StatefulWidget {
   final int length;
   final Function(String) onCompleted;
   final Function(String)? onChanged;
   final OtpController? controller;
-  
+  final List<String>? autofillHints; // ✅ use List<String> for TextFormField
+
   const OtpInputField({
     super.key,
     this.length = 6,
     required this.onCompleted,
     this.onChanged,
+    this.autofillHints,
     this.controller,
   });
 
@@ -64,46 +48,31 @@ class _OtpInputFieldState extends State<OtpInputField> {
   @override
   void initState() {
     super.initState();
-    _controllers = List.generate(
-      widget.length,
-      (index) => TextEditingController(),
-    );
-    _focusNodes = List.generate(
-      widget.length,
-      (index) => FocusNode(),
-    );
+    _controllers = List.generate(widget.length, (index) => TextEditingController());
+    _focusNodes = List.generate(widget.length, (index) => FocusNode());
     widget.controller?._attach(this);
   }
 
   @override
   void dispose() {
     widget.controller?._detach();
-    for (var controller in _controllers) {
-      controller.dispose();
-    }
-    for (var focusNode in _focusNodes) {
-      focusNode.dispose();
-    }
+    for (var controller in _controllers) controller.dispose();
+    for (var node in _focusNodes) node.dispose();
     super.dispose();
   }
 
   void _onTextChanged(String value, int index) {
-    // Skip processing if we're handling a paste operation
     if (_isProcessingPaste) return;
 
     if (value.length > 1) {
-      // Handle paste - extract only digits and distribute
       _handlePastedText(value, index);
       return;
     }
 
-    if (value.length == 1) {
-      // Move to next field
-      if (index < widget.length - 1) {
-        _focusNodes[index + 1].requestFocus();
-      } else {
-        _focusNodes[index].unfocus();
-      }
+    if (value.length == 1 && index < widget.length - 1) {
+      _focusNodes[index + 1].requestFocus();
+    } else if (value.length == 1 && index == widget.length - 1) {
+      _focusNodes[index].unfocus();
     }
 
     _updateOtp();
@@ -112,31 +81,17 @@ class _OtpInputFieldState extends State<OtpInputField> {
   void _handlePastedText(String pastedText, int startIndex) {
     if (!mounted) return;
     _isProcessingPaste = true;
-    
-    // Extract only digits from pasted text
+
     String digits = pastedText.replaceAll(RegExp(r'[^0-9]'), '');
-    
-    // Clear all fields first
-    for (var controller in _controllers) {
-      controller.clear();
-    }
-    
-    // Fill fields with the digits from the beginning
+    for (var controller in _controllers) controller.clear();
+
     for (int i = 0; i < digits.length && i < widget.length; i++) {
       _controllers[i].text = digits[i];
     }
-    
-    // Focus the appropriate field
-    int nextFocusIndex = digits.length;
-    if (nextFocusIndex >= widget.length) {
-      // All fields filled, unfocus to trigger completion
-      _focusNodes[widget.length - 1].unfocus();
-    } else {
-      // Focus the next empty field
-      _focusNodes[nextFocusIndex].requestFocus();
-    }
-    
-    // Use a post-frame callback to update OTP after the paste operation
+
+    int nextFocus = digits.length >= widget.length ? widget.length - 1 : digits.length;
+    _focusNodes[nextFocus].requestFocus();
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _isProcessingPaste = false;
       _updateOtp();
@@ -144,120 +99,95 @@ class _OtpInputFieldState extends State<OtpInputField> {
   }
 
   void _updateOtp() {
-    // Update OTP string
-    _otp = '';
-    for (var controller in _controllers) {
-      _otp += controller.text;
-    }
-
+    _otp = _controllers.map((c) => c.text).join();
     widget.onChanged?.call(_otp);
-
-    // Check if OTP is complete
-    if (_otp.length == widget.length) {
-      widget.onCompleted(_otp);
-    }
+    if (_otp.length == widget.length) widget.onCompleted(_otp);
   }
 
   void clearOtp() {
-    for (var controller in _controllers) {
-      controller.clear();
-    }
+    for (var c in _controllers) c.clear();
     _otp = '';
     widget.onChanged?.call(_otp);
-    if (_focusNodes.isNotEmpty) {
-      _focusNodes[0].requestFocus();
-    }
+    if (_focusNodes.isNotEmpty) _focusNodes[0].requestFocus();
   }
-  
+
   void setOtp(String otp) {
-    // Clear all fields first
-    for (var controller in _controllers) {
-      controller.clear();
-    }
-    
-    // Fill fields with the OTP digits
+    for (var c in _controllers) c.clear();
     String digits = otp.replaceAll(RegExp(r'[^0-9]'), '');
     for (int i = 0; i < digits.length && i < widget.length; i++) {
       _controllers[i].text = digits[i];
     }
-    
-    // Update the internal OTP state and trigger callbacks
     _updateOtp();
-    
-    // Unfocus all fields
-    for (var focusNode in _focusNodes) {
-      focusNode.unfocus();
-    }
-  }
-
-  void _onKeyEvent(KeyEvent event, int index) {
-    if (event is KeyDownEvent) {
-      if (event.logicalKey == LogicalKeyboardKey.backspace) {
-        // Handle backspace navigation
-        if (_controllers[index].text.isEmpty && index > 0) {
-          // Move to previous field and clear it
-          _focusNodes[index - 1].requestFocus();
-          _controllers[index - 1].clear();
-          _updateOtp();
-        }
-      }
-    }
+    for (var node in _focusNodes) node.unfocus();
   }
 
   @override
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-      children: List.generate(
-        widget.length,
-        (index) => SizedBox(
+      children: List.generate(widget.length, (index) {
+        return SizedBox(
           width: 48,
           height: 56,
-          child: KeyboardListener(
-            focusNode: FocusNode(),
-            onKeyEvent: (event) => _onKeyEvent(event, index),
-            child: TextFormField(
-              controller: _controllers[index],
-              focusNode: _focusNodes[index],
-              textAlign: TextAlign.center,
-              keyboardType: TextInputType.number,
-              inputFormatters: [
-                FilteringTextInputFormatter.digitsOnly,
-                // Custom formatter to handle paste and single character input
-                _OtpInputFormatter(),
-              ],
-              style: Theme.of(context).textTheme.displaySmall,
-              decoration: InputDecoration(
-                counterText: '',
-                filled: false,
-                border: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: Color(0x663898ED), width: 2),
-                ),
-                enabledBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3)
-                  , width: 2),
-                ),
-                focusedBorder: UnderlineInputBorder(
-                  borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
-                ),
-                errorBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppTheme.errorColor),
-                ),
-                focusedErrorBorder: const UnderlineInputBorder(
-                  borderSide: BorderSide(color: AppTheme.errorColor, width: 2),
-                ),
-                contentPadding: const EdgeInsets.symmetric(vertical: 16),
+          child: TextFormField(
+            controller: _controllers[index],
+            focusNode: _focusNodes[index],
+            textAlign: TextAlign.center,
+            keyboardType: TextInputType.number,
+            autofillHints: widget.autofillHints ??
+                (Platform.isIOS ? [AutofillHints.oneTimeCode] : null),
+            inputFormatters: [
+              FilteringTextInputFormatter.digitsOnly,
+              _OtpInputFormatter(),
+            ],
+            style: Theme.of(context).textTheme.displaySmall,
+            decoration: InputDecoration(
+              counterText: '',
+              filled: false,
+              border: const UnderlineInputBorder(
+                borderSide: BorderSide(color: Color(0x663898ED), width: 2),
               ),
-              onChanged: (value) => _onTextChanged(value, index),
-              onTap: () {
-                _controllers[index].selection = TextSelection.fromPosition(
-                  TextPosition(offset: _controllers[index].text.length),
-                );
-              },
+              enabledBorder: UnderlineInputBorder(
+                borderSide: BorderSide(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.3),
+                  width: 2,
+                ),
+              ),
+              focusedBorder: UnderlineInputBorder(
+                borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 3),
+              ),
+              contentPadding: const EdgeInsets.symmetric(vertical: 16),
             ),
+            onChanged: (value) => _onTextChanged(value, index),
+            onTap: () {
+              _controllers[index].selection = TextSelection.fromPosition(
+                TextPosition(offset: _controllers[index].text.length),
+              );
+            },
           ),
-        ),
-      ),
+        );
+      }),
     );
+  }
+}
+
+
+class OtpController {
+  _OtpInputFieldState? _state;
+
+  void _attach(_OtpInputFieldState state) {
+    _state = state;
+  }
+
+  void _detach() {
+    _state = null;
+  }
+
+  void clear() {
+    _state?.clearOtp();
+  }
+
+  void setText(String text) {
+    _state?.setOtp(text);
   }
 }

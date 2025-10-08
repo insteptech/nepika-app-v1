@@ -25,7 +25,7 @@ class AuthService {
   /// Get user's active onboarding step
   Future<String?> getActiveStep() async {
     final user = await getCurrentUser();
-    return user?.activeStep;
+    return user?.activeStep.toString();
   }
 
   /// Clear all authentication data (logout)

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../core/config/constants/routes.dart';
+import '../../../../core/services/recent_searches_service.dart';
 import '../../../../domain/community/entities/community_entities.dart';
 import '../bloc/blocs/user_search_bloc.dart';
 import '../bloc/events/user_search_event.dart';
@@ -111,12 +112,17 @@ class _UserSearchImageIcon extends StatelessWidget {
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.communityUserProfile,
-            arguments: {'userId': user.id},
-          );
+        onTap: () async {
+          // Save to recent searches when user visits profile
+          await RecentSearchesService.saveRecentSearch(user);
+          
+          if (context.mounted) {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.communityUserProfile,
+              arguments: {'userId': user.id},
+            );
+          }
         },
         borderRadius: BorderRadius.circular(24),
         child: CircleAvatar(
@@ -151,12 +157,17 @@ class _UserSearchNameWithNavigation extends StatelessWidget {
   Widget build(BuildContext context) {
     return Expanded(
       child: GestureDetector(
-        onTap: () {
-          Navigator.pushNamed(
-            context,
-            AppRoutes.communityUserProfile,
-            arguments: {'userId': user.id},
-          );
+        onTap: () async {
+          // Save to recent searches when user visits profile
+          await RecentSearchesService.saveRecentSearch(user);
+          
+          if (context.mounted) {
+            Navigator.pushNamed(
+              context,
+              AppRoutes.communityUserProfile,
+              arguments: {'userId': user.id},
+            );
+          }
         },
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

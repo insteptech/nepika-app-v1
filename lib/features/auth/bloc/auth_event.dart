@@ -12,15 +12,17 @@ class SendOtpRequested extends AuthEvent {
   final String phone;
   final String? email;
   final String otpId;
+  final String? appSignature;
 
   const SendOtpRequested({
     required this.phone,
     this.email,
     required this.otpId,
+    this.appSignature,
   });
 
   @override
-  List<Object?> get props => [phone, email, otpId];
+  List<Object?> get props => [phone, email, otpId, appSignature];
 }
 
 // Verify OTP Events
@@ -43,14 +45,16 @@ class VerifyOtpRequested extends AuthEvent {
 class ResendOtpRequested extends AuthEvent {
   final String phone;
   final String otpId;
+  final String? appSignature;
 
   const ResendOtpRequested({
     required this.phone, 
     required this.otpId,
+    this.appSignature,
   });
 
   @override
-  List<Object?> get props => [phone, otpId];
+  List<Object?> get props => [phone, otpId, appSignature];
 }
 
 // Clear Auth State

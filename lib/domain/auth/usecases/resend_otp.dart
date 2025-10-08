@@ -11,6 +11,7 @@ class ResendOtp {
     return await repository.resendOtp(
       phone: params.phone,
       otpId: params.otpId,
+      appSignature: params.appSignature,
     );
   }
 }
@@ -18,9 +19,10 @@ class ResendOtp {
 class ResendOtpParams extends Equatable {
   final String phone;
   final String otpId;
+  final String? appSignature;
 
-  const ResendOtpParams({required this.phone, required this.otpId});
+  const ResendOtpParams({required this.phone, required this.otpId, this.appSignature});
 
   @override
-  List<Object?> get props => [phone, otpId];
+  List<Object?> get props => [phone, otpId, appSignature];
 }

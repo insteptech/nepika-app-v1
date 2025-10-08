@@ -5,63 +5,52 @@ import '../../../core/config/constants/routes.dart';
 import 'welcome_logo.dart';
 
 class WelcomeContent extends StatelessWidget {
-  final Animation<Offset> slideAnimation;
-  final Animation<double> fadeAnimation;
-
   const WelcomeContent({
     super.key,
-    required this.slideAnimation,
-    required this.fadeAnimation,
   });
 
   @override
   Widget build(BuildContext context) {
-    return SlideTransition(
-      position: slideAnimation,
-      child: FadeTransition(
-        opacity: fadeAnimation,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20.0),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              
-              // Logo
-              const WelcomeLogo(),
-              const SizedBox(height: 20),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20.0),
+      child: Column(
+        children: [
+          const SizedBox(height: 20),
+          
+          // Logo
+          const WelcomeLogo(),
+          const SizedBox(height: 20),
 
-              // Main Title
-              Text(
-                'What is your Nepika',
-                style: Theme.of(context).textTheme.displayLarge?.copyWith(
-                  fontSize: 28,
-                ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-
-              // Subtitle
-              Text(
-                'Your personal skincare assistant to\nachieve healthier, glowing skin',
-                style: Theme.of(context).textTheme.headlineMedium!.secondary(context),
-                textAlign: TextAlign.center,
-              ),
-
-              const Spacer(),
-
-              // Get Started Button
-              CustomButton(
-                text: 'Get Started',
-                onPressed: () {
-                  Navigator.of(context).pushNamed(AppRoutes.phoneEntry);
-                },
-                type: ButtonType.primary,
-                size: ButtonSize.large,
-              ),
-              const SizedBox(height: 24),
-            ],
+          // Main Title
+          Text(
+            'What is your Nepika',
+            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+              fontSize: 28,
+            ),
+            textAlign: TextAlign.center,
           ),
-        ),
+          const SizedBox(height: 16),
+
+          // Subtitle
+          Text(
+            'Your personal skincare assistant to\nachieve healthier, glowing skin',
+            style: Theme.of(context).textTheme.headlineMedium!.secondary(context),
+            textAlign: TextAlign.center,
+          ),
+
+          const Spacer(),
+
+          // Get Started Button
+          CustomButton(
+            text: 'Get Started',
+            onPressed: () {
+              Navigator.of(context).pushNamed(AppRoutes.phoneEntry);
+            },
+            type: ButtonType.primary,
+            size: ButtonSize.large,
+          ),
+          const SizedBox(height: 24),
+        ],
       ),
     );
   }

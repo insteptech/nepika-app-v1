@@ -46,5 +46,11 @@
 	<string>Nepika may access your photo library to save analysis results and skincare progress photos for your personal tracking.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Nepika uses your location to provide relevant skincare recommendations based on your local climate and environmental conditions.</string>
+	<key>NSContactsUsageDescription</key>
+	<string>Nepika may use SMS autofill to automatically fill OTP codes for your convenience.</string>
+	<key>NSUserActivityTypes</key>
+	<array>
+		<string>com.apple.developer.associated-domains</string>
+	</array>
 </dict>
 </plist>

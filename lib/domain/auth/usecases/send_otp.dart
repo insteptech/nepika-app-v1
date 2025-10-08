@@ -14,6 +14,7 @@ class SendOtp extends UseCase<Map<String, dynamic>, SendOtpParams> {
       phone: params.phone,
       email: params.email,
       otpId: params.otpId,
+      appSignature: params.appSignature,
     );
   }
 }
@@ -22,11 +23,12 @@ class SendOtpParams extends Equatable {
   final String? phone;
   final String? email;
   final String? otpId;
+  final String? appSignature;
 
-  const SendOtpParams({this.phone, this.email, this.otpId});
+  const SendOtpParams({this.phone, this.email, this.otpId, this.appSignature});
 
   @override
-  List<Object?> get props => [phone, email, otpId];
+  List<Object?> get props => [phone, email, otpId, appSignature];
 }
 
 class ResendOtp extends UseCase<Map<String, dynamic>, ResendOtpParams> {

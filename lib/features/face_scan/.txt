@@ -1,0 +1,216 @@
+I/flutter ( 4802): 
+I/flutter ( 4802): 
+I/flutter ( 4802): 
+I/flutter ( 4802): ✅✅ Response [200] ✅✅
+I/flutter ( 4802): 
+I/flutter ( 4802): {
+I/flutter ( 4802):   "success": true,
+I/flutter ( 4802):   "timestamp": "2025-10-08T11:52:58.311616",
+I/flutter ( 4802):   "processing_time_seconds": 2.104,
+I/flutter ( 4802):   "condition_analysis": {
+I/flutter ( 4802):     "prediction": "Wrinkles",
+I/flutter ( 4802):     "sorted_predictions": [
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Wrinkles",
+I/flutter ( 4802):         67.0261800289154
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Eyebags",
+I/flutter ( 4802):         30.9931218624115
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Oily-Skin",
+I/flutter ( 4802):         1.1393209919333458
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Acne",
+I/flutter ( 4802):         0.506668770685792
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Blackheads",
+I/flutter ( 4802):         0.15722232637926936
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Skin-Redness",
+I/flutter ( 4802):         0.07732929079793394
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Dry-Skin",
+I/flutter ( 4802):         0.07539294892922044
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Whiteheads",
+I/flutter ( 4802):         0.02316222380613908
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Dark-Spots",
+I/flutter ( 4802):         0.0014721309526066761
+I/flutter ( 4802):       ],
+I/flutter ( 4802):       [
+I/flutter ( 4802):         "Englarged-Pores",
+I/flutter ( 4802):         0.000127518569570384
+I/flutter ( 4802):       ]
+I/flutter ( 4802):     ]
+I/flutter ( 4802):   },
+I/flutter ( 4802):   "skin_type_analysis": {
+I/flutter ( 4802):     "error": "Prediction failed: No face detected in image",
+I/flutter ( 4802):     "success": false
+I/flutter ( 4802):   },
+I/flutter ( 4802):   "area_detection_analysis": {
+I/flutter ( 4802):     "total_detections": 5,
+I/flutter ( 4802):     "detections": [
+I/flutter ( 4802):       {
+I/flutter ( 4802):         "class": "skin-redness",
+I/flutter ( 4802):         "confidence": 0.2742954194545746,
+I/flutter ( 4802):         "bbox": {
+I/flutter ( 4802):           "x1": 1077,
+I/flutter ( 4802):           "y1": 391,
+I/flutter ( 4802):           "x2": 1143,
+I/flutter ( 4802):           "y2": 444
+I/flutter ( 4802):         }
+I/flutter ( 4802):       },
+I/flutter ( 4802):       {
+I/flutter ( 4802):         "class": "wrinkles",
+I/flutter ( 4802):         "confidence": 0.17967814207077026,
+I/flutter ( 4802):         "bbox": {
+I/flutter ( 4802):           "x1": 96,
+I/flutter ( 4802):           "y1": 67,
+I/flutter ( 4802):           "x2": 267,
+I/flutter ( 4802):           "y2": 129
+I/flutter ( 4802):         }
+I/flutter ( 4802):       },
+I/flutter ( 4802):       {
+I/flutter ( 4802):         "class": "wrinkles",
+I/flutter ( 4802):         "confidence": 0.13797694444656372,
+I/flutter ( 4802):         "bbox": {
+I/flutter ( 4802):           "x1": 229,
+I/flutter ( 4802):           "y1": 0,
+I/flutter ( 4802):           "x2": 459,
+I/flutter ( 4802):           "y2": 88
+I/flutter ( 4802):         }
+I/flutter ( 4802):       },
+I/flutter ( 4802):       {
+I/flutter ( 4802):         "class": "skin-redness",
+I/flutter ( 4802):         "confidence": 0.1375856101512909,
+I/flutter ( 4802):         "bbox": {
+I/flutter ( 4802):           "x1": 907,
+I/flutter ( 4802):           "y1": 334,
+I/flutter ( 4802):           "x2": 1050,
+I/flutter ( 4802):           "y2": 463
+I/flutter ( 4802):         }
+I/flutter ( 4802):       },
+I/flutter ( 4802):       {
+I/flutter ( 4802):         "class": "wrinkles",
+I/flutter ( 4802):         "confidence": 0.1036200076341629,
+I/flutter ( 4802):         "bbox": {
+I/flutter ( 4802):           "x1": 45,
+I/flutter ( 4802):           "y1": 418,
+I/flutter ( 4802):           "x2": 232,
+I/flutter ( 4802):           "y2": 475
+I/flutter ( 4802):         }
+I/flutter ( 4802):       }
+I/flutter ( 4802):     ],
+I/flutter ( 4802):     "classes_found": [
+I/flutter ( 4802):       "skin-redness",
+I/flutter ( 4802):       "wrinkles"
+I/flutter ( 4802):     ],
+I/flutter ( 4802):     "model_threshold": 0.1
+I/flutter ( 4802):   },
+I/flutter ( 4802):   "recommendations": [
+I/flutter ( 4802):     {
+I/flutter ( 4802):       "skin_issue": "wrinkles",
+I/flutter ( 4802):       "recommendations": [
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Alpha Hydroxy Acids (AHAs)",
+I/flutter ( 4802):           "description": "AHAs exfoliate skin, improving texture and reducing wrinkles."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Bakuchiol",
+I/flutter ( 4802):           "description": "Bakuchiol is a natural retinol alternative, reducing wrinkles safely."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Ceramides",
+I/flutter ( 4802):           "description": "Ceramides repair barrier, reducing aging signs and fine lines."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Coenzyme Q10",
+I/flutter ( 4802):           "description": "CoQ10 protects skin cells and reduces wrinkle formation."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Hyaluronic Acid",
+I/flutter ( 4802):           "description": "Hyaluronic acid hydrates skin, plumping fine lines and wrinkles."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Niacinamide",
+I/flutter ( 4802):           "description": "Niacinamide improves elasticity and reduces wrinkles."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Peptides",
+I/flutter ( 4802):           "description": "Peptides boost collagen, firming skin and reducing wrinkles."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Retinol",
+I/flutter ( 4802):           "description": "Retinol increases collagen, reduces wrinkles, and smooths skin."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Vitamin C",
+I/flutter ( 4802):           "description": "Vitamin C boosts collagen and reduces fine lines."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Zinc Oxide",
+I/flutter ( 4802):           "description": "Zinc oxide protects against sun damage, the main cause of wrinkles."
+I/flutter ( 4802):         }
+I/flutter ( 4802):       ]
+I/flutter ( 4802):     },
+I/flutter ( 4802):     {
+I/flutter ( 4802):       "skin_issue": "skin redness",
+I/flutter ( 4802):       "recommendations": [
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Aloe Vera",
+I/flutter ( 4802):           "description": "Aloe vera soothes irritated skin and reduces redness."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Azelaic Acid",
+I/flutter ( 4802):           "description": "Azelaic acid calms redness and treats rosacea-prone skin."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Centella Asiatica",
+I/flutter ( 4802):           "description": "Centella heals damaged skin and reduces redness."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Chamomile Extract",
+I/flutter ( 4802):           "description": "Chamomile calms sensitive skin and soothes redness."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Colloidal Oatmeal",
+I/flutter ( 4802):           "description": "Colloidal oatmeal soothes inflamed, red skin."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Green Tea Extract",
+I/flutter ( 4802):           "description": "Green tea reduces inflammation and skin redness."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Licorice Extract",
+I/flutter ( 4802):           "description": "Licorice brightens skin and reduces redness."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Niacinamide",
+I/flutter ( 4802):           "description": "Niacinamide calms skin and reduces visible redness."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Panthenol",
+I/flutter ( 4802):           "description": "Panthenol hydrates and calms irritated skin."
+I/flutter ( 4802):         },
+I/flutter ( 4802):         {
+I/flutter ( 4802):           "product": "Zinc Oxide",
+I/flutter ( 4802):           "description": "Zinc oxide protects skin and prevents redness from sun."
+I/flutter ( 4802):         }
+I/flutter ( 4802):       ]
+I/flutter ( 4802):     }
+I/flutter ( 4802):   ],
+I/flutter ( 4802):   "image_uploaded": true
+I/flutter ( 4802): }
+I/flutter ( 4802): 
+I/flutter ( 4802): 
+I/flutter ( 4802): 
+I/flutter ( 4802): 

@@ -9,6 +9,7 @@ class FetchCommunityPosts extends PostsEvent {
   final int pageSize;
   final String? userId;
   final bool? followingOnly;
+  final bool bypassCache;
 
   FetchCommunityPosts({
     required this.token,
@@ -16,6 +17,7 @@ class FetchCommunityPosts extends PostsEvent {
     this.pageSize = 20,
     this.userId,
     this.followingOnly,
+    this.bypassCache = true, // Default to true for home screen no-cache behavior
   });
 }
 
@@ -25,6 +27,7 @@ class LoadMoreCommunityPosts extends PostsEvent {
   final int pageSize;
   final String? userId;
   final bool? followingOnly;
+  final bool bypassCache;
 
   LoadMoreCommunityPosts({
     required this.token,
@@ -32,6 +35,7 @@ class LoadMoreCommunityPosts extends PostsEvent {
     this.pageSize = 20,
     this.userId,
     this.followingOnly,
+    this.bypassCache = true, // Default to true for home screen no-cache behavior
   });
 }
 
@@ -173,4 +177,9 @@ class RefreshWithCacheClear extends PostsEvent {
     this.userId,
     this.followingOnly,
   });
+}
+
+// Sync Event for Like States
+class SyncLikeStatesEvent extends PostsEvent {
+  SyncLikeStatesEvent();
 }

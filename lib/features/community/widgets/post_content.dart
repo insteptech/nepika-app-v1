@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/gestures.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../../domain/community/entities/community_entities.dart';
 import '../utils/community_navigation.dart';
+import '../bloc/blocs/posts_bloc.dart';
+import '../bloc/events/posts_event.dart';
 
 /// Post content widget handling text display with clickable links and hashtags
 /// Follows Single Responsibility Principle - only handles content display
@@ -184,6 +187,16 @@ class PostContent extends StatelessWidget {
       token: token,
       userId: userId,
     );
+    
+    // Trigger a sync after returning from post details to ensure latest like states
+    if (context.mounted) {
+      try {
+        final postsBloc = context.read<PostsBloc>();
+        postsBloc.add(SyncLikeStatesEvent());
+      } catch (e) {
+        debugPrint('PostContent: Error syncing like states after navigation: $e');
+      }
+    }
   }
 
   void _launchUrl(BuildContext context, String url) async {

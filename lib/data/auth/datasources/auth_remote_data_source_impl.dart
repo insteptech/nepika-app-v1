@@ -15,10 +15,17 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? phone,
     String? otpId,
     String? email,
+    String? appSignature,
   }) async {
     final data = <String, dynamic>{
       'mobile_number': phone,
     };
+    
+    // Add app signature if available (for Android SMS auto-fill)
+    if (appSignature != null && appSignature.isNotEmpty) {
+      data['app_signature'] = appSignature;
+    }
+    
     final result = await _apiClient.request(
       path: ApiEndpoints.sendOtp,
       method: 'POST',
@@ -35,16 +42,21 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   Future<Map<String, dynamic>> resendOtp({
     required String phone,
     required String otpId,
+    String? appSignature,
   }) async {
     if (phone.isEmpty || otpId.isEmpty) {
       throw Exception('Phone number and OTP ID must be provided');
     }
 
-
     final data = <String, dynamic>{
       'mobile_number': phone,
       'otp_id': otpId,
     };
+    
+    // Add app signature if available (for Android SMS auto-fill)
+    if (appSignature != null && appSignature.isNotEmpty) {
+      data['app_signature'] = appSignature;
+    }
 
     final result = await _apiClient.request(
       path: ApiEndpoints.resendOtp,

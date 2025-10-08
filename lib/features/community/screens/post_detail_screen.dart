@@ -12,6 +12,9 @@ import '../../../domain/community/entities/community_entities.dart';
 import '../bloc/blocs/posts_bloc.dart';
 import '../bloc/events/posts_event.dart';
 import '../bloc/states/posts_state.dart';
+import '../bloc/blocs/profile_bloc.dart';
+import '../bloc/events/profile_event.dart';
+import '../bloc/states/profile_state.dart';
 import '../widgets/like_comment_share_row.dart';
 import '../widgets/like_state_listener.dart';
 import '../widgets/user_post_widget.dart';
@@ -59,6 +62,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
   
   // Current user data for profile picture
   AuthorEntity? _currentUser;
+  CommunityProfileEntity? _currentUserProfile;
   
   // Removed AutomaticKeepAliveClientMixin to prevent state conflicts
 
@@ -130,6 +134,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
 
       // Step 2: Load current user data for profile picture
       await _loadCurrentUser();
+      _loadUserProfile();
 
       // Step 3: Load post and comments with guaranteed token availability
       await _loadPostWithToken();
@@ -209,6 +214,26 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
         });
       }
     }
+  }
+
+  void _loadUserProfile() {
+    if (_token != null && _userId != null) {
+      context.read<ProfileBloc>().add(
+        GetCommunityProfile(token: _token!, userId: _userId!),
+      );
+    }
+  }
+
+  /// Get the current user's AuthorEntity, prioritizing profile data over cached user data
+  AuthorEntity? get _getCurrentUserAuthor {
+    if (_currentUserProfile != null) {
+      return AuthorEntity(
+        id: _currentUserProfile!.userId,
+        fullName: _currentUserProfile!.username,
+        avatarUrl: _currentUserProfile!.profileImageUrl ?? '',
+      );
+    }
+    return _currentUser;
   }
 
   Future<void> _loadPostWithToken() async {
@@ -516,10 +541,25 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.onTertiary,
-      body: BlocListener<PostsBloc, PostsState>(
-        listener: (context, state) {
-          _handleBlocStateChanges(state);
-        },
+      body: MultiBlocListener(
+        listeners: [
+          BlocListener<PostsBloc, PostsState>(
+            listener: (context, state) {
+              _handleBlocStateChanges(state);
+            },
+          ),
+          BlocListener<ProfileBloc, ProfileState>(
+            listener: (context, state) {
+              if (state is CommunityProfileLoaded && state.profile.isSelf) {
+                setState(() {
+                  _currentUserProfile = state.profile;
+                });
+              } else if (state is CommunityProfileError) {
+                debugPrint('Error loading user profile: ${state.message}');
+              }
+            },
+          ),
+        ],
         child: _buildBody(),
       ),
     );
@@ -803,15 +843,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
               UserImageIcon(author: post.author, padding: 0),
               const SizedBox(width: 12),
               UserNameWithNavigation(postDetail: post),
-               
-              
-              // TODO: Implement more options
-              IconButton(
-                icon: Icon(Icons.more_horiz, color: Colors.grey[600], size: 20),
-                onPressed: () {
-                  // TODO: Implement more options
-                },
-              ),
             ],
           ),
 
@@ -908,8 +939,8 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
                     // Current user's profile picture
                     Padding(
                       padding: const EdgeInsets.all(6.0),
-                      child: _currentUser != null 
-                          ? UserImageIcon(author: _currentUser!, padding: 0)
+                      child: _getCurrentUserAuthor != null 
+                          ? UserImageIcon(author: _getCurrentUserAuthor!, padding: 0)
                           : Container(
                               height: 40,
                               width: 40,
