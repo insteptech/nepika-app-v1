@@ -1,5 +1,5 @@
-import 'dart:convert';
-
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/config/constants/api_endpoints.dart';
 import 'package:nepika/data/onboarding/models/onboarding_models.dart';
@@ -63,15 +63,61 @@ class OnboardingRemoteDataSource implements IOnboardingRemoteDataSource {
         },
         body: answers
       );
-  
+
       final data = response.data as Map<String, dynamic>;
-      if (data['success'] != true) {
-        throw Exception(data['message'] ?? 'Failed to submit answers');
+
+      // Check if the response indicates failure
+      if (data['success'] == false) {
+        // Extract the user-friendly error message from the backend
+        final errorMessage = data['message'] as String? ?? 'Failed to submit answers';
+        throw Exception(errorMessage);
       }
-      
+
       return data;
+    } on DioException catch (e) {
+      // Handle Dio-specific errors (network, HTTP errors, etc.)
+      debugPrint('========================================');
+      debugPrint('OnboardingDataSource: DioException occurred');
+      debugPrint('Status code: ${e.response?.statusCode}');
+      debugPrint('Response data: ${e.response?.data}');
+      debugPrint('========================================');
+
+      final responseData = e.response?.data;
+
+      // Extract error message from backend response
+      String errorMessage = 'Failed to submit answers';
+
+      if (responseData is Map<String, dynamic>) {
+        if (responseData['message'] != null) {
+          errorMessage = responseData['message'].toString();
+        } else if (responseData['detail'] != null) {
+          errorMessage = responseData['detail'].toString();
+        } else if (e.response?.statusCode == 400) {
+          errorMessage = 'Invalid data submitted. Please check your answers.';
+        } else if (e.response?.statusCode == 401) {
+          errorMessage = 'Session expired. Please login again.';
+        } else if (e.response?.statusCode == 404) {
+          errorMessage = 'Onboarding step not found.';
+        } else if (e.response?.statusCode == 500) {
+          errorMessage = 'Server error. Please try again later.';
+        }
+      } else if (e.type == DioExceptionType.connectionTimeout) {
+        errorMessage = 'Connection timeout. Please check your internet connection.';
+      } else if (e.type == DioExceptionType.receiveTimeout) {
+        errorMessage = 'Server is taking too long to respond. Please try again.';
+      } else if (e.type == DioExceptionType.unknown) {
+        errorMessage = 'Network error. Please check your internet connection.';
+      }
+
+      debugPrint('Final error message: $errorMessage');
+      throw Exception(errorMessage);
     } catch (e) {
-      throw Exception("Failed to submit answers: $e");
+      debugPrint('OnboardingDataSource: Unexpected error: $e');
+      // Re-throw if it's already an Exception with a message
+      if (e is Exception) {
+        rethrow;
+      }
+      throw Exception('Unexpected error: $e');
     }
   }
 }

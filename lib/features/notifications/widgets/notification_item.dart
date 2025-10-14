@@ -13,15 +13,16 @@ class NotificationItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
+    final theme = Theme.of(context);
+
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
           border: Border(
             bottom: BorderSide(
-              color: const Color(0xFFF2F2F2), // Greyscale/300 from Figma
+              color: theme.dividerColor.withValues(alpha: 0.2),
               width: 1,
             ),
           ),
@@ -38,7 +39,7 @@ class NotificationItem extends StatelessWidget {
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: const Color(0xFFF2F2F2), // Greyscale/300
+                      color: theme.dividerColor.withValues(alpha: 0.3),
                       width: 1,
                     ),
                   ),
@@ -67,7 +68,7 @@ class NotificationItem extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: _getNotificationIconBackground(),
                       border: Border.all(
-                        color: Colors.white,
+                        color: theme.scaffoldBackgroundColor,
                         width: 2,
                       ),
                     ),
@@ -94,10 +95,10 @@ class NotificationItem extends StatelessWidget {
                       // Username
                       Text(
                         notification.actor.username,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
-                          color: Colors.black,
+                          color: theme.textTheme.bodyLarge?.color,
                         ),
                       ),
                       
@@ -123,9 +124,9 @@ class NotificationItem extends StatelessWidget {
                       // Timestamp
                       Text(
                         _formatTimestamp(notification.createdAt),
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
-                          color: Color(0xFFB8B8B8), // Greyscale/700
+                          color: theme.textTheme.bodySmall?.color,
                         ),
                       ),
                     ],
@@ -136,9 +137,9 @@ class NotificationItem extends StatelessWidget {
                   // Notification message
                   Text(
                     _getNotificationMessage(),
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 16,
-                      color: Color(0xFFB8B8B8), // Greyscale/700
+                      color: theme.textTheme.bodyMedium?.color,
                     ),
                   ),
                 ],
@@ -152,16 +153,16 @@ class NotificationItem extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
               decoration: BoxDecoration(
                 border: Border.all(
-                  color: const Color(0xFFCDCDCD), // Greyscale/600
+                  color: theme.dividerColor.withValues(alpha: 0.5),
                   width: 1,
                 ),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Text(
+              child: Text(
                 'Replies',
                 style: TextStyle(
                   fontSize: 16,
-                  color: Color(0xFF111111), // fill_9T3J13
+                  color: theme.textTheme.bodyLarge?.color,
                 ),
               ),
             ),
@@ -172,18 +173,23 @@ class NotificationItem extends StatelessWidget {
   }
 
   Widget _buildDefaultAvatar() {
-    return Container(
-      width: 48,
-      height: 48,
-      decoration: const BoxDecoration(
-        color: Color(0xFFF2F2F2),
-        shape: BoxShape.circle,
-      ),
-      child: const Icon(
-        Icons.person,
-        color: Color(0xFFB8B8B8),
-        size: 24,
-      ),
+    return Builder(
+      builder: (context) {
+        final theme = Theme.of(context);
+        return Container(
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+            color: theme.dividerColor.withValues(alpha: 0.2),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(
+            Icons.person,
+            color: theme.iconTheme.color?.withValues(alpha: 0.5),
+            size: 24,
+          ),
+        );
+      }
     );
   }
 

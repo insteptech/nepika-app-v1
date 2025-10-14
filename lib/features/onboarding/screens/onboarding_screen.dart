@@ -51,6 +51,10 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // Track data state for smart button behavior
   int? _lastLoadedStep;
 
+  // Track submission state to keep form visible
+  bool _isSubmitting = false;
+  OnboardingStepLoaded? _lastLoadedState;
+
   final _secureStorage = SecureStorage();
 
   @override
@@ -263,13 +267,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _handleBlocStateChanges(BuildContext context, OnboardingState state) {
     debugPrint('🔄 BLoC state changed: ${state.runtimeType}');
     if (state is OnboardingStepLoaded) {
-      // Update current step if it's different from our local state
-      // if (state.currentStep != _currentStep) {
-      //   debugPrint('📈 Updating current step from $_currentStep to ${state.currentStep}');
-      //   setState(() {
-      //     _currentStep = state.currentStep;
-      //   });
-      // }
+      // Save the loaded state so we can display it during submission
+      _lastLoadedState = state;
 
       // Track step changes for debugging
       if (_lastLoadedStep != state.currentStep) {
@@ -278,7 +277,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       }
 
       debugPrint('🔘 Button text: ${_getButtonText()}');
-      setState(() {});
+      setState(() {
+        _isSubmitting = false;
+      });
+    } else if (state is OnboardingStepSubmitting) {
+      // Mark as submitting when submission starts
+      setState(() {
+        _isSubmitting = true;
+      });
     } else if (state is OnboardingStepSubmitted) {
       debugPrint('✅ Step submitted successfully: ${state.message}');
       debugPrint('✅ NextStep from backend: ${state.nextStep}');
@@ -311,16 +317,48 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       debugPrint('🏁 Onboarding completed via BLoC');
       _navigateToCompletion();
     } else if (state is OnboardingError) {
+      debugPrint('========================================');
+      debugPrint('ERROR DETECTED IN ONBOARDING');
       debugPrint('❌ Onboarding error: ${state.message}');
-      if (mounted) {
-        try {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(state.message), backgroundColor: Colors.red),
-          );
-        } catch (e) {
-          debugPrint('❌ Error showing error snackbar: $e');
+      debugPrint('========================================');
+
+      // Use post-frame callback to ensure widget is fully built before showing snackbar
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          try {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(state.message),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+                action: SnackBarAction(
+                  label: 'Dismiss',
+                  textColor: Colors.white,
+                  onPressed: () {
+                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  },
+                ),
+              ),
+            );
+            debugPrint('✅ Error snackbar shown successfully');
+
+            // Restore the form state so user can retry
+            // This transitions back from error state to loaded state
+            if (_lastLoadedState != null) {
+              debugPrint('🔄 Dispatching RestoreFormState event');
+              _bloc.add(RestoreFormState(state: _lastLoadedState!));
+            }
+          } catch (e) {
+            debugPrint('❌ Error showing error snackbar: $e');
+          }
         }
-      }
+      });
+
+      // Force rebuild to show error state without losing data
+      setState(() {
+        _isSubmitting = false;
+      });
     }
   }
 
@@ -421,13 +459,36 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     bool isFormValid = false;
     int totalSteps = 7;
 
-    if (state is OnboardingLoading || state is OnboardingStepSubmitting) {
+    if (state is OnboardingLoading) {
+      // Only show skeleton when initially loading
       content = const OnboardingSkeleton();
+    } else if (state is OnboardingStepSubmitting) {
+      // Keep the form visible during submission using last loaded state
+      if (_lastLoadedState != null) {
+        title = _lastLoadedState!.screenData.title;
+        subtitle = _lastLoadedState!.screenData.description ?? subtitle;
+        buttonText = _getButtonText();
+        isFormValid = _lastLoadedState!.isFormValid;
+        totalSteps = _lastLoadedState!.screenData.totalSteps ?? totalSteps;
+        content = _buildQuestionsList(_lastLoadedState!);
+      } else {
+        content = const OnboardingSkeleton();
+      }
     } else if (state is OnboardingError) {
-      content = OnboardingErrorWidget(
-        message: state.message,
-        onRetry: _loadCurrentStep,
-      );
+      // Don't show error widget in content, errors are shown via snackbar only
+      // Keep the form visible using last loaded state so user can retry
+      if (_lastLoadedState != null) {
+        title = _lastLoadedState!.screenData.title;
+        subtitle = _lastLoadedState!.screenData.description ?? subtitle;
+        buttonText = _getButtonText();
+        isFormValid = _lastLoadedState!.isFormValid;
+        totalSteps = _lastLoadedState!.screenData.totalSteps ?? totalSteps;
+        content = _buildQuestionsList(_lastLoadedState!);
+      } else {
+        content = const Center(
+          child: Text('Please refresh to reload the form.'),
+        );
+      }
     } else if (state is OnboardingStepLoaded) {
       title = state.screenData.title;
       subtitle = state.screenData.description ?? subtitle;
@@ -469,6 +530,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         onBack: _handleBack,
         showProgressBar: shouldShowProgressBar,
         content: content,
+        isLoading: _isSubmitting,
       );
   }
 

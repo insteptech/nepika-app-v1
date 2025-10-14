@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../widgets/post_skeleton_loader.dart';
 
 /// Loading state component for posts
 /// Follows Single Responsibility Principle - only handles loading UI
@@ -12,16 +13,19 @@ class PostsLoading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Center(
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const CircularProgressIndicator(),
+          const SizedBox(height: 20),
+          const PostSkeletonLoader(itemCount: 5),
           if (message != null) ...[
             const SizedBox(height: 16),
             Text(
               message!,
-              style: Theme.of(context).textTheme.bodyMedium,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+              ),
               textAlign: TextAlign.center,
             ),
           ],

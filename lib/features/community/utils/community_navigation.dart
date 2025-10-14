@@ -156,7 +156,7 @@ class CommunityNavigation {
     }
     
     try {
-      await Navigator.of(context).push(
+      await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
           builder: (newContext) => MultiBlocProvider(
             providers: [

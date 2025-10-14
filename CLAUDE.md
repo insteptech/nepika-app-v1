@@ -32,10 +32,25 @@ The app follows **Clean Architecture** principles with clear separation of conce
 ```
 lib/
 ├── core/                 # Shared utilities, config, DI
+│   ├── api_base.dart    # Base HTTP client with Dio (handles token refresh)
+│   ├── di/              # Custom dependency injection (ServiceLocator)
+│   ├── config/          # App constants, routes, themes
+│   ├── network/         # Network utilities
+│   └── utils/           # Shared helpers (SecureStorage, SharedPrefsHelper)
 ├── data/                 # Data sources, models, repository implementations
 ├── domain/               # Entities, repositories (interfaces), use cases
-├── presentation/         # UI, BLoCs, pages, widgets
 └── features/            # Feature-based modular organization
+    ├── auth/            # Phone + OTP authentication
+    ├── community/       # Feed, posts, comments, user profiles, search
+    ├── dashboard/       # Main dashboard with bottom navigation
+    ├── face_scan/       # Face scanning with ML Kit
+    ├── notifications/   # In-app notifications with SSE
+    ├── onboarding/      # User onboarding flow
+    ├── products/        # Product catalog and details
+    ├── routine/         # Daily skincare routines
+    ├── settings/        # App settings and preferences
+    ├── splash/          # Splash screen
+    └── welcome/         # Welcome screen
 ```
 
 ### Key Architectural Patterns
@@ -43,7 +58,7 @@ lib/
 - **Clean Architecture**: Domain-driven design with dependency inversion
 - **Repository Pattern**: Data abstraction layer
 - **Dependency Injection**: Custom service locator in `core/di/injection_container.dart`
-- **Feature-based Structure**: Modular organization by feature domains
+- **Feature-based Structure**: Each feature is self-contained with its own screens, BLoCs, and logic
 
 ### Core Components
 
@@ -51,75 +66,108 @@ lib/
 - Uses `flutter_bloc` for state management
 - BLoCs handle business logic and emit states
 - UI listens to BLoC states and dispatches events
+- Some features use `provider` for theme management
 
 #### Dependency Injection
 - Custom `ServiceLocator` in `core/di/injection_container.dart`
 - Lazy singletons for repositories and data sources
 - Factory pattern for BLoCs
-- Must call `ServiceLocator.init()` in main.dart
+- **CRITICAL**: Must call `ServiceLocator.init()` in main.dart before app starts
+- Register new dependencies following the pattern: data source → repository → use cases → BLoC
 
 #### Navigation
 - Named routes defined in `core/config/constants/routes.dart`
+- Route classes: `AppRoutes`, `DashboardRoutes`, `CommunityRoutes`, `SettingsRoutes`, `OnboardingRoutes`
 - Custom `NavigationService` for programmatic navigation
-- Route generation in main.dart's `onGenerateRoute`
+- Route generation in `main.dart`'s `onGenerateRoute`
+- Bottom navigation in dashboard feature
 
 #### API Integration
-- `ApiBase` class handles HTTP requests with Dio
-- Token-based authentication with automatic refresh
-- Endpoints defined in `core/network/api_endpoints.dart`
-- Secure token storage using `flutter_secure_storage`
+- `ApiBase` class in `core/api_base.dart` handles all HTTP requests with Dio
+- Base URL configured in `core/config/env.dart`
+- **Automatic token refresh**: Built-in interceptor detects 401 responses and refreshes tokens
+- Token storage: Uses `SharedPreferences` for access/refresh tokens
+- Request queuing: Queues requests during token refresh to prevent race conditions
+- All API methods return Dio `Response` objects
 
 ## Key Features & Implementation
 
 ### Authentication Flow
-- Phone number entry → OTP verification → Onboarding
-- JWT token management with automatic refresh
-- Secure storage for sensitive data
+- Phone number entry → OTP verification → Onboarding → Face scan → Dashboard
+- JWT token management with automatic refresh via ApiBase interceptor
+- Tokens stored in SharedPreferences using `AppConstants.accessTokenKey` and `AppConstants.refreshTokenKey`
+- Auth BLoC handles state: `SendOtp`, `VerifyOtp`, `ResendOtp`
 
 ### Community Features
 - Feed with posts, likes, comments
-- User profiles and search
-- Post creation with media upload
-- Real-time interaction through REST APIs
+- User profiles and search functionality
+- Post creation with media upload (multipart/form-data)
+- Post detail screen with full comment threads
+- HybridPostsBloc and PostsBloc for different community views
+- UserSearchBloc for searching users
 
 ### Face Scan Technology
-- Camera integration with `google_mlkit_face_detection`
+- Camera integration with `camera` package
+- ML Kit face detection with `google_mlkit_face_detection`
 - Onboarding flow with face analysis
 - Skin condition detection and recommendations
+- Results stored and displayed in dashboard
 
 ### Dashboard & Routines
-- Personalized skincare routines
+- Bottom navigation with 4 tabs: Home, Explore, Scan, Profile
+- Personalized skincare routines with RoutineBloc
 - Product recommendations
-- Progress tracking
+- Scan result details
 - Settings and profile management
+
+### Notifications
+- In-app notification system with NotificationBloc
+- Real-time updates using Server-Sent Events (SSE) via `http` package
+- Notification debug screen for testing
 
 ## Data Flow Pattern
 
-**UI → BLoC → Repository → API Client → Backend**
+**UI → BLoC → Use Case → Repository → ApiBase → Backend**
 
-1. User interacts with UI
-2. UI dispatches BLoC events
-3. BLoC calls repository methods
-4. Repository uses ApiBase for HTTP requests
-5. Backend processes and returns data
-6. BLoC emits new states
-7. UI rebuilds based on state changes
+1. User interacts with UI (e.g., taps button, scrolls feed)
+2. UI dispatches BLoC event (e.g., `FetchCommunityPosts`)
+3. BLoC calls appropriate use case
+4. Use case invokes repository method
+5. Repository implementation uses `ApiBase` for HTTP requests
+6. ApiBase automatically adds auth headers and handles token refresh
+7. Backend processes and returns data
+8. Repository deserializes response
+9. BLoC emits new state (loading → success/error)
+10. UI rebuilds based on state changes
 
 ## Important Development Notes
 
-### Authentication Requirements
-- All API requests require valid JWT tokens
-- Token refresh handled automatically by `token_refresh_interceptor.dart`
+### Authentication & Token Management
+- All API requests automatically include Bearer token via ApiBase interceptor
+- Token refresh is handled transparently by ApiBase on 401 responses
+- Access token key: `AppConstants.accessTokenKey`
+- Refresh token key: `AppConstants.refreshTokenKey`
 - Use `SharedPrefsHelper` for user session management
+- Force logout occurs only when refresh token itself is invalid (401 during refresh)
+
+### API Request Patterns
+- Use `ApiBase().request()` for standard JSON requests
+- Use `ApiBase().uploadMultipart()` for file uploads
+- Query params passed via `query` parameter
+- Headers passed via `headers` parameter
+- Body passed via `body` parameter for POST/PUT
+- All requests return Dio `Response` objects
 
 ### Asset Management
 - Images: `assets/images/`
-- Icons: `assets/icons/` (including filled variants)
-- Custom font: HelveticaNowDisplay (Regular, Medium, SemiBold, Bold, Black)
+- App assets: `assets/app/`
+- Icons: `assets/icons/` and `assets/icons/filled/`
+- Custom font: HelveticaNowDisplay (weights: 400, 500, 600, 700, 900)
 
 ### Theme Support
-- Light and dark themes via `ThemeNotifier`
+- Light and dark themes via `ThemeNotifier` (provider-based)
 - Theme persistence with SharedPreferences
+- Themes defined in `core/config/constants/theme.dart`
 - Custom color palette in `core/widgets/color_palette.dart`
 
 ### Testing Setup
@@ -129,29 +177,57 @@ lib/
 
 ### Build Configuration
 - Portrait-only orientation (locked in main.dart)
-- Flutter version: 3.32.8
-- Dart version: 3.8.1
+- Flutter SDK: ^3.8.1
 - Uses `flutter_lints` for code quality
+- `injectable` for dependency injection annotations (with `build_runner`)
 
 ## Common Patterns
 
 ### Creating New Features
-1. Add domain entities and repository interfaces
-2. Implement data models and repository
-3. Create use cases for business logic
-4. Build BLoC for state management
-5. Design UI pages and widgets
-6. Register dependencies in ServiceLocator
-7. Add routes to routes.dart
+1. Create feature folder structure under `lib/features/your_feature/`
+2. Add domain entities and repository interfaces in `lib/domain/your_feature/`
+3. Implement data models and repository in `lib/data/your_feature/`
+4. Create use cases for business logic in `lib/domain/your_feature/usecases/`
+5. Build BLoC/Cubit with events and states in `lib/features/your_feature/bloc/`
+6. Design UI pages and widgets in `lib/features/your_feature/screens/` or `pages/`
+7. Register dependencies in `ServiceLocator.init()` following pattern:
+   - Data source (singleton)
+   - Repository (singleton)
+   - Use cases (singleton)
+   - BLoC (factory)
+8. Add routes to `core/config/constants/routes.dart`
+9. Add route generation case in `main.dart`'s `onGenerateRoute`
 
-### API Integration
-- Extend existing repository patterns
-- Use `ApiBase` for consistent HTTP handling
+### API Integration Example
+```dart
+// In repository implementation:
+final response = await ApiBase().request(
+  path: '/community/post',
+  method: 'POST',
+  body: {'text': 'Hello world'},
+);
+
+// For multipart uploads:
+final formData = FormData.fromMap({
+  'text': 'Hello',
+  'image': await MultipartFile.fromFile(imagePath),
+});
+final response = await ApiBase().uploadMultipart(
+  path: '/community/post',
+  formData: formData,
+);
+```
+
+### BLoC State Management Pattern
+- Events: Define user actions (e.g., `FetchPosts`, `CreatePost`)
+- States: Define UI states (e.g., `PostsLoading`, `PostsLoaded`, `PostsError`)
 - Handle loading, success, and error states in BLoCs
-- Implement proper error handling at each layer
+- Emit states sequentially: loading → success/error
+- Use Equatable for state comparison
 
 ### Widget Development
 - Follow existing component patterns in `core/widgets/`
-- Use theme-aware styling
+- Use theme-aware styling via `Theme.of(context)`
+- Access theme colors through `Theme.of(context).colorScheme` or custom ColorPalette
 - Implement responsive design principles
-- Create reusable components when possible
+- Create reusable components when patterns repeat

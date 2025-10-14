@@ -42,53 +42,58 @@ class NotificationBadge extends StatelessWidget {
             onTap?.call();
             // Navigate to notifications screen and mark as seen
             context.read<NotificationBloc>().add(const MarkAllNotificationsAsSeen());
-            Navigator.pushNamed(context, AppRoutes.notifications);
+            Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.notifications);
           },
           splashRadius: 10,
-          icon: Stack(
-            children: [
-              // Notification bell icon
-               Image.asset(
+          icon: SizedBox(
+            width: iconSize,
+            height: iconSize,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Notification bell icon
+                Image.asset(
                   'assets/icons/notifications.png',
                   width: iconSize,
                   height: iconSize,
                   color: iconColor ?? Theme.of(context).colorScheme.primary,
                 ),
-              
-              // Badge for unread count
-              if (unreadCount > 0)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: badgeColor ?? Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 1,
+
+                // Badge for unread count (positioned last to be on top)
+                if (unreadCount > 0)
+                  Positioned(
+                    right: -5,
+                    top: -5,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 3,
+                        vertical: 1,
                       ),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      unreadCount > 99 ? '99+' : unreadCount.toString(),
-                      style: TextStyle(
-                        color: badgeTextColor ?? Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
+                      decoration: BoxDecoration(
+                        color: badgeColor ?? Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 1.5,
+                        ),
                       ),
-                      textAlign: TextAlign.center,
+                      constraints: const BoxConstraints(
+                        minWidth: 16,
+                        minHeight: 16,
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : unreadCount.toString(),
+                        style: TextStyle(
+                          color: badgeTextColor ?? Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
                     ),
                   ),
-                ),
-            ],
+              ],
+            ),
           ),
         );
       },
@@ -136,64 +141,69 @@ class NotificationBadgeSVG extends StatelessWidget {
             onTap?.call();
             // Navigate to notifications screen and mark as seen
             context.read<NotificationBloc>().add(const MarkAllNotificationsAsSeen());
-            Navigator.pushNamed(context, AppRoutes.notifications);
+            Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.notifications);
           },
-          child: Stack(
-            children: [
-              // Custom SVG notification icon
-              Container(
-                width: iconSize,
-                height: iconSize,
-                decoration: BoxDecoration(
-                  color: iconColor ?? Theme.of(context).iconTheme.color,
-                ),
-                // TODO: Replace with SvgPicture.asset(iconPath) if using flutter_svg
-                // child: Icon(
-                //   Icons.notifications_none_outlined,
-                //   size: iconSize,
-                //   color: iconColor ?? Theme.of(context).iconTheme.color,
-                // ),
-                child: Image.asset(
-                  'assets/icons/notifications.png',
+          child: SizedBox(
+            width: iconSize,
+            height: iconSize,
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Custom SVG notification icon
+                Container(
                   width: iconSize,
                   height: iconSize,
-                ),
-              ),
-              
-              // Badge for unread count
-              if (unreadCount > 0)
-                Positioned(
-                  right: 0,
-                  top: 0,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: badgeColor ?? Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(
-                        color: Theme.of(context).scaffoldBackgroundColor,
-                        width: 1,
-                      ),
-                    ),
-                    constraints: const BoxConstraints(
-                      minWidth: 18,
-                      minHeight: 18,
-                    ),
-                    child: Text(
-                      unreadCount > 99 ? '99+' : unreadCount.toString(),
-                      style: TextStyle(
-                        color: badgeTextColor ?? Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
+                  decoration: BoxDecoration(
+                    color: iconColor ?? Theme.of(context).iconTheme.color,
+                  ),
+                  // TODO: Replace with SvgPicture.asset(iconPath) if using flutter_svg
+                  // child: Icon(
+                  //   Icons.notifications_none_outlined,
+                  //   size: iconSize,
+                  //   color: iconColor ?? Theme.of(context).iconTheme.color,
+                  // ),
+                  child: Image.asset(
+                    'assets/icons/notifications.png',
+                    width: iconSize,
+                    height: iconSize,
                   ),
                 ),
-            ],
+
+                // Badge for unread count (positioned last to be on top)
+                if (unreadCount > 0)
+                  Positioned(
+                    right: -2,
+                    top: -2,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: badgeColor ?? Colors.red,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: Theme.of(context).scaffoldBackgroundColor,
+                          width: 1.5,
+                        ),
+                      ),
+                      constraints: const BoxConstraints(
+                        minWidth: 18,
+                        minHeight: 18,
+                      ),
+                      child: Text(
+                        unreadCount > 99 ? '99+' : unreadCount.toString(),
+                        style: TextStyle(
+                          color: badgeTextColor ?? Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ),
+                  ),
+              ],
+            ),
           ),
         );
       },

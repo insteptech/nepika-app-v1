@@ -27,8 +27,7 @@ class UserImageIcon extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: () {
-          Navigator.pushNamed(
-            context,
+          Navigator.of(context, rootNavigator: true).pushNamed(
             AppRoutes.communityUserProfile,
             arguments: {'userId': author.id},
           );

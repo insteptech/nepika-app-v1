@@ -83,7 +83,7 @@ class OtpPermissionHandler {
 
   static Future<bool> handlePermissionRequest(BuildContext context) async {
     final otpService = OtpService();
-    
+
     debugPrint('OtpPermissionHandler: Checking current SMS permission status');
     final hasPermission = await otpService.checkSmsPermission();
     if (hasPermission) {
@@ -91,33 +91,15 @@ class OtpPermissionHandler {
       return true;
     }
 
-    debugPrint('OtpPermissionHandler: Requesting SMS permission');
+    debugPrint('OtpPermissionHandler: Requesting SMS permission silently');
     final granted = await otpService.requestSmsPermission();
     if (granted) {
       debugPrint('OtpPermissionHandler: SMS permission granted successfully');
       return true;
     }
 
-    debugPrint('OtpPermissionHandler: SMS permission request failed');
-    final permissionStatus = await Permission.sms.status;
-    debugPrint('OtpPermissionHandler: Current permission status: $permissionStatus');
-    
-    // Check if context is still mounted before using it
-    if (!context.mounted) {
-      debugPrint('OtpPermissionHandler: Context no longer mounted');
-      return false;
-    }
-    
-    if (permissionStatus.isPermanentlyDenied) {
-      debugPrint('OtpPermissionHandler: Permission permanently denied, showing settings dialog');
-      showPermissionPermanentlyDeniedDialog(context);
-    } else {
-      debugPrint('OtpPermissionHandler: Permission denied, showing retry dialog');
-      showPermissionDeniedDialog(context, () {
-        handlePermissionRequest(context);
-      });
-    }
-
+    debugPrint('OtpPermissionHandler: SMS permission denied - continuing silently without dialogs');
+    // Don't show any dialogs, just return false and let the app continue
     return false;
   }
 }

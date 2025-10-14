@@ -6,6 +6,7 @@ import '../../../core/config/constants/app_constants.dart';
 import '../../../core/config/constants/theme.dart';
 import '../../../core/widgets/back_button.dart';
 import '../../../core/widgets/routine_image.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/utils/logger.dart';
 import '../bloc/routine_bloc.dart';
 import '../bloc/routine_event.dart';
@@ -93,7 +94,29 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized || _token == null) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                const CustomBackButton(),
+                const SizedBox(height: 15),
+                const SizedBox(height: 40),
+                Text(
+                  "Today's Routine",
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+                const SizedBox(height: 35),
+                Expanded(child: _buildRoutineSkeletons()),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return BlocConsumer<RoutineBloc, RoutineState>(
@@ -296,7 +319,7 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
       children: [
         const SizedBox(height: 8),
         if (loading)
-          const Center(child: CircularProgressIndicator())
+          _buildRoutineSkeletons()
         else if (errorMessage != null)
           _buildErrorState(context, errorMessage)
         else if (routineSteps.isEmpty)
@@ -308,6 +331,70 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
           _buildEditRoutineButton(context),
         const SizedBox(height: 100),
       ],
+    );
+  }
+
+  Widget _buildRoutineSkeletons() {
+    return Column(
+      children: List.generate(5, (index) => _buildRoutineSkeleton()),
+    );
+  }
+
+  Widget _buildRoutineSkeleton() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon skeleton
+          const SkeletonLoader(
+            width: 48,
+            height: 48,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          const SizedBox(width: 16),
+          // Content skeleton
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title skeleton
+                const SkeletonLoader(
+                  width: 150,
+                  height: 20,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+                const SizedBox(height: 8),
+                // Description skeleton
+                const SkeletonLoader(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+                const SizedBox(height: 4),
+                // Second line of description
+                SkeletonLoader(
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  height: 14,
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Checkbox skeleton
+          const SkeletonLoader(
+            width: 24,
+            height: 24,
+            borderRadius: BorderRadius.all(Radius.circular(6)),
+          ),
+        ],
+      ),
     );
   }
 

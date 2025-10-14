@@ -10,10 +10,10 @@ import '../bloc/states/posts_state.dart';
 import '../bloc/blocs/profile_bloc.dart';
 import '../bloc/events/profile_event.dart';
 import '../bloc/states/profile_state.dart';
-import '../components/posts_loading.dart' as components;
 import '../components/posts_error.dart' as components;
 import '../widgets/user_post_widget.dart';
 import '../widgets/create_post_widget.dart';
+import '../widgets/post_skeleton_loader.dart';
 import '../utils/community_navigation.dart';
 import 'community_header.dart';
 
@@ -100,54 +100,52 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     _scrollController.addListener(() {
       // Only proceed if we have a valid scroll position
       if (!_scrollController.hasClients) return;
-      
+
       final position = _scrollController.position;
       final state = context.read<PostsBloc>().state;
-      
-      // Check if we're near the last post (more responsive than waiting for absolute bottom)
-      // Trigger when user scrolls to 80% of available content or within 100px of bottom
-      final scrollThreshold = position.maxScrollExtent * 0.8;
-      final isNearBottom = position.pixels >= scrollThreshold || 
-                          position.pixels >= (position.maxScrollExtent - 100);
-      
-      // Only trigger if:
-      // 1. We're near the bottom (80% scrolled or within 100px of bottom)
-      // 2. We have more posts to load (based on API response)
-      // 3. We're not already loading more
-      // 4. We have a valid token
-      // 5. We have at least one post (avoid empty list issues)
-      // 6. At least 1 second has passed since last load (prevent rapid requests)
+
+      // Early return if state is not PostsLoaded
+      if (state is! PostsLoaded) return;
+
+      // Check if we're near the bottom (75% scrolled or within 200px)
+      // More aggressive triggering to ensure pagination works smoothly
+      final scrollThreshold = position.maxScrollExtent * 0.75;
+      final pixelThreshold = position.maxScrollExtent - 200;
+      final isNearBottom = position.pixels >= scrollThreshold ||
+                          position.pixels >= pixelThreshold;
+
+      // Debounce logic: prevent rapid requests (500ms cooldown)
       final now = DateTime.now();
-      final canLoad = _lastLoadTime == null || 
-                     now.difference(_lastLoadTime!).inMilliseconds > 1000;
-      
-      if (isNearBottom && 
-          state is PostsLoaded && 
-          state.posts.isNotEmpty &&
-          state.hasMorePosts && 
-          !state.isLoadingMore &&
-          _token != null &&
-          canLoad) {
-        
-        debugPrint('CommunityHome: Auto-loading more posts');
-        debugPrint('  - Current posts: ${state.posts.length}');
-        debugPrint('  - Has more posts: ${state.hasMorePosts}');
-        debugPrint('  - Current page: ${state.currentPage}');
-        debugPrint('  - Loading page: ${state.currentPage + 1}');
-        
-        _lastLoadTime = now; // Update last load time
+      final canLoad = _lastLoadTime == null ||
+                     now.difference(_lastLoadTime!).inMilliseconds > 500;
+
+      // Only trigger if all conditions are met:
+      // 1. Near the bottom (75% or within 200px)
+      // 2. Has more posts to load
+      // 3. Not already loading
+      // 4. Has valid token
+      // 5. Has at least one post
+      // 6. Cooldown period passed
+      final shouldLoad = isNearBottom &&
+                        state.posts.isNotEmpty &&
+                        state.hasMorePosts &&
+                        !state.isLoadingMore &&
+                        _token != null &&
+                        canLoad;
+
+      if (shouldLoad) {
+        debugPrint('🔄 CommunityHome: Loading more posts');
+        debugPrint('  📊 Current: ${state.posts.length} posts, page ${state.currentPage}');
+        debugPrint('  ⏭️  Loading: page ${state.currentPage + 1}');
+        debugPrint('  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%');
+
+        _lastLoadTime = now;
         context.read<PostsBloc>().add(
           LoadMoreCommunityPosts(
             token: _token!,
             page: state.currentPage + 1,
           ),
         );
-      } else {
-        // Debug why loading didn't trigger
-        if (state is PostsLoaded && state.hasMorePosts && !isNearBottom) {
-          debugPrint('CommunityHome: Not loading - not near bottom yet');
-          debugPrint('  - Scroll progress: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(1)}%');
-        }
       }
     });
   }
@@ -245,17 +243,102 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                      current is PostsError;
             },
             builder: (context, state) {
+            // Show full-screen loading only on initial load
             if (state is PostsLoading) {
-              return const components.PostsLoading(message: 'Loading community posts...');
-            }
-            
-            if (state is PostsError) {
-              return components.PostsError(
-                message: state.message,
-                onRetry: _loadInitialPosts,
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  // Add small padding at top
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 1),
+                  ),
+
+                  // Sticky Header
+                  SliverPersistentHeader(
+                    pinned: true,
+                    floating: false,
+                    delegate: CommunityHeader(
+                      onSearchTap: _navigateToSearch,
+                    ),
+                  ),
+
+                  // Create Post Section
+                  SliverPersistentHeader(
+                    pinned: true,
+                    floating: false,
+                    delegate: _CreatePostSection(
+                      onCreatePostTap: _navigateToCreatePost,
+                      token: _token!,
+                      userId: _userId!,
+                      currentUserProfile: _currentUserProfile,
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 20),
+                  ),
+
+                  // Loading skeletons in feed area only
+                  SliverPadding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    sliver: SliverToBoxAdapter(
+                      child: ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: 3,
+                        itemBuilder: (context, index) => const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: SinglePostSkeleton(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               );
             }
-            
+
+            if (state is PostsError) {
+              return CustomScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                slivers: [
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 1),
+                  ),
+
+                  SliverPersistentHeader(
+                    pinned: true,
+                    floating: false,
+                    delegate: CommunityHeader(
+                      onSearchTap: _navigateToSearch,
+                    ),
+                  ),
+
+                  SliverPersistentHeader(
+                    pinned: true,
+                    floating: false,
+                    delegate: _CreatePostSection(
+                      onCreatePostTap: _navigateToCreatePost,
+                      token: _token!,
+                      userId: _userId!,
+                      currentUserProfile: _currentUserProfile,
+                    ),
+                  ),
+
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 20),
+                  ),
+
+                  SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: components.PostsError(
+                      message: state.message,
+                      onRetry: _loadInitialPosts,
+                    ),
+                  ),
+                ],
+              );
+            }
+
             if (state is PostsLoaded) {
               final posts = state.posts;
               final hasMorePosts = state.hasMorePosts;
@@ -271,7 +354,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                     const SliverToBoxAdapter(
                       child: SizedBox(height: 1),
                     ),
-                    
+
                     // Sticky Header
                     SliverPersistentHeader(
                       pinned: true,
@@ -304,7 +387,8 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
               );
             }
 
-            return const components.PostsLoading();
+            // Fallback loading state
+            return const Center(child: CircularProgressIndicator());
             },
           ),
         ),
@@ -314,10 +398,12 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
 
   Widget _buildPostsList(List<PostEntity> posts, bool hasMorePosts, bool isLoadingMore) {
     if (posts.isEmpty) {
-      return const SliverToBoxAdapter(
+      return SliverFillRemaining(
+        hasScrollBody: false,
         child: components.PostsEmpty(
           message: 'No posts in your community yet',
           actionText: 'Create First Post',
+          onAction: _navigateToCreatePost,
         ),
       );
     }
@@ -337,12 +423,10 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                 ),
               );
             } else if (isLoadingMore && hasMorePosts) {
-              // Only show loader when actively loading more posts
-              return const Center(
-                child: Padding(
-                  padding: EdgeInsets.all(16.0),
-                  child: CircularProgressIndicator(),
-                ),
+              // Show skeleton loader when actively loading more posts
+              return const Padding(
+                padding: EdgeInsets.symmetric(vertical: 8.0),
+                child: SinglePostSkeleton(),
               );
             }
             return null;

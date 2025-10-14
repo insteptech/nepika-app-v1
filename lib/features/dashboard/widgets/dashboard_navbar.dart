@@ -24,14 +24,14 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     'assets/icons/home_icon.png',
     'assets/icons/2_people.png',
     'assets/icons/scan_icon.png',
-    'assets/icons/box_icon.png',
+    'assets/icons/history_icon.png',
     'assets/icons/person_icon.png',
   ];
   static const _filledIcons = [
     'assets/icons/filled/home_icon.png',
-    'assets/icons/filled/community_icon.png',
+    'assets/icons/filled/2_people.png',
     'assets/icons/scan_icon.png',
-    'assets/icons/filled/box_icon.png',
+    'assets/icons/filled/history_icon.png',
     'assets/icons/filled/person_icon.png',
   ];
 
@@ -39,7 +39,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     AppRoutes.dashboardHome,
     AppRoutes.communityHome,
     AppRoutes.cameraScanGuidence,
-    AppRoutes.dashboardAllProducts,
+    AppRoutes.dashboardHistory,
     AppRoutes.dashboardSettings,
   ];
 
@@ -47,7 +47,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     'Home',
     'Community',
     'Scan',
-    'Products',
+    'History',
     'Settings',
   ];
 
@@ -55,13 +55,13 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     if (widget.selectedIndex == index && _navRoutes[index] != AppRoutes.cameraScanGuidence) {
       return;
     }
-    
-    
-    if (index == 1) { 
-      Navigator.of(context, rootNavigator: true).pushNamed(_navRoutes[index]);
-      return;
-    }
-    
+
+
+    // if (index == 1) {
+    //   Navigator.of(context, rootNavigator: true).pushNamed(_navRoutes[index]);
+    //   return;
+    // }
+
     widget.onNavBarTap(index, _navRoutes[index]);
   }
 
@@ -111,7 +111,8 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
                       iconPath,
                       width: kNavBarIconSize,
                       height: kNavBarIconSize,
-                      color: Theme.of(context).colorScheme.primary,
+                      color: Theme.of(context).
+                      colorScheme.primary,
                     ),
                     const SizedBox(height: 4),
                     Text(

@@ -1,4 +1,5 @@
 import 'package:equatable/equatable.dart';
+import 'package:nepika/features/onboarding/bloc/onboarding_state.dart';
 
 abstract class OnboardingEvent extends Equatable {
   const OnboardingEvent();
@@ -83,4 +84,13 @@ class SkipAndFetchNextStep extends OnboardingEvent {
 
 class ResetOnboarding extends OnboardingEvent {
   const ResetOnboarding();
+}
+
+class RestoreFormState extends OnboardingEvent {
+  final OnboardingStepLoaded state;
+
+  const RestoreFormState({required this.state});
+
+  @override
+  List<Object?> get props => [state];
 }

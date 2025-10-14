@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 class GreetingSection extends StatelessWidget {
   final Map<String, dynamic> user;
@@ -67,7 +68,9 @@ class GreetingSection extends StatelessWidget {
             duration: const Duration(milliseconds: 200),
             curve: Curves.easeInOut,
             child: IconButton(
-              onPressed: () => {},
+              onPressed: () => {
+                Navigator.of(context).pushNamed(AppRoutes.dashboardSettings)
+              },
               padding: EdgeInsets.all(0),
               icon: AnimatedContainer(
                 duration: const Duration(milliseconds: 200),

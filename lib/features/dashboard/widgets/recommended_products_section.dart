@@ -274,27 +274,23 @@ class RecommendedProductsSection extends StatelessWidget {
   Widget _buildSkeletonCard(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: colorScheme.surface,
+        color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-        ],
       ),
       child: Row(
         children: [
+          // Image skeleton
           Container(
             width: 80,
             height: 90,
             decoration: BoxDecoration(
-              color: colorScheme.surfaceVariant,
+              color: baseColor,
               borderRadius: BorderRadius.circular(8),
             ),
           ),
@@ -304,40 +300,42 @@ class RecommendedProductsSection extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
+                // Product name skeleton
                 Container(
                   width: double.infinity,
-                  height: 14,
+                  height: 12,
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceVariant,
+                    color: baseColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 6),
                 Container(
-                  width: 120,
-                  height: 14,
+                  width: 100,
+                  height: 12,
                   decoration: BoxDecoration(
-                    color: colorScheme.surfaceVariant,
+                    color: baseColor,
                     borderRadius: BorderRadius.circular(4),
                   ),
                 ),
                 const SizedBox(height: 12),
+                // Badges skeleton
                 Row(
                   children: [
                     Container(
-                      width: 60,
-                      height: 32,
+                      width: 50,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant,
+                        color: baseColor,
                         borderRadius: BorderRadius.circular(100),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Container(
-                      width: 80,
-                      height: 32,
+                      width: 60,
+                      height: 28,
                       decoration: BoxDecoration(
-                        color: colorScheme.surfaceVariant,
+                        color: baseColor,
                         borderRadius: BorderRadius.circular(100),
                       ),
                     ),

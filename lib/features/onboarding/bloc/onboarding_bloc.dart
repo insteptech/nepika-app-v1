@@ -27,6 +27,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<SkipCurrentStep>(_onSkipCurrentStep);
     on<SkipAndFetchNextStep>(_onSkipAndFetchNextStep);
     on<ResetOnboarding>(_onResetOnboarding);
+    on<RestoreFormState>(_onRestoreFormState);
   }
 
   Future<void> _onLoadOnboardingStep(
@@ -171,6 +172,8 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
     if (!currentState.isFormValid) {
       debugPrint('❌ Form validation failed - emitting error');
+
+      // Emit error to show validation message - screen will preserve form using _lastLoadedState
       emit(const OnboardingError(message: 'Please answer all required questions'));
       return;
     }
@@ -207,7 +210,21 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       }
     } catch (e) {
       debugPrint('❌ Submission error: $e');
-      emit(OnboardingError(message: 'Failed to submit answers: $e'));
+
+      // Extract clean error message
+      String errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+
+      // Remove any nested "Failed to submit" prefixes
+      errorMessage = errorMessage.replaceAll('Failed to submit onboarding answers: ', '');
+      errorMessage = errorMessage.replaceAll('Failed to submit answers: ', '');
+
+      debugPrint('📤 Clean error message: $errorMessage');
+
+      // Just emit error - the screen will use _lastLoadedState to preserve form data
+      emit(OnboardingError(message: errorMessage));
     }
   }
 
@@ -331,6 +348,14 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     Emitter<OnboardingState> emit,
   ) {
     emit(const OnboardingInitial());
+  }
+
+  void _onRestoreFormState(
+    RestoreFormState event,
+    Emitter<OnboardingState> emit,
+  ) {
+    debugPrint('🔄 Restoring form state after error');
+    emit(event.state);
   }
 
   // Helper Methods

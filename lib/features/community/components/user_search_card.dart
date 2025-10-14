@@ -117,11 +117,10 @@ class _UserSearchImageIcon extends StatelessWidget {
           await RecentSearchesService.saveRecentSearch(user);
           
           if (context.mounted) {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.communityUserProfile,
-              arguments: {'userId': user.id},
-            );
+          Navigator.of(context, rootNavigator: true).pushNamed(
+            AppRoutes.communityUserProfile,
+            arguments: {'userId': user.id},
+          );
           }
         },
         borderRadius: BorderRadius.circular(24),
@@ -162,11 +161,10 @@ class _UserSearchNameWithNavigation extends StatelessWidget {
           await RecentSearchesService.saveRecentSearch(user);
           
           if (context.mounted) {
-            Navigator.pushNamed(
-              context,
-              AppRoutes.communityUserProfile,
-              arguments: {'userId': user.id},
-            );
+          Navigator.of(context, rootNavigator: true).pushNamed(
+            AppRoutes.communityUserProfile,
+            arguments: {'userId': user.id},
+          );
           }
         },
         child: Column(

@@ -22,25 +22,32 @@ class _ConditionsSectionState extends State<ConditionsSection> {
 
   @override
   Widget build(BuildContext context) {
-    if (widget.latestConditionResult == null || widget.latestConditionResult!.isEmpty) {
+    if (widget.latestConditionResult == null ||
+        widget.latestConditionResult!.isEmpty) {
       return const SizedBox.shrink();
     }
 
     // Convert the map to a list of entries and sort by percentage (highest first)
-    final conditions = widget.latestConditionResult!.entries
-        .where((entry) => entry.value is num)
-        .map((entry) => MapEntry(entry.key, (entry.value as num).toDouble()))
-        .toList()
-      ..sort((a, b) => b.value.compareTo(a.value));
+    final conditions =
+        widget.latestConditionResult!.entries
+            .where((entry) => entry.value is num)
+            .map(
+              (entry) => MapEntry(entry.key, (entry.value as num).toDouble()),
+            )
+            .toList()
+          ..sort((a, b) => b.value.compareTo(a.value));
+
+    // Limit to first 9 conditions
+    final limitedConditions = conditions.take(9).toList();
 
     // Calculate grid dimensions
     const itemsPerRow = 3;
-    final totalRows = (conditions.length / itemsPerRow).ceil();
-    final visibleRows = _isExpanded ? totalRows : 1.5;
+    final totalRows = (limitedConditions.length / itemsPerRow).ceil();
     final cardHeight = 170.0;
     final rowSpacing = 12.0;
-    final containerHeight =
-        (visibleRows * cardHeight) + ((visibleRows - 1) * rowSpacing) - 40;
+    final containerHeight = _isExpanded
+        ? (totalRows * cardHeight) + ((totalRows - 1) * rowSpacing) + 48 // Reduced button space when expanded
+        : (1.5 * cardHeight) + (0.5 * rowSpacing) + 20; // Compact when collapsed
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -58,48 +65,64 @@ class _ConditionsSectionState extends State<ConditionsSection> {
               child: GridView.builder(
                 physics: const NeverScrollableScrollPhysics(),
                 padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                gridDelegate: const 
-                SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: itemsPerRow,
                   crossAxisSpacing: 12,
                   mainAxisSpacing: 12,
                   childAspectRatio: 0.9,
                 ),
-                itemCount: conditions.length,
+                // itemCount: conditions.length,
+                // itemBuilder: (context, index) {
+                //   final condition = conditions[index];
+                //   return ConditionCard(
+                //     conditionName: condition.key,
+                //     percentage: condition.value,
+                //     onTap: () {
+                //       if (widget.onConditionTap != null) {
+                //         widget.onConditionTap!(condition.key);
+                //       }
+                //     },
+                //   );
+                // },
+                itemCount: limitedConditions.length,
                 itemBuilder: (context, index) {
-                  final condition = conditions[index];
+                  final condition = limitedConditions[index];
                   return ConditionCard(
                     conditionName: condition.key,
                     percentage: condition.value,
                     onTap: () {
-                      if (widget.onConditionTap != null) {
-                        widget.onConditionTap!(condition.key);
-                      }
+                      widget.onConditionTap?.call(condition.key);
                     },
                   );
                 },
               ),
             ),
-            
+
             // Single dynamic button with blur background (only show if has more than 1.5 rows)
             if (totalRows > 1.5)
               Positioned(
                 bottom: 0,
                 left: 0,
                 right: 0,
-                height: _isExpanded ? 60 : 80,
+                height: _isExpanded ? 48 : 120,
                 child: Container(
-                  decoration: _isExpanded ? null : BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.0),
-                        Theme.of(context).scaffoldBackgroundColor.withValues(alpha: 0.8),
-                        Theme.of(context).scaffoldBackgroundColor,
-                      ],
-                    ),
-                  ),
+                  decoration: _isExpanded
+                      ? null
+                      : BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor.withValues(alpha: 0.0),
+                              Theme.of(
+                                context,
+                              ).scaffoldBackgroundColor.withValues(alpha: 0.8),
+                              Theme.of(context).scaffoldBackgroundColor,
+                            ],
+                          ),
+                        ),
                   child: Center(
                     child: GestureDetector(
                       onTap: () {
@@ -112,9 +135,14 @@ class _ConditionsSectionState extends State<ConditionsSection> {
                         child: BackdropFilter(
                           filter: ImageFilter.blur(sigmaX: .5, sigmaY: .5),
                           child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 8,
+                            ),
                             decoration: BoxDecoration(
-                              color: Theme.of(context).colorScheme.onTertiary.withValues(alpha: .9),
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onTertiary.withValues(alpha: .9),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                 color: Colors.blueGrey.withValues(alpha: .6),
@@ -126,12 +154,18 @@ class _ConditionsSectionState extends State<ConditionsSection> {
                               children: [
                                 Text(
                                   _isExpanded ? 'View Less' : 'View More',
-                                  style: Theme.of(context).textTheme.bodyMedium?.hint(context)
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.hint(context),
                                 ),
                                 const SizedBox(width: 4),
                                 Icon(
-                                  _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
-                                  color: Theme.of(context).textTheme.bodyMedium?.hint(context).color!,
+                                  _isExpanded
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  color: Theme.of(
+                                    context,
+                                  ).textTheme.bodyMedium?.hint(context).color!,
                                   size: 20,
                                 ),
                               ],

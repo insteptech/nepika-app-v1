@@ -7,6 +7,10 @@ import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
 import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
 import 'package:nepika/features/face_scan/main.dart';
+import 'package:nepika/features/face_scan/screens/scan_report_loader_screen.dart';
+import 'package:nepika/features/dashboard/screens/image_gallery_screen.dart';
+import 'package:nepika/features/dashboard/screens/history_screen.dart';
+import 'package:nepika/features/settings/screens/main_settings_screen.dart';
 import 'core/di/injection_container.dart' as di;
 import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
 import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
@@ -127,6 +131,13 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.dashboardHome:
               return MaterialPageRoute(builder: (_) => const DashboardWithNotifications());
+            case AppRoutes.dashboardScanResultDetails:
+              // Navigate to dashboard first, then to scan result details
+              return MaterialPageRoute(
+                builder: (_) => DashboardWithScanResults(
+                  reportId: (settings.arguments as Map<String, dynamic>?)?['reportId'] as String?,
+                ),
+              );
             case AppRoutes.conditionDetailsPage:
               return MaterialPageRoute(
                 settings: settings,
@@ -157,6 +168,23 @@ class MyApp extends StatelessWidget {
                   return ProductInfoScreen(productId: productId);
                 },
               );
+            case AppRoutes.dashboardImageGallery:
+              return MaterialPageRoute(
+                settings: settings,
+                builder: (_) {
+                  final args = settings.arguments as Map<String, dynamic>?;
+                  final images = args?['images'] as List<Map<String, dynamic>>?;
+                  return ImageGalleryScreen(initialImages: images);
+                },
+              );
+            case AppRoutes.dashboardHistory:
+              return MaterialPageRoute(
+                builder: (_) => const HistoryScreen(),
+              );
+            case AppRoutes.dashboardSettings:
+              return MaterialPageRoute(
+                builder: (_) => const MainSettingsScreen(),
+              );
             case AppRoutes.subscription:
               return MaterialPageRoute(builder: (_) => const PricingScreen());
             case AppRoutes.notifications:
@@ -179,6 +207,15 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.termsOfUse:
               return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
+            case AppRoutes.scanResultDetails:
+              final args = settings.arguments as Map<String, dynamic>?;
+              final reportId = args?['reportId'] as String?;
+              if (reportId == null) {
+                return MaterialPageRoute(builder: (_) => const NotFoundScreen());
+              }
+              return MaterialPageRoute(
+                builder: (_) => ScanReportLoaderScreen(reportId: reportId),
+              );
             case AppRoutes.notFound:
               return MaterialPageRoute(builder: (_) => const NotFoundScreen());
             default:

@@ -52,13 +52,18 @@ class AppRoutes {
 
   static const String dashboardAllProducts = '/dashboard/products/all';
   static const String dashboardSpecificProduct = '/dashboard/products/info';
-
+  static const String dashboardImageGallery = '/dashboard/image-gallery';
+  static const String dashboardHistory = '/dashboard/history';
 
   static const String dashboardSettings = '/dashboard/settings';
   static const String notificationsAndSettings = '/dashboard/settings/notifications-and-settings';
   static const String helpAndSupport = '/dashboard/settings/help-and-support';
   static const String communityAndEngagement = '/dashboard/settings/community-and-engagement';
   static const String setupNotifications = '/dashboard/settings/setup_notifications';
+  
+  // Face scan routes
+  static const String dashboardScanResultDetails = '/dashboard/scan-result-details';
+  static const String scanResultDetails = '/scan-result-details';
 
 
 

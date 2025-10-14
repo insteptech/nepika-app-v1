@@ -3,7 +3,6 @@ import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
 import 'package:nepika/core/config/env.dart';
-import 'package:nepika/core/utils/secure_storage.dart';
 import 'package:nepika/core/network/secure_api_client.dart';
 
 /// Handles API communication for face scan analysis

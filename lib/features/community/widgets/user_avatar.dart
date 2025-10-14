@@ -78,10 +78,9 @@ class UserAvatar extends StatelessWidget {
   }
 
   void _navigateToProfile(BuildContext context) {
-    Navigator.pushNamed(
-      context,
-      AppRoutes.communityUserProfile,
-      arguments: {'userId': author.id},
-    );
+          Navigator.of(context, rootNavigator: true).pushNamed(
+            AppRoutes.communityUserProfile,
+            arguments: {'userId': author.id},
+          );
   }
 }

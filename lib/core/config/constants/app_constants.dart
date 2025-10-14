@@ -9,7 +9,7 @@ class AppConstants {
 
 
   static const String appLanguageKey = 'app_language';
-  
+
   // Storage Keys
   static const String userTokenKey = 'user_token';
   static const String userDataKey = 'user_data';
@@ -17,6 +17,7 @@ class AppConstants {
   static const String onboardingKey = 'onboarding_completed';
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
+  static const String termsAcceptedKey = 'terms_accepted';
   
   // Animation Durations
   static const Duration defaultAnimationDuration = Duration(milliseconds: 300);

@@ -6,36 +6,45 @@ import 'package:image/image.dart' as img;
 /// Handles image processing for face scan captured images
 class FaceScanImageProcessor {
   
-  /// Process captured image for upload (flip if front camera)
+  /// Process captured image for upload (rotate and flip as needed)
   static Future<XFile> processImageForUpload(
     XFile imageFile,
     CameraLensDirection? lensDirection,
   ) async {
-    // If it's a front camera, flip the image horizontally
-    if (lensDirection == CameraLensDirection.front) {
-      try {
-        final bytes = await imageFile.readAsBytes();
-        final image = img.decodeImage(bytes);
+    try {
+      final bytes = await imageFile.readAsBytes();
+      final image = img.decodeImage(bytes);
+      
+      if (image != null) {
+        img.Image processedImage = image;
         
-        if (image != null) {
-          // Flip horizontally
-          final flippedImage = img.flipHorizontal(image);
-          
-          // Save the flipped image to a temporary file
-          final tempDir = Directory.systemTemp;
-          final timestamp = DateTime.now().millisecondsSinceEpoch;
-          final tempFile = File('${tempDir.path}/flipped_face_image_$timestamp.jpg');
-          await tempFile.writeAsBytes(img.encodeJpg(flippedImage));
-          
-          debugPrint('Image flipped for front camera');
-          return XFile(tempFile.path);
+        // Log original image dimensions for debugging
+        debugPrint('Original image dimensions: ${image.width}x${image.height}');
+        debugPrint('Camera lens direction: $lensDirection');
+        
+        // Don't apply any rotation by default - test if camera captures are correct orientation
+        // If rotation is needed, it should be determined by actual testing, not assumptions
+        
+        // If it's a front camera, flip the image horizontally
+        if (lensDirection == CameraLensDirection.front) {
+          processedImage = img.flipHorizontal(processedImage);
+          debugPrint('Image flipped horizontally for front camera');
         }
-      } catch (e) {
-        debugPrint('Error processing image: $e');
+        
+        // Save the processed image to a temporary file
+        final tempDir = Directory.systemTemp;
+        final timestamp = DateTime.now().millisecondsSinceEpoch;
+        final tempFile = File('${tempDir.path}/processed_face_image_$timestamp.jpg');
+        await tempFile.writeAsBytes(img.encodeJpg(processedImage, quality: 90));
+        
+        debugPrint('Image processed successfully: ${processedImage.width}x${processedImage.height}');
+        return XFile(tempFile.path);
       }
+    } catch (e) {
+      debugPrint('Error processing image: $e');
     }
     
-    // Return original image if not front camera or if processing failed
+    // Return original image if processing failed
     return imageFile;
   }
 

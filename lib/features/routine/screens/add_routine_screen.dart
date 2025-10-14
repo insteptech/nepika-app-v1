@@ -5,6 +5,7 @@ import '../../../core/config/constants/routes.dart';
 import '../../../core/config/constants/app_constants.dart';
 import '../../../core/config/constants/theme.dart';
 import '../../../core/widgets/back_button.dart';
+import '../../../core/widgets/skeleton_loader.dart';
 import '../../../core/utils/logger.dart';
 import '../../../domain/routine/entities/routine.dart';
 import '../bloc/routine_bloc.dart';
@@ -92,8 +93,33 @@ class _AddRoutineScreenState extends State<AddRoutineScreen> {
   @override
   Widget build(BuildContext context) {
     if (!_isInitialized || _token == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
+      return Scaffold(
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 16),
+                const CustomBackButton(),
+                const SizedBox(height: 15),
+                const SizedBox(height: 40),
+                Text(
+                  "Add new routine",
+                  style: Theme.of(context).textTheme.displaySmall,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Select routine steps to add to your daily routine',
+                  style: Theme.of(context).textTheme.headlineMedium!.secondary(context),
+                ),
+                const SizedBox(height: 35),
+                Expanded(child: _buildRoutineSkeletons()),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
@@ -232,9 +258,9 @@ class _AddRoutineScreenState extends State<AddRoutineScreen> {
     required List<Routine> routines,
   }) {
     if (loading) {
-      return const Center(child: CircularProgressIndicator());
+      return _buildRoutineSkeletons();
     }
-    
+
     if (errorMessage != null) {
       return RoutineErrorWidget(
         message: errorMessage,
@@ -245,7 +271,7 @@ class _AddRoutineScreenState extends State<AddRoutineScreen> {
         },
       );
     }
-    
+
     if (routines.isEmpty) {
       return NoRoutinesAvailable(
         onRefresh: () {
@@ -260,7 +286,7 @@ class _AddRoutineScreenState extends State<AddRoutineScreen> {
       children: routines.map((routine) {
         final isLoading = _addingRoutineId == routine.id;
         final isSuccessfullyAdded = _successfullyAddedRoutineIds.contains(routine.id);
-        
+
         return RoutineTile(
           routine: routine,
           type: RoutineTileType.selection,
@@ -269,6 +295,70 @@ class _AddRoutineScreenState extends State<AddRoutineScreen> {
           onAdd: () => _onAddRoutine(routine.id),
         );
       }).toList(),
+    );
+  }
+
+  Widget _buildRoutineSkeletons() {
+    return Column(
+      children: List.generate(5, (index) => _buildRoutineSkeleton()),
+    );
+  }
+
+  Widget _buildRoutineSkeleton() {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Icon skeleton
+          const SkeletonLoader(
+            width: 48,
+            height: 48,
+            borderRadius: BorderRadius.all(Radius.circular(12)),
+          ),
+          const SizedBox(width: 16),
+          // Content skeleton
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Title skeleton
+                const SkeletonLoader(
+                  width: 150,
+                  height: 20,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+                const SizedBox(height: 8),
+                // Description skeleton
+                const SkeletonLoader(
+                  width: double.infinity,
+                  height: 14,
+                  borderRadius: BorderRadius.all(Radius.circular(4)),
+                ),
+                const SizedBox(height: 4),
+                // Second line of description
+                SkeletonLoader(
+                  width: MediaQuery.of(context).size.width * 0.6,
+                  height: 14,
+                  borderRadius: const BorderRadius.all(Radius.circular(4)),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Add button skeleton
+          const SkeletonLoader(
+            width: 32,
+            height: 32,
+            borderRadius: BorderRadius.all(Radius.circular(8)),
+          ),
+        ],
+      ),
     );
   }
 

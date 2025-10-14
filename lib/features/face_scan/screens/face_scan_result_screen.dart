@@ -4,9 +4,7 @@ import 'dart:ui' as ui;
 import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
-// import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-// import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/widgets/authenticated_network_image.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import '../components/camera_manager.dart';
@@ -18,6 +16,8 @@ import '../widgets/face_alignment_overlay.dart';
 import '../widgets/shimmer_overlay.dart';
 import '../components/bounding_box_painter.dart';
 import '../models/detection_models.dart';
+import '../models/scan_analysis_models.dart';
+import 'scan_result_details_screen.dart';
 
 /// Main face scan result page with camera, face detection, and analysis
 class FaceScanResultScreen extends StatefulWidget {
@@ -69,6 +69,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
   String? _apiError;
   DetectionResults? _detectionResults;
   ui.Size? _actualImageSize;
+  ScanAnalysisResponse? _scanAnalysisResponse;
   
 
   @override
@@ -261,6 +262,8 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
         _showShimmerCompletion = true;
         // Parse detection results from API response
         _detectionResults = _parseDetectionResults(result.analysisResults);
+        // Parse complete scan analysis response
+        _scanAnalysisResponse = ScanAnalysisResponse.fromJson(result.analysisResults ?? {});
         // Keep _isProcessingAPI = true until completion animation finishes
       });
 
@@ -275,6 +278,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
         _isProcessingAPI = false;
         _reportImageUrl = null;
         _detectionResults = null;
+        _scanAnalysisResponse = null;
       });
     }
   }
@@ -291,6 +295,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       _isProcessingAPI = false;
       _showShimmerCompletion = false;
       _detectionResults = null;
+      _scanAnalysisResponse = null;
       _selectedCondition = null;
       _actualImageSize = null;
       _resetToDefaultState();
@@ -1151,13 +1156,34 @@ Widget _buildImageWidget() {
     }
 
     // Show result button if analysis is available
-    if (_analysisResults != null || _detectionResults != null) {
+    if (_scanAnalysisResponse != null) {
       return Container(
           padding: const EdgeInsets.symmetric(horizontal: 0,vertical: 30),
           width: double.infinity,
           child: CustomButton(
             text: 'Result',
-            onPressed: null,
+            onPressed: () {
+              // Navigate directly to scan result details screen
+              final reportId = _scanAnalysisResponse?.reportId;
+              debugPrint('📊 Report ID for navigation: $reportId');
+
+              if (reportId != null) {
+                debugPrint('✅ Navigating to ScanResultDetailsScreen with reportId: $reportId');
+                Navigator.of(context).push(
+                  MaterialPageRoute(
+                    builder: (context) => ScanResultDetailsScreen(
+                      reportId: reportId,
+                    ),
+                  ),
+                );
+              } else {
+                // Fallback: show error if no report ID
+                debugPrint('❌ Report ID is null - cannot navigate to details');
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Report ID not available')),
+                );
+              }
+            },
           ),
         );
     }

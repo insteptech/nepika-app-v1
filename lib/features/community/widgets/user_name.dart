@@ -16,8 +16,7 @@ class UserNameWithNavigation extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          Navigator.pushNamed(
-            context,
+          Navigator.of(context, rootNavigator: true).pushNamed(
             AppRoutes.communityUserProfile,
             arguments: {'userId': userId},
           );

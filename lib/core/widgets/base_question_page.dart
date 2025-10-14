@@ -165,6 +165,7 @@ class BaseQuestionPage extends StatefulWidget {
   final bool showBackButton;
   final bool showSkipButton;
   final bool showProgressBar;
+  final bool isLoading;
 
   // Universal list of question routes (update as needed)
   // static final List<String> questionRoutes = [
@@ -191,6 +192,7 @@ class BaseQuestionPage extends StatefulWidget {
     this.showBackButton = true,
     this.showSkipButton = true,
     this.showProgressBar = true,
+    this.isLoading = false,
   });
 
   @override
@@ -266,8 +268,9 @@ class _BaseQuestionPageState extends State<BaseQuestionPage> {
           width: double.infinity,
           child: CustomButton(
             text: widget.buttonText,
-            onPressed: widget.isFormValid ? widget.onNext : null,
-            isDisabled: !widget.isFormValid,
+            onPressed: (widget.isFormValid && !widget.isLoading) ? widget.onNext : null,
+            isDisabled: !widget.isFormValid || widget.isLoading,
+            isLoading: widget.isLoading,
           ),
         )
       ],

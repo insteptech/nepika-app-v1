@@ -40,10 +40,10 @@ class _DashboardScreenState extends State<DashboardScreen>
   String? _token;
   bool _isInitialized = false;
   DateTime? _lastRefreshTime;
-  bool _hasNavigatedAway = false;
   final FocusNode _focusNode = FocusNode();
   // ignore: unused_field
   bool _isPageVisible = true;
+  RouteObserver<PageRoute>? _routeObserver;
 
   @override
   void initState() {
@@ -51,16 +51,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     WidgetsBinding.instance.addObserver(this);
     _dashboardBloc = DashboardBloc(DashboardRepositoryImpl(ApiBase()));
 
-    // Add focus listener for additional refresh trigger
-    _focusNode.addListener(() {
-      if (_focusNode.hasFocus &&
-          _isInitialized &&
-          _token != null &&
-          _shouldRefresh()) {
-        debugPrint('Dashboard: Focus gained, refreshing data');
-        _refreshDashboard();
-      }
-    });
+    // Focus listener removed - was causing excessive requests
 
     _loadTokenAndFetch();
   }
@@ -88,33 +79,22 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (route != null && route is PageRoute) {
       final navigator = Navigator.of(context);
       final observers = navigator.widget.observers;
-      final routeObserver = observers
+      _routeObserver = observers
           .whereType<RouteObserver<PageRoute>>()
           .firstOrNull;
-      if (routeObserver != null) {
-        routeObserver.subscribe(this, route);
+      if (_routeObserver != null) {
+        _routeObserver!.subscribe(this, route);
       }
     }
-
-    // Additional refresh trigger when dependencies change
-    if (_hasNavigatedAway &&
-        _isInitialized &&
-        _token != null &&
-        _shouldRefresh()) {
-      debugPrint('Dashboard: Dependencies changed, refreshing after navigation');
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _refreshDashboard();
-        _hasNavigatedAway = false;
-      });
-    }
+    // Removed dependency change refresh - was causing excessive requests
   }
 
   @override
   void didPopNext() {
     // Called when a route has been popped off, and the current route shows up
-    debugPrint('Dashboard: Returned from another screen, refreshing data');
+    debugPrint('Dashboard: Returned from another screen');
     _isPageVisible = true;
-    _hasNavigatedAway = false;
+    // Only refresh if enough time has passed (30 seconds)
     if (_isInitialized && _token != null && _shouldRefresh()) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         _refreshDashboard();
@@ -126,7 +106,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   void didPushNext() {
     // Called when the current route has been pushed
     debugPrint('Dashboard: Navigated to another screen');
-    _hasNavigatedAway = true;
     _isPageVisible = false;
   }
 
@@ -135,8 +114,9 @@ class _DashboardScreenState extends State<DashboardScreen>
     if (_lastRefreshTime == null) {
       return true;
     }
-    // Refresh if more than 1 second has passed since last refresh
-    return now.difference(_lastRefreshTime!).inSeconds > 1;
+    // Refresh if more than 30 seconds has passed since last refresh
+    // This prevents over-requesting the /welcome endpoint
+    return now.difference(_lastRefreshTime!).inSeconds > 30;
   }
 
   Future<void> _loadTokenAndFetch() async {
@@ -167,13 +147,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     _focusNode.dispose();
 
     // Unsubscribe from RouteObserver
-    final navigator = Navigator.of(context);
-    final observers = navigator.widget.observers;
-    final routeObserver = observers
-        .whereType<RouteObserver<PageRoute>>()
-        .firstOrNull;
-    if (routeObserver != null) {
-      routeObserver.unsubscribe(this);
+    if (_routeObserver != null) {
+      _routeObserver!.unsubscribe(this);
     }
     _dashboardBloc.close();
     super.dispose();
@@ -181,16 +156,7 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Add a post-frame callback to refresh when widget is rebuilt after navigation
-    if (_isInitialized && _token != null && _hasNavigatedAway) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (_shouldRefresh()) {
-          debugPrint('Dashboard: Build after navigation, refreshing data');
-          _refreshDashboard();
-          _hasNavigatedAway = false;
-        }
-      });
-    }
+    // Removed build refresh - handled by didPopNext instead
 
     return BlocProvider.value(
       value: _dashboardBloc,
@@ -337,7 +303,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ConditionsSection(
               latestConditionResult: latestConditionResult,
               onConditionTap: (conditionName) =>
-                  _handleConditionTap(conditionName, skinScore),
+                  _handleConditionTap(conditionName, skinScore, imageGallery),
             ),
             const SizedBox(height: 10),
             _buildProgressSummarySection(progressSummary),
@@ -429,13 +395,23 @@ class _DashboardScreenState extends State<DashboardScreen>
           showButton: true,
           buttonText: 'View all',
           onButtonPressed: () {
-            if (widget.onNavigate != null) {
-              widget.onNavigate!('/image_gallery');
-            }
+            Navigator.of(context, rootNavigator: true).pushNamed(
+              AppRoutes.dashboardImageGallery,
+              arguments: {'images': imageGallery},
+            );
           },
           buttonLoading: isLoading,
         ),
-        ImageGallerySection(imageGallery: imageGallery),
+        ImageGallerySection(
+          imageGallery: imageGallery,
+          isLoading: isLoading,
+          onShowAll: () {
+            Navigator.of(context, rootNavigator: true).pushNamed(
+              AppRoutes.dashboardImageGallery,
+              arguments: {'images': imageGallery},
+            );
+          },
+        ),
       ],
     );
   }
@@ -463,15 +439,32 @@ class _DashboardScreenState extends State<DashboardScreen>
   }
 
   void _handleConditionTap(
-      String conditionName, Map<String, dynamic> skinScore) {
-    final arguments = {
-      'skinScore': skinScore,
-      'conditionInfo': conditionName,
-    };
-    Navigator.of(context, rootNavigator: true).pushNamed(
-      AppRoutes.conditionDetailsPage,
-      arguments: arguments,
-    );
+      String conditionName,
+      Map<String, dynamic> skinScore,
+      List<Map<String, dynamic>> imageGallery) {
+    // Get the latest report ID from imageGallery
+    String? reportId;
+    if (imageGallery.isNotEmpty) {
+      reportId = imageGallery.first['id'] as String?;
+    }
+
+    if (reportId != null) {
+      // Navigate to scan result details screen with report ID
+      Navigator.of(context, rootNavigator: true).pushNamed(
+        AppRoutes.scanResultDetails,
+        arguments: {
+          'reportId': reportId,
+        },
+      );
+    } else {
+      // Fallback: Show error if no report ID available
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No scan results available'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 }
 

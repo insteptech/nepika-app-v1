@@ -210,8 +210,8 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   Widget _buildTitle(TextTheme textTheme) {
     return Text(
-      "Recommend Products",
-      style: textTheme.bodyLarge,
+      "History",
+      style: textTheme.headlineLarge,
     );
   }
 
@@ -241,7 +241,7 @@ class _ProductsScreenState extends State<ProductsScreen> {
   Widget _buildEmptyState(BuildContext context) {
     return Center(
       child: Text(
-        'No products found',
+        'No data found',
         style: Theme.of(context).textTheme.bodyMedium!.secondary(context),
       ),
     );

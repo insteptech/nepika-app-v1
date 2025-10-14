@@ -16,7 +16,8 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
   List<CameraDescription> _cameras = [];
   bool _isInitialized = false;
   bool _isCapturing = false;
-  
+  int _currentCameraIndex = 0; // Track current camera (0 = front, 1 = back)
+
   @override
   void initState() {
     super.initState();
@@ -32,28 +33,29 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
   Future<void> _initializeCamera() async {
     // Request camera permission
     final cameraPermission = await Permission.camera.request();
-    
+
     if (cameraPermission.isGranted) {
       try {
         // Get available cameras
         _cameras = await availableCameras();
-        
+
         if (_cameras.isNotEmpty) {
-          // Use front camera if available, otherwise use first camera
-          final frontCamera = _cameras.firstWhere(
+          // Use front camera first if available
+          final frontCameraIndex = _cameras.indexWhere(
             (camera) => camera.lensDirection == CameraLensDirection.front,
-            orElse: () => _cameras.first,
           );
-          
+
+          _currentCameraIndex = frontCameraIndex != -1 ? frontCameraIndex : 0;
+
           // Initialize camera controller
           _cameraController = CameraController(
-            frontCamera,
+            _cameras[_currentCameraIndex],
             ResolutionPreset.high,
             enableAudio: false,
           );
-          
+
           await _cameraController!.initialize();
-          
+
           if (mounted) {
             setState(() {
               _isInitialized = true;
@@ -69,6 +71,42 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
     } else {
       if (mounted) {
         _showErrorDialog('Camera permission is required to take photos.');
+      }
+    }
+  }
+
+  Future<void> _switchCamera() async {
+    if (_cameras.length < 2) return;
+
+    setState(() {
+      _isInitialized = false;
+    });
+
+    await _cameraController?.dispose();
+
+    // Toggle camera index
+    _currentCameraIndex = (_currentCameraIndex + 1) % _cameras.length;
+
+    try {
+      _cameraController = CameraController(
+        _cameras[_currentCameraIndex],
+        ResolutionPreset.high,
+        enableAudio: false,
+      );
+
+      await _cameraController!.initialize();
+
+      if (mounted) {
+        setState(() {
+          _isInitialized = true;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error switching camera: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error switching camera: ${e.toString()}')),
+        );
       }
     }
   }
@@ -123,15 +161,27 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
   
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+
     return Scaffold(
       backgroundColor: Colors.black,
       body: SafeArea(
         child: Stack(
           children: [
-            // Camera preview
+            // Camera preview with proper aspect ratio (no stretching)
             if (_isInitialized && _cameraController != null)
               Positioned.fill(
-                child: CameraPreview(_cameraController!),
+                child: OverflowBox(
+                  alignment: Alignment.center,
+                  child: FittedBox(
+                    fit: BoxFit.cover,
+                    child: SizedBox(
+                      width: MediaQuery.of(context).size.width,
+                      height: MediaQuery.of(context).size.width * _cameraController!.value.aspectRatio,
+                      child: CameraPreview(_cameraController!),
+                    ),
+                  ),
+                ),
               )
             else
               const Center(
@@ -147,15 +197,15 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
                   ],
                 ),
               ),
-            
-            // Face alignment guide overlay
+
+            // Face alignment guide overlay (80% of screen width)
             if (_isInitialized)
               Positioned.fill(
                 child: CustomPaint(
-                  painter: FaceAlignmentPainter(),
+                  painter: FaceAlignmentPainter(circleRadius: screenWidth * 0.4),
                 ),
               ),
-            
+
             // Top controls
             Positioned(
               top: 16,
@@ -181,66 +231,31 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
                       ),
                     ),
                   ),
-                  
-                  // Title
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withValues(alpha: 0.5),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      'Align Your Face',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
+
+                  const Spacer(),
+
+                  // Camera switch button
+                  if (_cameras.length > 1)
+                    GestureDetector(
+                      onTap: _switchCamera,
+                      child: Container(
+                        width: 40,
+                        height: 40,
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.5),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.flip_camera_ios,
+                          color: Colors.white,
+                          size: 24,
+                        ),
                       ),
                     ),
-                  ),
-                  
-                  const SizedBox(width: 40), // Spacer to center title
                 ],
               ),
             ),
-            
-            // Instructions
-            Positioned(
-              bottom: 140,
-              left: 20,
-              right: 20,
-              child: Container(
-                padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: Colors.black.withValues(alpha: 0.7),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: const Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(
-                      'Position your face within the circle',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                    SizedBox(height: 8),
-                    Text(
-                      'Make sure your face is well-lit and centered',
-                      style: TextStyle(
-                        color: Colors.white70,
-                        fontSize: 14,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            
+
             // Bottom controls
             Positioned(
               bottom: 32,
@@ -289,22 +304,26 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
 
 /// Custom painter for face alignment guide
 class FaceAlignmentPainter extends CustomPainter {
+  final double circleRadius;
+
+  FaceAlignmentPainter({this.circleRadius = 120.0});
+
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
       ..color = Colors.white.withValues(alpha: 0.8)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3.0;
-    
-    final center = Offset(size.width / 2, size.height / 2 - 50);
-    const radius = 120.0;
-    
+
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = circleRadius;
+
     // Draw main circle
     canvas.drawCircle(center, radius, paint);
-    
+
     // Draw corner guides
     const guideLength = 20.0;
-    const guideOffset = radius * 0.7;
+    final guideOffset = radius * 0.7;
     
     final guidePaint = Paint()
       ..color = Colors.white.withValues(alpha: 0.6)

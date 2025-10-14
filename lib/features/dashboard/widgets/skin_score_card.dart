@@ -141,17 +141,13 @@ class SkinScoreCard extends StatelessWidget {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
     final textTheme = theme.textTheme;
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
+
     return Container(
       decoration: BoxDecoration(
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: colorScheme.shadow.withValues(alpha: 0.08),
-            blurRadius: 20,
-            offset: const Offset(0, 10),
-          ),
-        ],
       ),
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -159,25 +155,17 @@ class SkinScoreCard extends StatelessWidget {
         children: [
           Text(
             'Your skin score',
-            style: textTheme.bodyLarge
+            style: textTheme.bodyLarge!.secondary(context).copyWith(fontSize: 13),
           ),
           const SizedBox(height: 8),
-          Row(
-            children: [
-              // Skeleton for score (backend data)
-              Container(
-                width: 60,
-                height: 30,
-                decoration: BoxDecoration(
-                  color: colorScheme.surfaceVariant,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: _buildShimmerEffect(),
-              ),
-              const SizedBox(width: 8),
-              // Skeleton for change value (backend data)
-             
-            ],
+          // Skeleton for score
+          Container(
+            width: 60,
+            height: 24,
+            decoration: BoxDecoration(
+              color: baseColor,
+              borderRadius: BorderRadius.circular(4),
+            ),
           ),
           const Spacer(),
           Column(
@@ -185,56 +173,22 @@ class SkinScoreCard extends StatelessWidget {
             children: [
               Text(
                 'Last updated:',
-            style: textTheme.bodyMedium
+                style: textTheme.bodyMedium!.secondary(context),
               ),
-              const SizedBox(height: 2),
-              // Skeleton for date (backend data)
+              const SizedBox(height: 4),
+              // Skeleton for date
               Container(
-                width: 160,
-                height: 12,
+                width: 120,
+                height: 10,
                 decoration: BoxDecoration(
-                  color: colorScheme.onSurface,
+                  color: baseColor,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: _buildShimmerEffect(),
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildShimmerEffect() {
-    return TweenAnimationBuilder<double>(
-      tween: Tween(begin: 0.3, end: 1.0),
-      duration: const Duration(milliseconds: 1500),
-      builder: (context, value, child) {
-        return AnimatedBuilder(
-          animation: AlwaysStoppedAnimation(value),
-          builder: (context, child) {
-            return Container(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Colors.grey[300]!,
-                    Colors.grey[100]!,
-                    Colors.grey[300]!,
-                  ],
-                  stops: [
-                    (value - 0.3).clamp(0.0, 1.0),
-                    value.clamp(0.0, 1.0),
-                    (value + 0.3).clamp(0.0, 1.0),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(4),
-              ),
-            );
-          },
-        );
-      },
     );
   }
 }

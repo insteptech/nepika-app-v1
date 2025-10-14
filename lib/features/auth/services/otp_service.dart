@@ -65,75 +65,96 @@ class OtpService {
     }
 
     _isListening = true;
-    
+
     try {
-      debugPrint('OtpService: Starting SMS listener with permissions verified');
-      
-      // Get app signature for debugging and SMS format verification
+      debugPrint('OtpService: ========== STARTING SMS LISTENER ==========');
+      debugPrint('OtpService: Permission granted, initializing listener...');
+
+      // Get app signature for debugging
       try {
         final signature = await SmsAutoFill().getAppSignature;
         debugPrint('OtpService: App signature: $signature');
-        debugPrint('OtpService: Expected SMS format: "Your OTP code is: 123456. This code will expire in 5 minutes."');
-        debugPrint('OtpService: Note: App signature ($signature) not required for your SMS format');
+        debugPrint('OtpService: ==========================================');
+        debugPrint('OtpService: ⚠️  BACKEND MUST SEND SMS IN THIS EXACT FORMAT:');
+        debugPrint('OtpService: ==========================================');
+        debugPrint('OtpService: <#> Your OTP code is 163051');
+        debugPrint('OtpService: Do not share this code. It will expire in 5 minutes.');
+        debugPrint('OtpService: $signature');
+        debugPrint('OtpService: ==========================================');
+        debugPrint('OtpService: Note: The app signature "$signature" MUST be on a separate line at the end');
+        debugPrint('OtpService: Note: The SMS MUST start with "<#>" for Android auto-detection');
+        debugPrint('OtpService: ==========================================');
       } catch (error) {
         debugPrint('OtpService: Error getting app signature: $error');
       }
-      
-      // Initialize SmsAutoFill listener with multiple approaches
-      debugPrint('OtpService: Initializing SmsAutoFill listener...');
-      
-      // Try without regex first (most compatible)
-      SmsAutoFill().listenForCode;
-      debugPrint('OtpService: SmsAutoFill listener initialized without regex (broad detection)');
-      
-      // Also try with a simpler regex pattern
+
+      // Method 1: Use listenForCode with a specific pattern
+      debugPrint('OtpService: Starting listener with regex pattern...');
+
       try {
-        SmsAutoFill().listenForCode(smsCodeRegexPattern: r'\d{6}');
-        debugPrint('OtpService: SmsAutoFill listener also set with simple 6-digit regex');
+        // First, unregister any existing listener
+        SmsAutoFill().unregisterListener();
+        debugPrint('OtpService: Unregistered any existing listeners');
       } catch (e) {
-        debugPrint('OtpService: Could not set regex pattern: $e');
+        debugPrint('OtpService: No existing listener to unregister: $e');
       }
-      
+
+      // Now start fresh listener
+      await SmsAutoFill().listenForCode();
+      debugPrint('OtpService: ✅ Listener initialized successfully');
+
+      // Method 2: Also periodically check using getSmsCode (backup method)
+      Timer.periodic(const Duration(seconds: 2), (timer) {
+        if (!_isListening) {
+          timer.cancel();
+          return;
+        }
+
+        debugPrint('OtpService: Polling for SMS code (backup method)...');
+        SmsAutoFill().getAppSignature.then((signature) {
+          debugPrint('OtpService: Poll check - signature still active: $signature');
+        });
+      });
+
       // Set up timeout
       _autoCaptuteTimeout = Timer(const Duration(seconds: _timeoutSeconds), () {
-        debugPrint('OtpService: Timeout reached after $_timeoutSeconds seconds');
+        debugPrint('OtpService: ⏱️ Timeout reached after $_timeoutSeconds seconds');
         _isListening = false;
         SmsAutoFill().unregisterListener();
         onTimeout();
       });
 
-      // Listen for SMS using both methods for better compatibility
+      // Listen for SMS code
       _smsSubscription = SmsAutoFill().code.listen(
         (code) {
-          debugPrint('OtpService: ✅ SMS DETECTED! Received code from SmsAutoFill: "$code"');
+          debugPrint('OtpService: ========== SMS CODE RECEIVED ==========');
+          debugPrint('OtpService: Raw code from SmsAutoFill: "$code"');
+          debugPrint('OtpService: Code length: ${code.length}');
+
           if (code.isEmpty) {
-            debugPrint('OtpService: ⚠️ Received empty code from SmsAutoFill');
-          } else {
-            _processSmsCode(code, onOtpReceived);
+            debugPrint('OtpService: ⚠️ Received empty code');
+            return;
           }
+
+          debugPrint('OtpService: Processing received code...');
+          _processSmsCode(code, onOtpReceived);
         },
         onError: (error) {
-          debugPrint('OtpService: ❌ Error listening for SMS code: $error');
+          debugPrint('OtpService: ❌ Error in SMS listener: $error');
           _isListening = false;
           onError?.call();
         },
+        onDone: () {
+          debugPrint('OtpService: SMS listener stream closed');
+        },
       );
-      
-      debugPrint('OtpService: 📱 SMS listener active - waiting for incoming SMS...');
-      debugPrint('OtpService: 📋 Expected format: "Your OTP code is: 123456. This code will expire in 5 minutes."');
-      debugPrint('OtpService: ⚠️ TROUBLESHOOTING TIPS:');
-      debugPrint('OtpService: 1. Try sending SMS from a verified/branded sender ID');
-      debugPrint('OtpService: 2. Ensure SMS contains only alphanumeric characters');
-      debugPrint('OtpService: 3. Some SMS gateways may not work with auto-detection');
-      debugPrint('OtpService: 4. Test by manually sending SMS from another phone to this number');
-      
-      // Note: getIncomingSms is not available in current sms_autofill version
-      // The main listener above should handle SMS detection
-      
-      debugPrint('OtpService: SMS listener setup complete, waiting for SMS...');
-      
-    } catch (e) {
-      debugPrint('OtpService: Exception in startListening: $e');
+
+      debugPrint('OtpService: 📱 SMS listener is now ACTIVE and waiting...');
+      debugPrint('OtpService: ==========================================');
+
+    } catch (e, stackTrace) {
+      debugPrint('OtpService: ❌ Exception in startListening: $e');
+      debugPrint('OtpService: Stack trace: $stackTrace');
       _isListening = false;
       onError?.call();
     }
@@ -144,47 +165,77 @@ class OtpService {
   }
 
   void _processSmsCode(String code, Function(String) onOtpReceived) {
-    if (code.isNotEmpty && code.length >= 4) {
-      final extractedOtp = _extractOtp(code);
-      
-      if (extractedOtp != null) {
-        debugPrint('OtpService: Successfully extracted OTP: $extractedOtp');
-        _cleanup();
-        onOtpReceived(extractedOtp);
-      } else {
-        debugPrint('OtpService: No valid 6-digit OTP found in SMS: "$code"');
-      }
-    } else {
-      debugPrint('OtpService: Received code too short: "$code" (length: ${code.length})');
+    debugPrint('OtpService: ========== PROCESSING SMS CODE ==========');
+    debugPrint('OtpService: Input code: "$code"');
+    debugPrint('OtpService: Code length: ${code.length}');
+
+    if (code.isEmpty) {
+      debugPrint('OtpService: ❌ Code is empty, cannot process');
+      return;
     }
+
+    final extractedOtp = _extractOtp(code);
+
+    if (extractedOtp != null) {
+      debugPrint('OtpService: ✅ Successfully extracted OTP: $extractedOtp');
+      debugPrint('OtpService: Cleaning up listener and calling onOtpReceived...');
+      _cleanup();
+      onOtpReceived(extractedOtp);
+      debugPrint('OtpService: OTP passed to callback successfully');
+    } else {
+      debugPrint('OtpService: ❌ No valid 6-digit OTP found in: "$code"');
+      debugPrint('OtpService: This might not be an OTP SMS, continuing to listen...');
+    }
+
+    debugPrint('OtpService: ==========================================');
   }
 
   String? _extractOtp(String smsCode) {
-    debugPrint('OtpService: Extracting OTP from SMS: "$smsCode"');
-    
+    debugPrint('OtpService: ========== EXTRACTING OTP ==========');
+    debugPrint('OtpService: Input SMS: "$smsCode"');
+
     // Try different OTP patterns specifically designed for your SMS format
+    // Format: "<#> Your OTP code is 163051\nDo not share this code. It will expire in 5 minutes."
+    // Format (Android): "<#> Your OTP code is 163051\nDo not share this code. It will expire in 5 minutes.\njfdoiwh+1n2"
     final patterns = [
-      r'Your OTP code is:\s*(\d{6})', // Exact match for your format: "Your OTP code is: 123456"
-      r'OTP code is:\s*(\d{6})',      // Partial match: "OTP code is: 123456"
-      r'code is:\s*(\d{6})',          // Even shorter match: "code is: 123456"
-      r'(?:OTP|code)[\s:]+(\d{6})',   // OTP or code followed by space/colon and 6 digits
+      r'Your OTP code is\s+(\d{6})',  // Match "Your OTP code is 163051"
+      r'OTP code is\s+(\d{6})',       // Match "OTP code is 163051"
+      r'code is\s+(\d{6})',           // Match "code is 163051"
+      r'<#>\s*Your OTP code is\s+(\d{6})', // Match with Android prefix
       r'\b(\d{6})\b',                 // 6 digits with word boundaries (most reliable)
       r'(\d{6})',                     // Any 6 consecutive digits (fallback)
     ];
-    
+
+    int patternIndex = 0;
     for (String pattern in patterns) {
-      final RegExp otpRegExp = RegExp(pattern, caseSensitive: false);
+      patternIndex++;
+      debugPrint('OtpService: Trying pattern #$patternIndex: "$pattern"');
+
+      final RegExp otpRegExp = RegExp(pattern, caseSensitive: false, multiLine: true);
       final Match? match = otpRegExp.firstMatch(smsCode);
+
       if (match != null) {
+        debugPrint('OtpService: Pattern matched! Match groups: ${match.groupCount}');
         String? extractedCode = match.group(1) ?? match.group(0);
-        if (extractedCode != null && extractedCode.length == 6) {
-          debugPrint('OtpService: Found OTP using pattern "$pattern": $extractedCode');
-          return extractedCode;
+
+        if (extractedCode != null) {
+          debugPrint('OtpService: Extracted code: "$extractedCode" (length: ${extractedCode.length})');
+
+          if (extractedCode.length == 6 && int.tryParse(extractedCode) != null) {
+            debugPrint('OtpService: ✅ Valid 6-digit OTP found: $extractedCode');
+            debugPrint('OtpService: ==========================================');
+            return extractedCode;
+          } else {
+            debugPrint('OtpService: ⚠️ Code length is ${extractedCode.length}, need exactly 6 digits');
+          }
         }
+      } else {
+        debugPrint('OtpService: Pattern did not match');
       }
     }
-    
-    debugPrint('OtpService: No 6-digit OTP found in SMS');
+
+    debugPrint('OtpService: ❌ No valid 6-digit OTP found after trying all patterns');
+    debugPrint('OtpService: ==========================================');
     return null;
   }
 

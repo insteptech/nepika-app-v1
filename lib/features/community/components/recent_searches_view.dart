@@ -145,11 +145,10 @@ class _RecentSearchesViewState extends State<RecentSearchesView> {
                 onRemove: () => _removeRecentSearch(user.id),
                 onTap: () {
                   widget.onRecentSearchSelected?.call();
-                  Navigator.pushNamed(
-                    context,
-                    AppRoutes.communityUserProfile,
-                    arguments: {'userId': user.id},
-                  );
+          Navigator.of(context, rootNavigator: true).pushNamed(
+            AppRoutes.communityUserProfile,
+            arguments: {'userId': user.id},
+          );
                 },
               );
             },

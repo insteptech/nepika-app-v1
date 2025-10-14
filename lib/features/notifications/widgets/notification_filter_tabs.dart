@@ -10,7 +10,8 @@ class NotificationFilterTabs extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    
+    final theme = Theme.of(context);
+
     return BlocBuilder<NotificationBloc, NotificationState>(
       builder: (context, state) {
         NotificationFilter currentFilter = NotificationFilter.all;
@@ -46,12 +47,12 @@ class NotificationFilterTabs extends StatelessWidget {
                     ),
                     decoration: BoxDecoration(
                       color: isSelected
-                          ? const Color(0xFF3898ED) // Primary color from Figma
+                          ? theme.colorScheme.primary
                           : Colors.transparent,
                       border: Border.all(
                         color: isSelected
-                            ? const Color(0xFF3898ED)
-                            : const Color(0xFFDDDDDD), // Greyscale/500 from Figma
+                            ? theme.colorScheme.primary
+                            : theme.dividerColor.withValues(alpha: 0.5),
                         width: 1,
                       ),
                       borderRadius: BorderRadius.circular(10),
@@ -61,7 +62,7 @@ class NotificationFilterTabs extends StatelessWidget {
                       style: TextStyle(
                         color: isSelected
                             ? Colors.white
-                            : const Color(0xFF111111), // fill_9T3J13 from Figma
+                            : theme.textTheme.bodyLarge?.color,
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
                       ),

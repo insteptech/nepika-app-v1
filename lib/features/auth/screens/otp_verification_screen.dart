@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'dart:async';
+import 'package:sms_autofill/sms_autofill.dart';
 import '../../../core/config/constants/routes.dart';
 import '../../../core/widgets/custom_button.dart';
 import '../../../core/widgets/back_button.dart';
@@ -10,7 +11,6 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../services/otp_service.dart';
 import '../components/otp_permission_handler.dart';
-import '../components/auto_capture_indicator.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String? phoneNumber;
@@ -154,7 +154,8 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 const SizedBox(height: 60),
                 _buildResendSection(),
                 const Spacer(),
-                AutoCaptureIndicator(isActive: _isAutoCapturing),
+                // Hide the existing auto-capture indicator
+                // AutoCaptureIndicator(isActive: _isAutoCapturing),
                 _buildVerifyButton(),
                 const SizedBox(height: 24),
                 _buildTermsAndPrivacy(),
@@ -187,27 +188,112 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   Widget _buildOtpInput() {
-    return OtpInputField(
-      length: 6,
-      controller: _otpController,
-      onCompleted: _handleOtpCompleted,
-      onChanged: (value) {
-        debugPrint('OTP Changed: "$value", Length: ${value.length}');
-        setState(() {
-          _otp = value;
-        });
-        
-        // Auto-confirm when 6 digits are entered via manual typing
-        if (value.length == 6 && _phoneNumber.isNotEmpty && _otpId != null && !_isLoading) {
-          debugPrint('Auto-confirm triggered for manually entered OTP');
-          Future.delayed(const Duration(milliseconds: 500), () {
-            if (mounted && !_isLoading && _otp == value) {
-              debugPrint('Executing auto-confirmation for OTP: $value');
-              _performOtpVerification();
-            }
-          });
-        }
-      },
+    return Column(
+      children: [
+        Stack(
+          children: [
+            // Hidden TextFieldPinAutoFill for SMS auto-capture (iOS/Android)
+            Positioned(
+              left: -1000,
+              top: -1000,
+              child: SizedBox(
+                width: 1,
+                height: 1,
+                child: TextFieldPinAutoFill(
+                  codeLength: 6,
+                  autoFocus: true,
+                  decoration: const InputDecoration(
+                    border: InputBorder.none,
+                    counterText: '',
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  currentCode: _otp,
+                  onCodeSubmitted: (code) {
+                    debugPrint('AutoFill: Code submitted: "$code"');
+                    if (code.length == 6) {
+                      _handleAutoFilledCode(code);
+                    }
+                  },
+                  onCodeChanged: (code) {
+                    debugPrint('AutoFill: Code changed: "$code"');
+                    if (code.length == 6) {
+                      _handleAutoFilledCode(code);
+                    }
+                  },
+                ),
+              ),
+            ),
+            // Visible custom OTP input fields
+            OtpInputField(
+              length: 6,
+              controller: _otpController,
+              autofillHints: const [
+                AutofillHints.oneTimeCode,
+              ],
+              onCompleted: (otp) {
+                debugPrint('OTP Completed manually: "$otp"');
+                // Schedule state update after build completes
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _otp = otp;
+                    });
+
+                    // Auto-verify when 6 digits are entered manually
+                    if (otp.length == 6 && _phoneNumber.isNotEmpty && _otpId != null && !_isLoading) {
+                      debugPrint('Auto-verifying manually entered OTP');
+                      Future.delayed(const Duration(milliseconds: 300), () {
+                        if (mounted && !_isLoading && _otp == otp) {
+                          _performOtpVerification();
+                        }
+                      });
+                    }
+                  }
+                });
+              },
+              onChanged: (value) {
+                debugPrint('OTP Changed: "$value", Length: ${value.length}');
+                // Schedule state update after build completes
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (mounted) {
+                    setState(() {
+                      _otp = value;
+                    });
+                  }
+                });
+              },
+            ),
+          ],
+        ),
+        if (_isAutoCapturing)
+          Padding(
+            padding: const EdgeInsets.only(top: 8, right: 0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                SizedBox(
+                  width: 10,
+                  height: 10,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 1.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Auto-detecting',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        fontSize: 10,
+                        color: Theme.of(context).colorScheme.outline,
+                        fontWeight: FontWeight.w400,
+                      ),
+                ),
+              ],
+            ),
+          ),
+      ],
     );
   }
 
@@ -243,14 +329,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     return SizedBox(
       width: double.infinity,
       child: CustomButton(
-        text: _isAutoCapturing
-            ? 'Waiting for OTP...'
-            : _otp.length == 6
-                ? 'Confirm'
-                : 'Verify OTP',
+        text: _otp.length == 6 ? 'Confirm' : 'Verify OTP',
         onPressed: _handleVerifyOtp,
         isDisabled: false,
-        isLoading: _isLoading || _isAutoCapturing,
+        isLoading: _isLoading,
       ),
     );
   }
@@ -311,25 +393,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-  void _handleOtpCompleted(String otp) {
-    debugPrint('OTP Completed: "$otp", Length: ${otp.length}');
-    setState(() {
-      _otp = otp;
-    });
-    
-    if (otp.length == 6 && _phoneNumber.isNotEmpty && _otpId != null && !_isLoading) {
-      debugPrint('Auto-confirm triggered for completed OTP');
-      // Add a small delay to ensure UI updates are complete
-      Future.delayed(const Duration(milliseconds: 300), () {
-        if (mounted && !_isLoading) {
-          debugPrint('Executing auto-confirmation for completed OTP: $otp');
-          _performOtpVerification();
-        }
-      });
-    } else {
-      debugPrint('OTP completion validation failed - Length: ${otp.length}, Phone: "$_phoneNumber", OtpId: "$_otpId", Loading: $_isLoading');
-    }
-  }
 
   void _handleVerifyOtp() {
     debugPrint('Verify OTP clicked - OTP: "$_otp", Length: ${_otp.length}, Phone: "$_phoneNumber", OtpId: "$_otpId"');
@@ -398,20 +461,48 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Future<void> _requestAutoCapture() async {
     if (_hasRequestedPermission) return;
-    
+
     setState(() {
       _hasRequestedPermission = true;
     });
 
-    final shouldAutoCapture = await OtpPermissionHandler.showPermissionDialog(context);
-    
-    if (shouldAutoCapture && mounted) {
-      final hasPermission = await OtpPermissionHandler.handlePermissionRequest(context);
-      
-      if (hasPermission && mounted) {
-        _startAutoCapture();
-      }
+    // Directly request permission without showing dialog
+    final hasPermission = await OtpPermissionHandler.handlePermissionRequest(context);
+
+    if (hasPermission && mounted) {
+      _startAutoCapture();
+    } else if (mounted) {
+      // If permission denied, silently continue with manual entry
+      debugPrint('Auto-capture permission denied, continuing with manual entry');
     }
+  }
+
+  void _handleAutoFilledCode(String code) {
+    debugPrint('Handling auto-filled code: "$code"');
+    
+    // Schedule state update after build completes
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && code.length == 6) {
+        setState(() {
+          _otp = code;
+          _isAutoCapturing = false;
+        });
+        
+        // Update the visible OTP input fields
+        _otpController.setText(code);
+
+        // Auto-confirm when 6 digits are entered
+        if (_phoneNumber.isNotEmpty && _otpId != null && !_isLoading) {
+          debugPrint('Auto-confirm triggered for auto-filled OTP');
+          Future.delayed(const Duration(milliseconds: 500), () {
+            if (mounted && !_isLoading && _otp == code) {
+              debugPrint('Executing auto-confirmation for OTP: $code');
+              _performOtpVerification();
+            }
+          });
+        }
+      }
+    });
   }
 
   void _startAutoCapture() {
@@ -426,18 +517,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             _isAutoCapturing = false;
             _otp = otp;
           });
-          
+
           _otpController.setText(otp);
-          
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('OTP captured successfully!'),
-              backgroundColor: Colors.green,
-              duration: Duration(seconds: 1),
-            ),
-          );
-          
-          Future.delayed(const Duration(milliseconds: 800), () {
+
+          // Silently verify without showing snackbar
+          Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted && _otp.length == 6) {
               _performOtpVerification();
             }
@@ -449,15 +533,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           setState(() {
             _isAutoCapturing = false;
           });
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Auto-capture timed out. Please enter OTP manually.'),
-                backgroundColor: Colors.orange,
-              ),
-            );
-          }
         }
       },
       onError: () {
@@ -465,67 +540,93 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           setState(() {
             _isAutoCapturing = false;
           });
-          
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Auto-capture error. Please enter OTP manually.'),
-                backgroundColor: Colors.red,
-              ),
-            );
-          }
         }
       },
     );
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Listening for incoming OTP SMS...'),
-          backgroundColor: Colors.green,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
   }
 
   void _handleAuthStateChanges(BuildContext context, AuthState state) {
     debugPrint('OTP Screen - BLoC State: ${state.runtimeType}');
-    
+    debugPrint('OTP Screen - Full state details: $state');
+
     switch (state) {
       case OtpSent():
         // Don't override navigation arguments with BLoC state
         // Navigation arguments take precedence
         debugPrint('OtpSent state received but navigation arguments take precedence');
         break;
-        
+
       case VerifyingOtp():
+        debugPrint('VerifyingOtp state - Setting loading to true');
         setState(() {
           _isLoading = true;
         });
         break;
-        
+
       case OtpVerified():
         debugPrint('OTP verification successful');
         setState(() {
           _isLoading = false;
         });
-        
+
         if (mounted) {
           final route = state.authResponse.user.activeStep == 0
               ? AppRoutes.userInfo
               : AppRoutes.dashboardHome;
-              
+
           Navigator.of(context).pushReplacementNamed(route);
         }
         break;
-        
+
       case ErrorWhileOtpVerification():
+        debugPrint('========================================');
+        debugPrint('ERROR STATE DETECTED!');
         debugPrint('OTP Verification Error: ${state.message}');
+        debugPrint('Error email: ${state.email}');
+        debugPrint('Error phone: ${state.phone}');
+        debugPrint('Mounted: $mounted');
+        debugPrint('========================================');
+
         setState(() {
           _isLoading = false;
         });
-        
+
+        if (mounted) {
+          debugPrint('Attempting to show error snackbar...');
+          try {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  state.message.isNotEmpty ? state.message : 'Invalid or expired OTP. Please try again.',
+                ),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 4),
+                behavior: SnackBarBehavior.floating,
+              ),
+            );
+            debugPrint('Snackbar shown successfully');
+          } catch (e) {
+            debugPrint('Error showing snackbar: $e');
+          }
+        }
+
+        // Also clear the OTP input so user can try again
+        _otpController.clear();
+        setState(() {
+          _otp = '';
+        });
+        break;
+
+      case OtpResent():
+        setState(() {
+          if (state.otpId != null) {
+            _otpId = state.otpId;
+          }
+        });
+        break;
+
+      case ErrorWhileSendingOtp():
+        debugPrint('Error while sending OTP: ${state.message}');
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
@@ -536,14 +637,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           );
         }
         break;
-        
-      case OtpResent():
-        setState(() {
-          if (state.otpId != null) {
-            _otpId = state.otpId;
-          }
-        });
-        break;
+
+      default:
+        debugPrint('Unhandled auth state: ${state.runtimeType}');
     }
   }
 }

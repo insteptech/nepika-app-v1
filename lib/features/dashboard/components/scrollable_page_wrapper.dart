@@ -16,12 +16,15 @@ class ScrollablePageWrapper extends StatelessWidget {
     return NotificationListener<ScrollNotification>(
       onNotification: (ScrollNotification notification) {
         // Respond to any scroll updates for more responsive navbar behavior
-        if (notification is ScrollUpdateNotification && 
+        if (notification is ScrollUpdateNotification &&
             !notification.metrics.outOfRange &&
             notification.scrollDelta != null &&
             notification.scrollDelta!.abs() > 1.0) { // Reduced threshold for better responsiveness
-          
-          onScroll(notification.metrics.pixels, notification.scrollDelta!);
+
+          // Defer scroll handling to avoid calling setState during build
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            onScroll(notification.metrics.pixels, notification.scrollDelta!);
+          });
         }
         return false; // Allow the notification to continue
       },
