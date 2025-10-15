@@ -16,6 +16,12 @@ import '../../domain/routine/usecases/delete_routine_step.dart';
 import '../../domain/routine/usecases/add_routine_step.dart';
 import '../../features/routine/main.dart';
 
+// FCM
+import '../../data/fcm/repositories/fcm_token_repository_impl.dart';
+import '../../domain/fcm/repositories/fcm_token_repository.dart';
+import '../../domain/fcm/usecases/save_fcm_token_usecase.dart';
+import '../services/fcm_token_service.dart';
+
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
   
@@ -84,6 +90,28 @@ class ServiceLocator {
         addRoutineStep: get<AddRoutineStep>(),
       ),
     );
+
+    // FCM - Repository
+    _registerLazySingleton<FcmTokenRepository>(
+      FcmTokenRepositoryImpl(
+        apiBase: get<ApiBase>(),
+      ),
+    );
+
+    // FCM - Use cases
+    _registerLazySingleton<SaveFcmTokenUseCase>(
+      SaveFcmTokenUseCase(get<FcmTokenRepository>()),
+    );
+
+    // FCM - Legacy Service (Deprecated - use UnifiedFcmService.instance instead)
+    _registerLazySingleton<FcmTokenService>(
+      FcmTokenService(
+        saveFcmTokenUseCase: get<SaveFcmTokenUseCase>(),
+      ),
+    );
+
+    // Note: UnifiedFcmService is a singleton accessed via UnifiedFcmService.instance
+    // No need to register it in DI as it manages its own lifecycle
   }
 
   static void reset() {

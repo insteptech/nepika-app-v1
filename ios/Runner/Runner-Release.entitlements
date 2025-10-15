@@ -16,8 +16,8 @@
 		<string>$(AppIdentifierPrefix)com.assisted.nepika</string>
 	</array>
 	
-	<!-- Push notifications entitlement -->
+	<!-- Push notifications entitlement for production -->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 </dict>
 </plist>

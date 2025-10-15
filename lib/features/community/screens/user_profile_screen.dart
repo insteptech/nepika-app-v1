@@ -12,6 +12,7 @@ import 'package:share_plus/share_plus.dart';
 import '../../../core/config/env.dart';
 import 'dart:convert';
 import '../utils/community_navigation.dart';
+import '../widgets/post_skeleton_loader.dart';
 
 enum ActiveTab { threads, replies }
 
@@ -33,6 +34,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String? _token;
   ProfileBloc? _profileBloc;
   bool _isInitialized = false;
+  DateTime? _lastLoadTime; // Prevent rapid loading requests
 
   ActiveTab _currentActive = ActiveTab.threads;
   
@@ -58,8 +60,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   bool _showScrolledHeader = false; // Controls globe->back icon transition
   late ScrollController _mainScrollController;
 
-  // PageView controller for swipe navigation
-  late PageController _pageController;
 
   @override
   void didChangeDependencies() {
@@ -87,24 +87,67 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     _mainScrollController = ScrollController()
       ..addListener(_onMainScroll)
       ..addListener(() => _onScroll('main'));
-    _pageController = PageController(initialPage: 0);
   }
 
   @override
   void dispose() {
     _mainScrollController.dispose();
-    _pageController.dispose();
     _profileBloc?.close();
     super.dispose();
   }
 
   void _onScroll(String tabType) {
+    // Only proceed if we have a valid scroll position
     if (!_mainScrollController.hasClients) return;
-    
-    if (_mainScrollController.position.pixels >= _mainScrollController.position.maxScrollExtent * 0.9) {
-      if (_currentActive == ActiveTab.threads && _hasMoreThreads && !_loadingMoreThreads) {
+
+    final position = _mainScrollController.position;
+
+    // Check if we're near the bottom (75% scrolled or within 200px)
+    // More aggressive triggering to ensure pagination works smoothly
+    final scrollThreshold = position.maxScrollExtent * 0.75;
+    final pixelThreshold = position.maxScrollExtent - 200;
+    final isNearBottom = position.pixels >= scrollThreshold ||
+                        position.pixels >= pixelThreshold;
+
+    // Debounce logic: prevent rapid requests (500ms cooldown)
+    final now = DateTime.now();
+    final canLoad = _lastLoadTime == null ||
+                   now.difference(_lastLoadTime!).inMilliseconds > 500;
+
+    if (_currentActive == ActiveTab.threads) {
+      // Only trigger if all conditions are met for threads
+      final shouldLoad = isNearBottom &&
+                        _threads.isNotEmpty &&
+                        _hasMoreThreads &&
+                        !_loadingMoreThreads &&
+                        _token != null &&
+                        canLoad;
+
+      if (shouldLoad) {
+        debugPrint('🔄 Profile: Loading more threads');
+        debugPrint('  📊 Current: ${_threads.length} threads, page $_threadsPage');
+        debugPrint('  ⏭️  Loading: page ${_threadsPage + 1}');
+        debugPrint('  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%');
+
+        _lastLoadTime = now;
         _loadMoreThreads();
-      } else if (_currentActive == ActiveTab.replies && _hasMoreReplies && !_loadingMoreReplies) {
+      }
+    } else if (_currentActive == ActiveTab.replies) {
+      // Only trigger if all conditions are met for replies
+      final shouldLoad = isNearBottom &&
+                        _replies.isNotEmpty &&
+                        _hasMoreReplies &&
+                        !_loadingMoreReplies &&
+                        _token != null &&
+                        canLoad;
+
+      if (shouldLoad) {
+        debugPrint('🔄 Profile: Loading more replies');
+        debugPrint('  📊 Current: ${_replies.length} replies, page $_repliesPage');
+        debugPrint('  ⏭️  Loading: page ${_repliesPage + 1}');
+        debugPrint('  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%');
+
+        _lastLoadTime = now;
         _loadMoreReplies();
       }
     }
@@ -844,27 +887,7 @@ Join the conversation: $profileUrl''';
                 ),
               ),
               SliverToBoxAdapter(
-                child: SizedBox(
-                  height: MediaQuery.of(context).size.height - 200,
-                  child: PageView(
-                    controller: _pageController,
-                    onPageChanged: (index) {
-                      final newTab = index == 0 ? ActiveTab.threads : ActiveTab.replies;
-                      debugPrint('ProfilePage: PageView changed to index $index (${newTab.name})');
-                      if (_currentActive != newTab) {
-                        debugPrint('ProfilePage: Updating active tab from ${_currentActive.name} to ${newTab.name}');
-                        setState(() {
-                          _currentActive = newTab;
-                        });
-                        _loadTabData(newTab);
-                      }
-                    },
-                    children: [
-                      _buildPostsList(context, ActiveTab.threads),
-                      _buildPostsList(context, ActiveTab.replies),
-                    ],
-                  ),
-                ),
+                child: _buildPostsList(context, _currentActive),
               ),
             ],
           ),
@@ -1266,11 +1289,6 @@ Join the conversation: $profileUrl''';
                   setState(() {
                     _currentActive = ActiveTab.threads;
                   });
-                  _pageController.animateToPage(
-                    0,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
                   _loadTabData(ActiveTab.threads);
                 } else {
                   debugPrint('ProfilePage: Threads tab already active');
@@ -1318,11 +1336,6 @@ Join the conversation: $profileUrl''';
                   setState(() {
                     _currentActive = ActiveTab.replies;
                   });
-                  _pageController.animateToPage(
-                    1,
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeInOut,
-                  );
                   _loadTabData(ActiveTab.replies);
                 } else {
                   debugPrint('ProfilePage: Replies tab already active');
@@ -1369,6 +1382,7 @@ Join the conversation: $profileUrl''';
   Widget _buildPostsList(BuildContext context, ActiveTab tab) {
     final currentPosts = tab == ActiveTab.threads ? _threads : _replies;
     final isLoading = tab == ActiveTab.threads ? _loadingMoreThreads : _loadingMoreReplies;
+    final hasMore = tab == ActiveTab.threads ? _hasMoreThreads : _hasMoreReplies;
 
     if (currentPosts.isEmpty && !isLoading) {
       return SizedBox(
@@ -1406,31 +1420,24 @@ Join the conversation: $profileUrl''';
       );
     }
 
-    return ListView.builder(
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: currentPosts.length + (isLoading ? 1 : 0),
-      itemBuilder: (context, index) {
-        if (index == currentPosts.length && isLoading) {
-          return const Padding(
-            padding: EdgeInsets.all(16),
-            child: Center(child: CircularProgressIndicator()),
+    return Column(
+      children: [
+        ...currentPosts.map((post) {
+          return Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: UserPostWidget(
+              post: post,
+              token: _token!,
+              userId: _currentUserId!,
+            ),
           );
-        }
-
-        if (index >= currentPosts.length) {
-          return const SizedBox.shrink();
-        }
-
-        final post = currentPosts[index];
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: UserPostWidget(
-            post: post,
-            token: _token!,
-            userId: _currentUserId!,
+        }),
+        if (isLoading && hasMore)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: SinglePostSkeleton(),
           ),
-        );
-      },
+      ],
     );
   }
 }

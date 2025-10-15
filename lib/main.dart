@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
+import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
 import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
@@ -12,6 +14,7 @@ import 'package:nepika/features/dashboard/screens/image_gallery_screen.dart';
 import 'package:nepika/features/dashboard/screens/history_screen.dart';
 import 'package:nepika/features/settings/screens/main_settings_screen.dart';
 import 'core/di/injection_container.dart' as di;
+import 'core/services/fcm_background_handler.dart';
 import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
 import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
 import 'package:nepika/features/dashboard/main.dart';
@@ -38,6 +41,8 @@ import 'features/splash/main.dart';
 import 'features/welcome/main.dart'; 
 import 'package:provider/provider.dart';
 
+// Background message handler is now in fcm_background_handler.dart
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
@@ -50,6 +55,21 @@ void main() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   await SharedPrefsHelper.init();
   await di.ServiceLocator.init();
+
+  // Set up background message handler
+  FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
+
+  // Initialize unified FCM service
+  try {
+    await UnifiedFcmService.instance.initialize();
+    // Use logger if available, otherwise fallback to debugPrint
+    debugPrint('✅ Unified FCM Service initialized successfully');
+  } catch (e) {
+    debugPrint('❌ Unified FCM Service initialization failed: $e');
+    // Continue app initialization even if FCM fails
+  }
+
+
 
   runApp(
     ChangeNotifierProvider(

@@ -52,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     _dashboardBloc = DashboardBloc(DashboardRepositoryImpl(ApiBase()));
 
     // Focus listener removed - was causing excessive requests
-
+    
     _loadTokenAndFetch();
   }
 
