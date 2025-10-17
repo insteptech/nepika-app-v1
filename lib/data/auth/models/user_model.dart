@@ -45,7 +45,7 @@ class UserModel extends User {
       isEmailVerified: json['is_email_verified'] as bool? ?? false,
       isPhoneVerified: json['is_phone_verified'] as bool? ?? false,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
-      activeStep: json['active_step'] as int ? ?? 0,
+      activeStep: json['active_step'] as int ? ?? 1,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
           : null,

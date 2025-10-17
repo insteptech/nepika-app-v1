@@ -11,6 +11,21 @@ class GreetingSection extends StatelessWidget {
     super.key
   });
 
+  String _getTimeBasedGreeting() {
+    final now = DateTime.now();
+    final hour = now.hour;
+    
+    if (hour >= 5 && hour < 12) {
+      return 'Good Morning!';
+    } else if (hour >= 12 && hour < 17) {
+      return 'Good Afternoon!';
+    } else if (hour >= 17 && hour < 21) {
+      return 'Good Evening!';
+    } else {
+      return 'Good Night!';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final String userName = user['name']?.toString().trim() ?? '';
@@ -56,7 +71,7 @@ class GreetingSection extends StatelessWidget {
                       duration: const Duration(milliseconds: 150),
                       opacity: isCollapsed ? 0.0 : 1.0,
                       child: Text(
-                        greeting.isNotEmpty ? greeting : 'welcome back!',
+                        _getTimeBasedGreeting(),
                         style: Theme.of(context).textTheme.bodyLarge!.secondary(context),
                       ),
                     ) : SizedBox(height: 0)

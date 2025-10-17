@@ -28,6 +28,7 @@ import 'package:nepika/features/notifications/screens/notifications_screen.dart'
 import 'package:nepika/features/notifications/screens/notification_debug_screen.dart';
 import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
+import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
@@ -204,6 +205,11 @@ class MyApp extends StatelessWidget {
             case AppRoutes.dashboardSettings:
               return MaterialPageRoute(
                 builder: (_) => const MainSettingsScreen(),
+              );
+            case AppRoutes.dashboardReminderSettings:
+            case DashboardRoutes.reminderSettings:
+              return MaterialPageRoute(
+                builder: (_) => const ReminderSettings(),
               );
             case AppRoutes.subscription:
               return MaterialPageRoute(builder: (_) => const PricingScreen());

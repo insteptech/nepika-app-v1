@@ -22,6 +22,13 @@ import '../../domain/fcm/repositories/fcm_token_repository.dart';
 import '../../domain/fcm/usecases/save_fcm_token_usecase.dart';
 import '../services/fcm_token_service.dart';
 
+// Reminders
+import '../../data/reminders/datasources/reminder_remote_data_source.dart';
+import '../../data/reminders/repositories/reminder_repository_impl.dart';
+import '../../domain/reminders/repositories/reminder_repository.dart';
+import '../../domain/reminders/usecases/add_reminder.dart';
+import '../../features/reminders/bloc/reminder_bloc.dart';
+
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
   
@@ -112,6 +119,28 @@ class ServiceLocator {
 
     // Note: UnifiedFcmService is a singleton accessed via UnifiedFcmService.instance
     // No need to register it in DI as it manages its own lifecycle
+
+    // Reminders - Data sources
+    _registerLazySingleton<ReminderRemoteDataSource>(
+      ReminderRemoteDataSourceImpl(get<ApiBase>()),
+    );
+
+    // Reminders - Repository
+    _registerLazySingleton<ReminderRepository>(
+      ReminderRepositoryImpl(get<ReminderRemoteDataSource>()),
+    );
+
+    // Reminders - Use cases
+    _registerLazySingleton<AddReminder>(
+      AddReminder(get<ReminderRepository>()),
+    );
+
+    // Reminders - Bloc (Factory)
+    _registerFactory<ReminderBloc>(
+      () => ReminderBloc(
+        addReminderUseCase: get<AddReminder>(),
+      ),
+    );
   }
 
   static void reset() {

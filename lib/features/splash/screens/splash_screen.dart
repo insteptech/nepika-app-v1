@@ -28,7 +28,7 @@ class SplashView extends StatelessWidget {
         if (state is SplashNavigateToWelcome) {
           Navigator.of(context).pushReplacementNamed(AppRoutes.welcome);
         } else if (state is SplashNavigateToOnboarding) {
-          if (state.activeStep != null && state.activeStep! > 0) {
+          if (state.activeStep != null && state.activeStep! > 1) {
             Navigator.of(context).pushReplacementNamed(AppRoutes.dashboardHome);
           } else {
             Navigator.of(context).pushReplacementNamed(

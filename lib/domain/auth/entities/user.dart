@@ -60,7 +60,7 @@ class User {
       isEmailVerified: json['is_email_verified'] as bool?,
       isPhoneVerified: json['is_phone_verified'] as bool?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
-      activeStep: json['active_step'] as int? ?? 0,
+      activeStep: json['active_step'] as int? ?? 1,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -126,7 +126,7 @@ class AuthResponse {
         email: data['email'] as String?,
         phone: data['phone'] as String?,
         onboardingCompleted: data['onboarding_completed'] as bool? ?? false,
-        activeStep: data['active_step'] ?? 0,
+        activeStep: data['active_step'] ?? 1,
         isNewUser: data['is_new_user'] ?? false,
       );
     }

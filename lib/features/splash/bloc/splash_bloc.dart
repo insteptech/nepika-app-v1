@@ -72,7 +72,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
         // Check if the response indicates success
         if (responseData['success'] == true) {
           final userData = responseData['data'];
-          final int activeStep = userData['active_step'] ?? 0;
+          final int activeStep = userData['active_step'] ?? 1;
 
           // Navigate to onboarding regardless of completion status
           emit(SplashNavigateToOnboarding(activeStep: activeStep));
