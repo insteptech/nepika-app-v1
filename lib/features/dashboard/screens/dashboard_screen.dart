@@ -5,6 +5,7 @@ import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/features/routine/main.dart';
+import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
@@ -129,8 +130,26 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
 
     if (_token != null) {
+      // Generate FCM token now that user is authenticated and on dashboard
+      _generateFcmToken();
+      
       _dashboardBloc.add(DashboardRequested(_token!));
     }
+  }
+
+  /// Generate FCM token when user reaches dashboard
+  void _generateFcmToken() {
+    // Generate FCM token asynchronously without blocking dashboard load
+    UnifiedFcmService.instance.generateToken().then((token) {
+      if (token != null) {
+        debugPrint('✅ FCM token generated successfully from dashboard: ${token.substring(0, 20)}...');
+      } else {
+        debugPrint('⚠️ FCM token generation failed from dashboard');
+      }
+    }).catchError((error) {
+      debugPrint('❌ FCM token generation error from dashboard: $error');
+      // Don't block dashboard flow for FCM failures
+    });
   }
 
   void _refreshDashboard() {

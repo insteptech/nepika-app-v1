@@ -4,7 +4,6 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
-import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
 import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
@@ -53,24 +52,13 @@ void main() async {
     DeviceOrientation.portraitDown,
   ]);
   
+  // Initialize core dependencies first
   final sharedPreferences = await SharedPreferences.getInstance();
   await SharedPrefsHelper.init();
   await di.ServiceLocator.init();
 
-  // Set up background message handler
+  // Set up background message handler (FCM will be initialized from splash screen)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
-
-  // Initialize unified FCM service
-  try {
-    await UnifiedFcmService.instance.initialize();
-    // Use logger if available, otherwise fallback to debugPrint
-    debugPrint('✅ Unified FCM Service initialized successfully');
-  } catch (e) {
-    debugPrint('❌ Unified FCM Service initialization failed: $e');
-    // Continue app initialization even if FCM fails
-  }
-
-
 
   runApp(
     ChangeNotifierProvider(
@@ -79,6 +67,7 @@ void main() async {
     ),
   );
 }
+
 
 
 class MyApp extends StatelessWidget {

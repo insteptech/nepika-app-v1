@@ -6,6 +6,7 @@ import '../../../core/config/constants/app_constants.dart';
 import '../../../core/network/secure_api_client.dart';
 import '../../../core/utils/debug_logger.dart';
 import '../../../core/utils/shared_prefs_helper.dart';
+import '../../../core/services/unified_fcm_service.dart';
 import 'splash_event.dart';
 import 'splash_state.dart';
 
@@ -21,10 +22,24 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
   ) async {
     emit(SplashAnimating());
     
+    // Initialize FCM service in background during splash animation (without token generation)
+    _initializeFcmInBackground();
+    
     // Wait for animation duration
     await Future.delayed(const Duration(seconds: 3));
     
     add(CheckAuthenticationStatus());
+  }
+
+  /// Initialize FCM service in background without blocking splash flow
+  void _initializeFcmInBackground() {
+    // Run FCM initialization asynchronously without blocking the splash flow
+    UnifiedFcmService.instance.initializeWithoutToken().then((_) {
+      logJson('✅ FCM Service initialized successfully during splash');
+    }).catchError((error) {
+      logJson('❌ FCM Service initialization failed during splash: $error');
+      // Don't block app flow for FCM failures
+    });
   }
 
   Future<void> _onCheckAuthenticationStatus(

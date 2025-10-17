@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../utils/app_logger.dart';
 import '../api_base.dart';
 import '../../firebase_options.dart';
@@ -42,8 +43,8 @@ class UnifiedFcmService {
   static const Duration _tokenRefreshDebounceDelay = Duration(seconds: 5);
   
   // Retry configuration
-  static const int _maxRetries = 3;
-  static const Duration _baseRetryDelay = Duration(seconds: 2);
+  static const int _maxRetries = 5;
+  static const Duration _baseRetryDelay = Duration(seconds: 3);
   
   // Notification ID management
   static const int _maxNotificationId = 2147483647; // Max int32 value
@@ -57,13 +58,22 @@ class UnifiedFcmService {
   /// Initialize the complete FCM service
   /// This should be called once during app startup
   Future<void> initialize() async {
+    await initializeWithoutToken();
+    
+    // After basic initialization, get the token
+    await _initializeTokenManagement();
+  }
+
+  /// Initialize FCM service without token generation (for splash screen)
+  /// This prepares FCM but doesn't attempt token generation yet
+  Future<void> initializeWithoutToken() async {
     if (_isInitialized) {
       AppLogger.warning('FCM service already initialized', tag: 'FCM');
       return;
     }
 
     try {
-      AppLogger.info('Initializing unified FCM service...', tag: 'FCM');
+      AppLogger.info('Initializing unified FCM service (without token)...', tag: 'FCM');
 
       // 1. Initialize Firebase
       await _initializeFirebase();
@@ -77,11 +87,8 @@ class UnifiedFcmService {
       // 4. Set up message handlers
       await _setupMessageHandlers();
       
-      // 5. Initialize token management
-      await _initializeTokenManagement();
-      
       _isInitialized = true;
-      AppLogger.success('FCM service initialized successfully', tag: 'FCM');
+      AppLogger.success('FCM service initialized successfully (without token)', tag: 'FCM');
       
     } catch (e, stackTrace) {
       AppLogger.error(
@@ -111,38 +118,96 @@ class UnifiedFcmService {
     }
   }
 
-  /// Request all necessary permissions
+  /// Request all necessary permissions with retry mechanism
   Future<void> _requestPermissions() async {
-    try {
-      // Request FCM permissions
-      final NotificationSettings fcmSettings = 
-          await FirebaseMessaging.instance.requestPermission(
-        alert: true,
-        badge: true,
-        sound: true,
-        carPlay: false,
-        criticalAlert: false,
-        provisional: false,
-        announcement: false,
-      );
+    const int maxRetries = 3;
+    const Duration retryDelay = Duration(seconds: 1);
+    
+    for (int attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        AppLogger.info('Requesting permissions (attempt $attempt/$maxRetries)', tag: 'FCM');
+        
+        // Request FCM permissions with explicit configuration
+        final NotificationSettings fcmSettings = 
+            await FirebaseMessaging.instance.requestPermission(
+          alert: true,
+          badge: true,
+          sound: true,
+          carPlay: false,
+          criticalAlert: false,
+          provisional: false,
+          announcement: false,
+        );
 
-      // Request system notification permission (Android 13+)
-      if (Platform.isAndroid) {
-        final PermissionStatus status = await Permission.notification.request();
-        _permissionsGranted = status.isGranted && 
-            fcmSettings.authorizationStatus == AuthorizationStatus.authorized;
-      } else {
-        _permissionsGranted = fcmSettings.authorizationStatus == AuthorizationStatus.authorized ||
-            fcmSettings.authorizationStatus == AuthorizationStatus.provisional;
+        // Request system notification permission (Android 13+)
+        bool systemPermissionGranted = true;
+        if (Platform.isAndroid) {
+          // Check current status first
+          final PermissionStatus currentStatus = await Permission.notification.status;
+          AppLogger.info('Current notification permission status: $currentStatus', tag: 'FCM');
+          
+          if (currentStatus.isDenied) {
+            final PermissionStatus requestedStatus = await Permission.notification.request();
+            systemPermissionGranted = requestedStatus.isGranted;
+            AppLogger.info('Requested notification permission result: $requestedStatus', tag: 'FCM');
+          } else {
+            systemPermissionGranted = currentStatus.isGranted;
+          }
+          
+          _permissionsGranted = systemPermissionGranted && 
+              fcmSettings.authorizationStatus == AuthorizationStatus.authorized;
+        } else {
+          _permissionsGranted = fcmSettings.authorizationStatus == AuthorizationStatus.authorized ||
+              fcmSettings.authorizationStatus == AuthorizationStatus.provisional;
+        }
+
+        AppLogger.info(
+          'Permission results - FCM: ${fcmSettings.authorizationStatus}, '
+          'System: $systemPermissionGranted, Final: $_permissionsGranted',
+          tag: 'FCM',
+        );
+        
+        // If permissions are granted, break out of retry loop
+        if (_permissionsGranted) {
+          AppLogger.success('All permissions granted successfully', tag: 'FCM');
+          return;
+        }
+        
+        // If this is not the last attempt and permissions failed, retry
+        if (attempt < maxRetries) {
+          AppLogger.warning(
+            'Permissions not fully granted, retrying in ${retryDelay.inSeconds}s...',
+            tag: 'FCM',
+          );
+          await Future.delayed(retryDelay);
+        }
+        
+      } catch (e) {
+        AppLogger.error('Permission request attempt $attempt failed', tag: 'FCM', error: e);
+        
+        if (attempt == maxRetries) {
+          _permissionsGranted = false;
+          AppLogger.error('Permission request failed after $maxRetries attempts', tag: 'FCM');
+          return;
+        }
+        
+        await Future.delayed(retryDelay);
       }
-
-      AppLogger.info(
-        'Notification permissions: FCM=${fcmSettings.authorizationStatus}, '
-        'System=$_permissionsGranted',
+    }
+    
+    // Final fallback - check if we have any permissions at all
+    try {
+      final NotificationSettings finalCheck = 
+          await FirebaseMessaging.instance.getNotificationSettings();
+      _permissionsGranted = finalCheck.authorizationStatus != AuthorizationStatus.denied &&
+          finalCheck.authorizationStatus != AuthorizationStatus.notDetermined;
+      
+      AppLogger.warning(
+        'Permission fallback check: ${finalCheck.authorizationStatus}, granted: $_permissionsGranted',
         tag: 'FCM',
       );
     } catch (e) {
-      AppLogger.error('Permission request failed', tag: 'FCM', error: e);
+      AppLogger.error('Permission fallback check failed', tag: 'FCM', error: e);
       _permissionsGranted = false;
     }
   }
@@ -238,8 +303,20 @@ class UnifiedFcmService {
   /// Initialize token management with refresh handling
   Future<void> _initializeTokenManagement() async {
     try {
-      // Get initial token
+      AppLogger.info('Starting token management initialization...', tag: 'FCM');
+      
+      // Print debug info before token retrieval
+      await printDebugInfo();
+      
+      // Get initial token with comprehensive logging
+      AppLogger.info('Attempting to retrieve initial FCM token...', tag: 'FCM');
       await _refreshToken();
+
+      if (_currentToken != null) {
+        AppLogger.success('Initial token retrieved successfully', tag: 'FCM');
+      } else {
+        AppLogger.warning('Initial token retrieval returned null', tag: 'FCM');
+      }
 
       // Listen for token refresh
       _onTokenRefreshSubscription = FirebaseMessaging.instance.onTokenRefresh.listen(
@@ -251,9 +328,10 @@ class UnifiedFcmService {
         ),
       );
 
-      AppLogger.success('Token management initialized', tag: 'FCM');
-    } catch (e) {
+      AppLogger.success('Token management initialized with refresh listener', tag: 'FCM');
+    } catch (e, stackTrace) {
       AppLogger.error('Token management initialization failed', tag: 'FCM', error: e);
+      AppLogger.error('Stack trace: $stackTrace', tag: 'FCM');
     }
   }
 
@@ -296,55 +374,155 @@ class UnifiedFcmService {
     }
   }
 
-  /// Get FCM token with retry logic
+  /// Get FCM token with robust retry logic and network checks
   Future<String?> _getTokenWithRetry() async {
     for (int attempt = 1; attempt <= _maxRetries; attempt++) {
       try {
-        final String? token = await FirebaseMessaging.instance.getToken();
+        AppLogger.info('Token retrieval attempt $attempt/$_maxRetries', tag: 'FCM');
         
-        if (token != null && token.isNotEmpty) {
-          return token;
+        // Check network connectivity before attempting token retrieval
+        if (!await _checkNetworkConnectivity()) {
+          AppLogger.warning('No network connectivity on attempt $attempt', tag: 'FCM');
+          if (attempt < _maxRetries) {
+            await Future.delayed(_baseRetryDelay * attempt);
+            continue;
+          }
+          return null;
         }
         
+        // Check if Firebase is properly initialized
+        if (!await _isFirebaseReady()) {
+          AppLogger.warning('Firebase not ready on attempt $attempt', tag: 'FCM');
+          if (attempt < _maxRetries) {
+            await Future.delayed(_baseRetryDelay * attempt);
+            continue;
+          }
+          return null;
+        }
+        
+        // Check permissions before token retrieval
+        if (!_permissionsGranted) {
+          AppLogger.warning('Permissions not granted, attempting to re-request', tag: 'FCM');
+          await _requestPermissions();
+          if (!_permissionsGranted) {
+            AppLogger.warning('Permissions still not granted on attempt $attempt', tag: 'FCM');
+            if (attempt < _maxRetries) {
+              await Future.delayed(_baseRetryDelay * attempt);
+              continue;
+            }
+            return null;
+          }
+        }
+        
+        // Attempt to get the token
+        AppLogger.info('Requesting FCM token from Firebase...', tag: 'FCM');
+        final String? token = await FirebaseMessaging.instance.getToken();
+        
+        if (token != null && token.isNotEmpty && _validateFcmToken(token)) {
+          AppLogger.success(
+            'Valid FCM token received on attempt $attempt: ${token.substring(0, 20)}...',
+            tag: 'FCM',
+          );
+          return token;
+        } else {
+          AppLogger.warning(
+            'Invalid or null token received on attempt $attempt: ${token?.substring(0, 20) ?? 'null'}',
+            tag: 'FCM',
+          );
+        }
+        
+        // If this is not the last attempt, wait before retrying
         if (attempt < _maxRetries) {
           final Duration delay = _baseRetryDelay * attempt;
           AppLogger.info(
-            'Token retrieval attempt $attempt failed, retrying in ${delay.inSeconds}s',
+            'Token retrieval failed, retrying in ${delay.inSeconds}s...',
             tag: 'FCM',
           );
           await Future.delayed(delay);
         }
-      } catch (e) {
+        
+      } catch (e, stackTrace) {
         AppLogger.error(
-          'Token retrieval attempt $attempt failed',
+          'Token retrieval attempt $attempt failed with exception',
           tag: 'FCM',
           error: e,
         );
         
-        if (attempt == _maxRetries) rethrow;
+        if (attempt == _maxRetries) {
+          AppLogger.error('Token retrieval failed after $attempt attempts', tag: 'FCM');
+          AppLogger.error('Final error: $e', tag: 'FCM');
+          AppLogger.error('Stack trace: $stackTrace', tag: 'FCM');
+          return null;
+        }
+        
         await Future.delayed(_baseRetryDelay * attempt);
       }
     }
     
+    AppLogger.error('Failed to retrieve FCM token after $_maxRetries attempts', tag: 'FCM');
     return null;
+  }
+
+  /// Check network connectivity
+  Future<bool> _checkNetworkConnectivity() async {
+    try {
+      final connectivity = Connectivity();
+      final result = await connectivity.checkConnectivity();
+      
+      // connectivity_plus 5.0.1 returns a single ConnectivityResult
+      final isConnected = result == ConnectivityResult.mobile ||
+                         result == ConnectivityResult.wifi ||
+                         result == ConnectivityResult.ethernet;
+      
+      AppLogger.info('Network connectivity check: $isConnected ($result)', tag: 'FCM');
+      return isConnected;
+    } catch (e) {
+      AppLogger.error('Network connectivity check failed', tag: 'FCM', error: e);
+      // Assume connected if check fails
+      return true;
+    }
+  }
+
+  /// Check if Firebase is properly initialized and ready
+  Future<bool> _isFirebaseReady() async {
+    try {
+      // Check if Firebase is initialized
+      if (Firebase.apps.isEmpty) {
+        AppLogger.warning('No Firebase apps found', tag: 'FCM');
+        return false;
+      }
+      
+      // Check if FirebaseMessaging is available
+      final messaging = FirebaseMessaging.instance;
+      
+      // Try to get notification settings as a readiness check
+      final settings = await messaging.getNotificationSettings();
+      AppLogger.info('Firebase readiness check - Auth status: ${settings.authorizationStatus}', tag: 'FCM');
+      
+      return true;
+    } catch (e) {
+      AppLogger.error('Firebase readiness check failed', tag: 'FCM', error: e);
+      return false;
+    }
   }
 
   /// Validate FCM token format
   bool _validateFcmToken(String token) {
-    if (token.isEmpty) return false;
-    
-    // FCM tokens are typically base64url encoded and quite long
-    if (token.length < 140) return false; // Minimum realistic length
-    
-    // Should not contain whitespace or special characters except - and _
-    final RegExp validTokenPattern = RegExp(r'^[A-Za-z0-9_-]+$');
-    if (!validTokenPattern.hasMatch(token)) return false;
-    
-    // Should not be a fallback token
-    if (token.startsWith('fcm-fallback-') || token.startsWith('fcm-error-')) {
+    // Accept any non-empty token that Firebase provides
+    // Firebase tokens are always valid if they're generated by Firebase
+    if (token.isEmpty) {
+      AppLogger.warning('Empty token received', tag: 'FCM');
       return false;
     }
     
+    // Should not be a fallback token
+    if (token.startsWith('fcm-fallback-') || token.startsWith('fcm-error-')) {
+      AppLogger.warning('Fallback/error token received: $token', tag: 'FCM');
+      return false;
+    }
+    
+    // All other tokens are valid - Firebase generates them correctly
+    AppLogger.success('Token validation passed for token: ${token.substring(0, 10)}... (length: ${token.length})', tag: 'FCM');
     return true;
   }
 
@@ -516,6 +694,24 @@ class UnifiedFcmService {
     return false;
   }
 
+  /// Generate and retrieve FCM token (for dashboard screen)
+  /// Call this when user reaches dashboard to get the token
+  Future<String?> generateToken() async {
+    if (!_isInitialized) {
+      AppLogger.warning('FCM service not initialized, initializing now...', tag: 'FCM');
+      await initializeWithoutToken();
+    }
+    
+    try {
+      AppLogger.info('Generating FCM token from dashboard...', tag: 'FCM');
+      await _initializeTokenManagement();
+      return _currentToken;
+    } catch (e) {
+      AppLogger.error('Token generation from dashboard failed', tag: 'FCM', error: e);
+      return null;
+    }
+  }
+
   /// Force refresh token (useful for testing)
   Future<String?> forceRefreshToken() async {
     try {
@@ -550,19 +746,73 @@ class UnifiedFcmService {
     AppLogger.info('FCM service disposed', tag: 'FCM');
   }
 
-  /// Get service status for debugging
+  /// Get comprehensive service status for debugging
   Map<String, dynamic> getStatus() {
     return {
-      'isInitialized': _isInitialized,
-      'permissionsGranted': _permissionsGranted,
-      'hasToken': _currentToken != null,
-      'tokenLength': _currentToken?.length ?? 0,
-      'activeSubscriptions': {
+      'service': {
+        'isInitialized': _isInitialized,
+        'permissionsGranted': _permissionsGranted,
+        'hasToken': _currentToken != null,
+        'tokenLength': _currentToken?.length ?? 0,
+        'tokenPreview': _currentToken?.substring(0, 20) ?? 'null',
+      },
+      'permissions': {
+        'granted': _permissionsGranted,
+      },
+      'subscriptions': {
         'onMessage': _onMessageSubscription != null,
         'onMessageOpenedApp': _onMessageOpenedAppSubscription != null,
         'onTokenRefresh': _onTokenRefreshSubscription != null,
       },
-      'hasDebounceTimer': _tokenRefreshDebounceTimer?.isActive ?? false,
+      'timers': {
+        'hasDebounceTimer': _tokenRefreshDebounceTimer?.isActive ?? false,
+      },
+      'firebase': {
+        'appsCount': Firebase.apps.length,
+        'appNames': Firebase.apps.map((app) => app.name).toList(),
+      },
     };
+  }
+
+  /// Print comprehensive debug information
+  Future<void> printDebugInfo() async {
+    try {
+      AppLogger.info('=== FCM Service Debug Information ===', tag: 'FCM');
+      
+      // Service status
+      final status = getStatus();
+      AppLogger.info('Service Status: $status', tag: 'FCM');
+      
+      // Device information
+      AppLogger.info('Platform: ${Platform.operatingSystem} ${Platform.operatingSystemVersion}', tag: 'FCM');
+      
+      // Network connectivity
+      final isConnected = await _checkNetworkConnectivity();
+      AppLogger.info('Network Connected: $isConnected', tag: 'FCM');
+      
+      // Firebase status
+      final firebaseReady = await _isFirebaseReady();
+      AppLogger.info('Firebase Ready: $firebaseReady', tag: 'FCM');
+      
+      // Permission details
+      if (Platform.isAndroid) {
+        final notificationStatus = await Permission.notification.status;
+        AppLogger.info('Android Notification Permission: $notificationStatus', tag: 'FCM');
+      }
+      
+      // FCM settings
+      try {
+        final settings = await FirebaseMessaging.instance.getNotificationSettings();
+        AppLogger.info('FCM Settings - Auth: ${settings.authorizationStatus}, '
+                      'Alert: ${settings.alert}, Badge: ${settings.badge}, '
+                      'Sound: ${settings.sound}', tag: 'FCM');
+      } catch (e) {
+        AppLogger.error('Failed to get FCM settings', tag: 'FCM', error: e);
+      }
+      
+      AppLogger.info('=== End Debug Information ===', tag: 'FCM');
+    } catch (e) {
+      AppLogger.error('Failed to print debug info', tag: 'FCM', error: e);
+    }
   }
 }

@@ -55,9 +55,9 @@ class ImageGallerySection extends StatelessWidget {
       child: Center(
         child: Text(
           "No images found",
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: Colors.grey,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyMedium?.copyWith(color: Colors.grey),
         ),
       ),
     );
@@ -65,7 +65,9 @@ class ImageGallerySection extends StatelessWidget {
 
   Widget _buildImageGallery(BuildContext context) {
     final showAllTile = imageGallery.length >= 6;
-    final displayList = showAllTile ? imageGallery.take(5).toList() : imageGallery;
+    final displayList = showAllTile
+        ? imageGallery.take(5).toList()
+        : imageGallery;
 
     return SizedBox(
       height: 135,
@@ -81,23 +83,29 @@ class ImageGallerySection extends StatelessWidget {
 
           final img = displayList[index];
           final imageUrl = '${Env.baseUrl}/reports/${img['id']}/image';
-
-          return AuthenticatedNetworkImage(
-            imageUrl: imageUrl,
-            width: 125,
-            height: 130,
-            fit: BoxFit.cover,
+          return ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            placeholder: Container(
-              width: 125,
-              height: 130,
-              color: Colors.grey.shade300,
-            ),
-            errorWidget: Image.asset(
-              'assets/images/image_placeholder.png',
+            child: Image.network(
+              img['url'] ?? imageUrl,
               width: 125,
               height: 130,
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 125,
+                  height: 130,
+                  color: Colors.grey.shade300,
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  'assets/images/image_placeholder.png',
+                  width: 125,
+                  height: 130,
+                  fit: BoxFit.cover,
+                );
+              },
             ),
           );
         },
@@ -139,7 +147,7 @@ class ImageGallerySection extends StatelessWidget {
               Text(
                 'Show All',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ],

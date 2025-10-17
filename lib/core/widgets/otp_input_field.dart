@@ -165,14 +165,15 @@ class _OtpInputFieldState extends State<OtpInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(widget.length, (index) {
+    return Flexible(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(widget.length, (index) {
         final bool hasFocus = _focusNodes[index].hasFocus;
 
         return Container(
-          margin: EdgeInsets.only(right: index < widget.length - 1 ? 12 : 0),
-          padding: const EdgeInsets.only(left: 10, right: 10, bottom: 8),
+          margin: EdgeInsets.only(right: index < widget.length - 1 ? 8 : 0),
+          padding: const EdgeInsets.only(left: 6, right: 6, bottom: 8),
           decoration: BoxDecoration(
             border: Border(
               bottom: BorderSide(
@@ -184,7 +185,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
             ),
           ),
           child: SizedBox(
-            width: 28,
+            width: 26,
             height: 38,
             child: KeyboardListener(
               focusNode: FocusNode(skipTraversal: true),
@@ -239,6 +240,7 @@ class _OtpInputFieldState extends State<OtpInputField> {
           ),
         );
       }),
+      ),
     );
   }
 }
