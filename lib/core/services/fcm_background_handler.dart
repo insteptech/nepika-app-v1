@@ -9,9 +9,14 @@ import '../../firebase_options.dart';
 Future<void> firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   try {
     // Initialize Firebase if not already done
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
+    try {
+      Firebase.app(); // Check if already initialized
+    } catch (e) {
+      // Not initialized, initialize now
+      await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.currentPlatform,
+      );
+    }
 
     AppLogger.info(
       'Background message received: ${message.messageId}',

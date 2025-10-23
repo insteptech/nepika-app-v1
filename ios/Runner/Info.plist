@@ -36,6 +36,8 @@
 	<string>Nepika needs permission to save your skin analysis photos to your photo library.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Nepika may access your photo library to save analysis results and skincare progress photos for your personal tracking.</string>
+	<key>NSUserNotificationsUsageDescription</key>
+	<string>Nepika sends you personalized skincare reminders to help you maintain a consistent routine and achieve your skin goals.</string>
 	<key>NSUserActivityTypes</key>
 	<array>
 		<string>com.apple.developer.associated-domains</string>

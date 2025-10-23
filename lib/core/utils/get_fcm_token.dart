@@ -23,16 +23,23 @@ class FcmUtil {
     // 🔥 1. Initialize Firebase
     // -----------------------------
     try {
-      await Firebase.initializeApp(
-        options: const FirebaseOptions(
-          apiKey: 'AIzaSyDY1ecvnLO94Q7NUFT3liol-WDbUT7wBXM',
-          appId: '1:1075434774461:ios:3431aedde55c9f4f05bcd4',
-          messagingSenderId: '1075434774461',
-          projectId: 'nepika-ai',
-          storageBucket: 'nepika-ai.firebasestorage.app',
-        ),
-      );
-      print('✅ Firebase initialized successfully');
+      // Check if Firebase is already initialized
+      try {
+        Firebase.app();
+        print('✅ Firebase already initialized');
+      } catch (e) {
+        // Initialize Firebase
+        await Firebase.initializeApp(
+          options: const FirebaseOptions(
+            apiKey: 'AIzaSyDY1ecvnLO94Q7NUFT3liol-WDbUT7wBXM',
+            appId: '1:1075434774461:ios:3431aedde55c9f4f05bcd4',
+            messagingSenderId: '1075434774461',
+            projectId: 'nepika-ai',
+            storageBucket: 'nepika-ai.firebasestorage.app',
+          ),
+        );
+        print('✅ Firebase initialized successfully');
+      }
     } catch (e) {
       print('❌ Firebase init error: $e');
       return;

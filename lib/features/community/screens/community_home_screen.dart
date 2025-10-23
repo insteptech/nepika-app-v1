@@ -3,6 +3,8 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../../../../core/config/constants/app_constants.dart';
+import '../../../../core/config/constants/routes.dart';
+import '../../../../core/widgets/navigation/navigation_components.dart';
 import '../../../../domain/community/entities/community_entities.dart';
 import '../bloc/blocs/posts_bloc.dart';
 import '../bloc/events/posts_event.dart';
@@ -30,6 +32,7 @@ class CommunityHomeScreen extends StatefulWidget {
 
 class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   String? _token;
   String? _userId;
   bool _isLoading = true;
@@ -182,6 +185,142 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     }
   }
 
+  void _openDrawer() {
+    _scaffoldKey.currentState?.openDrawer();
+  }
+
+  void _onDrawerItemTap(int index) {
+    Navigator.of(context).pop(); // Close drawer first
+    
+    switch (index) {
+      case 0: // Community Home
+        // Already on community home, just refresh
+        _refreshPosts();
+        break;
+      case 1: // Search
+        _navigateToSearch();
+        break;
+      case 2: // Notifications
+        Navigator.of(context).pushNamed(AppRoutes.notificationDebug);
+        break;
+      case 3: // Profile
+        Navigator.of(context).pushNamed(CommunityRoutes.userProfile);
+        break;
+      case 4: // Settings
+        Navigator.of(context).pushNamed(AppRoutes.dashboardSettings);
+        break;
+    }
+  }
+
+  List<DrawerItem> _buildDrawerItems() {
+    return [
+      const DrawerItem(
+        title: 'Home',
+        icon: Icons.home_outlined,
+      ),
+      const DrawerItem(
+        title: 'Search',
+        icon: Icons.search_outlined,
+      ),
+      const DrawerItem(
+        title: 'Notifications',
+        icon: Icons.notifications_outlined,
+      ),
+      const DrawerItem(
+        title: 'Profile',
+        icon: Icons.person_outline,
+      ),
+      const DrawerItem(
+        title: 'Settings',
+        icon: Icons.settings_outlined,
+      ),
+    ];
+  }
+
+  Widget _buildCommunityDrawer() {
+    return Drawer(
+      backgroundColor: Theme.of(context).colorScheme.onTertiary,
+      child: Column(
+        children: [
+          // Header
+          Container(
+            height: 100,
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            child: Center(
+              child: Text(
+                'Community',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ),
+          
+          // Navigation Items
+          Expanded(
+            child: ListView.builder(
+              padding: EdgeInsets.zero,
+              itemCount: _buildDrawerItems().length,
+              itemBuilder: (context, index) {
+                final item = _buildDrawerItems()[index];
+                return ListTile(
+                  leading: Icon(
+                    item.icon,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: Text(
+                    item.title,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurface,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  onTap: () => _onDrawerItemTap(index),
+                );
+              },
+            ),
+          ),
+          
+          // Create Post Button
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop(); // Close drawer
+                _navigateToCreatePost();
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(double.infinity, 50),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(25),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.add, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Create Post',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -220,7 +359,9 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     }
 
     return Scaffold(
+      key: _scaffoldKey,
       backgroundColor: Theme.of(context).colorScheme.onTertiary,
+      drawer: _buildCommunityDrawer(),
       body: SafeArea(
         child: MultiBlocListener(
           listeners: [
@@ -259,6 +400,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                     floating: false,
                     delegate: CommunityHeader(
                       onSearchTap: _navigateToSearch,
+                      onMenuTap: _openDrawer,
                     ),
                   ),
 
@@ -310,6 +452,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                     floating: false,
                     delegate: CommunityHeader(
                       onSearchTap: _navigateToSearch,
+                      onMenuTap: _openDrawer,
                     ),
                   ),
 
@@ -361,6 +504,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
                       floating: false,
                       delegate: CommunityHeader(
                         onSearchTap: _navigateToSearch,
+                        onMenuTap: _openDrawer,
                       ),
                     ),
 

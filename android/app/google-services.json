@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "1075434774461",
-    "project_id": "nepika-ai",
-    "storage_bucket": "nepika-ai.firebasestorage.app"
+    "project_number": "429514031239",
+    "project_id": "nepika-c189e",
+    "storage_bucket": "nepika-c189e.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:1075434774461:android:0805973ab36af68f05bcd4",
+        "mobilesdk_app_id": "1:429514031239:android:0ac5a35299da86a3577822",
         "android_client_info": {
           "package_name": "com.assisted.nepika"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyARFuWhBP7pxyxb-wPudX-ZL79U5Lw9wr8"
+          "current_key": "AIzaSyC2-6KHY2ZP6Y-Bb44Jas0I7KjdN_LxM4Y"
         }
       ],
       "services": {

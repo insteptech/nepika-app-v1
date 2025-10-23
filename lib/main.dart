@@ -28,6 +28,7 @@ import 'package:nepika/features/notifications/screens/notification_debug_screen.
 import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
+import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
@@ -40,6 +41,8 @@ import 'domain/auth/usecases/resend_otp.dart' as resend;
 import 'features/splash/main.dart';
 import 'features/welcome/main.dart'; 
 import 'package:provider/provider.dart';
+import 'core/services/local_notification_service.dart';
+import 'core/utils/app_logger.dart';
 
 // Background message handler is now in fcm_background_handler.dart
 
@@ -56,6 +59,13 @@ void main() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   await SharedPrefsHelper.init();
   await di.ServiceLocator.init();
+
+  // Initialize local notification service
+  try {
+    await LocalNotificationService.instance.initialize();
+  } catch (e) {
+    AppLogger.error('Failed to initialize LocalNotificationService', tag: 'Main', error: e);
+  }
 
   // Set up background message handler (FCM will be initialized from splash screen)
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
@@ -198,7 +208,10 @@ class MyApp extends StatelessWidget {
             case AppRoutes.dashboardReminderSettings:
             case DashboardRoutes.reminderSettings:
               return MaterialPageRoute(
-                builder: (_) => const ReminderSettings(),
+                builder: (_) => BlocProvider(
+                  create: (context) => di.ServiceLocator.get<ReminderBloc>(),
+                  child: const ReminderSettings(),
+                ),
               );
             case AppRoutes.subscription:
               return MaterialPageRoute(builder: (_) => const PricingScreen());

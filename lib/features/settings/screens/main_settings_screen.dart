@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:nepika/core/di/injection_container.dart' as di;
+import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/settings/screens/onboarding_data_screen.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -103,7 +106,12 @@ class MainSettingsScreen extends StatelessWidget {
         'Reminders',
         onTap: () {
           Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const ReminderSettings()),
+            MaterialPageRoute(
+              builder: (_) => BlocProvider(
+                create: (context) => di.ServiceLocator.get<ReminderBloc>(),
+                child: const ReminderSettings(),
+              ),
+            ),
           );
         },
       ),

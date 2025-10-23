@@ -17,6 +17,8 @@ import 'screens/history_screen.dart';
 import 'screens/set_reminder_screen.dart';
 import 'components/scrollable_page_wrapper.dart';
 import 'widgets/dashboard_navbar.dart';
+import 'package:nepika/core/di/injection_container.dart' as di;
+import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 
 // Export BLoCs for dashboard feature independence
 export 'bloc/dashboard_bloc.dart';
@@ -538,7 +540,10 @@ class _DashboardState extends State<Dashboard>
       case AppRoutes.dashboardReminderSettings:
         return _buildScrollableRoute(
           settings: RouteSettings(name: AppRoutes.dashboardReminderSettings),
-          child: const ReminderSettings(),
+          child: BlocProvider(
+            create: (context) => di.ServiceLocator.get<ReminderBloc>(),
+            child: const ReminderSettings(),
+          ),
         );
       case AppRoutes.dashboardAllProducts:
         return _buildScrollableRoute(

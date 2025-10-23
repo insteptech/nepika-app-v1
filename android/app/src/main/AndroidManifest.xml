@@ -11,6 +11,10 @@
     <!-- Notification permissions for Android 13+ (API level 33+) -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     
+    <!-- Exact alarm permission for Android 12+ (API level 31+) -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
+    
     <!-- Wake up the device for notifications -->
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     

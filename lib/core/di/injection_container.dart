@@ -29,6 +29,9 @@ import '../../domain/reminders/repositories/reminder_repository.dart';
 import '../../domain/reminders/usecases/add_reminder.dart';
 import '../../features/reminders/bloc/reminder_bloc.dart';
 
+// Local Notifications
+import '../services/local_notification_service.dart';
+
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
   
@@ -120,6 +123,11 @@ class ServiceLocator {
     // Note: UnifiedFcmService is a singleton accessed via UnifiedFcmService.instance
     // No need to register it in DI as it manages its own lifecycle
 
+    // Local Notifications Service (Singleton)
+    _registerLazySingleton<LocalNotificationService>(
+      LocalNotificationService.instance,
+    );
+
     // Reminders - Data sources
     _registerLazySingleton<ReminderRemoteDataSource>(
       ReminderRemoteDataSourceImpl(get<ApiBase>()),
@@ -139,6 +147,7 @@ class ServiceLocator {
     _registerFactory<ReminderBloc>(
       () => ReminderBloc(
         addReminderUseCase: get<AddReminder>(),
+        localNotificationService: get<LocalNotificationService>(),
       ),
     );
   }

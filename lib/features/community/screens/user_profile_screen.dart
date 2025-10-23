@@ -51,6 +51,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   // Profile data
   CommunityProfileEntity? _profileData;
   
+  // Profile error state
+  String? _profileError;
+  
   // Follow state
   bool? _isFollowing;
   bool _isFollowLoading = false;
@@ -826,6 +829,11 @@ Join the conversation: $profileUrl''';
       );
     }
 
+    // Show profile not found screen if there's an error
+    if (_profileError != null) {
+      return _buildProfileNotFound(context);
+    }
+
     // Try to get ProfileBloc from context, handle gracefully if not available
     try {
       final profileBloc = context.read<ProfileBloc>();
@@ -903,6 +911,7 @@ Join the conversation: $profileUrl''';
       debugPrint('ProfilePage: Profile loaded: ${state.profile.username}');
       setState(() {
         _profileData = state.profile;
+        _profileError = null; // Clear any previous error
       });
       
       // Note: Backend now provides follow status in profile response, no need for separate API call
@@ -912,6 +921,12 @@ Join the conversation: $profileUrl''';
         token: _token!,
         userId: profileUserId!,
       ));
+    } else if (state is CommunityProfileError && state.userId == profileUserId) {
+      debugPrint('ProfilePage: Profile error: ${state.message}');
+      setState(() {
+        _profileError = state.message;
+        _profileData = null; // Clear any previous profile data
+      });
     } else if (state is UserThreadsLoaded && state.userId == profileUserId) {
       debugPrint('ProfilePage: Threads loaded: ${state.threads.length} items');
       setState(() {
@@ -1039,6 +1054,97 @@ Join the conversation: $profileUrl''';
     } else {
       debugPrint('ProfilePage: Unhandled state: ${state.runtimeType}');
     }
+  }
+
+  Widget _buildProfileNotFound(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.onTertiary,
+      appBar: AppBar(
+        backgroundColor: Theme.of(context).colorScheme.onTertiary,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.of(context).pop(),
+        ),
+        title: const Text('Profile'),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(20),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.person_off_outlined,
+                size: 80,
+                color: Colors.grey[400],
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Profile not found',
+                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.grey[700],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                _profileError?.contains('404') == true 
+                    ? 'This user doesn\'t exist or the profile has been removed.'
+                    : _profileError ?? 'Unable to load profile. Please try again.',
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Colors.grey[600],
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  OutlinedButton(
+                    onPressed: () => Navigator.of(context).pop(),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Go Back'),
+                  ),
+                  ElevatedButton(
+                    onPressed: () {
+                      // Retry loading profile
+                      if (_token != null && profileUserId != null && _profileBloc != null) {
+                        setState(() {
+                          _profileError = null;
+                        });
+                        _profileBloc!.add(GetCommunityProfile(
+                          token: _token!,
+                          userId: profileUserId!,
+                        ));
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 12,
+                      ),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Widget _buildProfileContent(BuildContext context) {

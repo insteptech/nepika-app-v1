@@ -41,8 +41,14 @@ class FcmManager {
 
     try {
       // Initialize Firebase (uses platform-specific config files)
-      await Firebase.initializeApp();
-      AppLogger.success('Firebase initialized successfully', tag: 'FCM');
+      try {
+        Firebase.app(); // Check if already initialized
+        AppLogger.info('Firebase already initialized', tag: 'FCM');
+      } catch (e) {
+        // Not initialized, initialize now
+        await Firebase.initializeApp();
+        AppLogger.success('Firebase initialized successfully', tag: 'FCM');
+      }
 
       // Initialize local notifications
       await _initializeLocalNotifications();

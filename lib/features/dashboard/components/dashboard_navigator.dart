@@ -1,7 +1,10 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/di/injection_container.dart' as di;
 import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';
+import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import '../screens/set_reminder_screen.dart';
 // import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
 import 'package:nepika/features/routine/main.dart';
@@ -258,7 +261,10 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
           settings,
           ScrollablePageWrapper(
             onScroll: _handleScroll,
-            child: const ReminderSettings(),
+            child: BlocProvider(
+              create: (context) => di.ServiceLocator.get<ReminderBloc>(),
+              child: const ReminderSettings(),
+            ),
           ),
         );
       case AppRoutes.dashboardAllProducts:

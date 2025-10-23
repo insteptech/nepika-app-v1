@@ -1,16 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import '../../../../core/widgets/back_button.dart';
 import '../../notifications/widgets/notification_badge.dart';
 import '../../notifications/bloc/notification_bloc.dart';
 import '../../notifications/bloc/notification_event.dart';
 
-/// Community header component with logo, back button, search, and notifications
+/// Community header component with logo, hamburger menu, search, and notifications
 /// Follows Single Responsibility Principle - only handles header display
 class CommunityHeader extends SliverPersistentHeaderDelegate {
   final VoidCallback onSearchTap;
+  final VoidCallback onMenuTap;
 
-  CommunityHeader({required this.onSearchTap});
+  CommunityHeader({
+    required this.onSearchTap,
+    required this.onMenuTap,
+  });
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
@@ -40,10 +43,18 @@ class CommunityHeader extends SliverPersistentHeaderDelegate {
             ),
           ),
 
-          // Back Button
-          const Positioned(
+          // Hamburger Menu Button
+          Positioned(
             left: 0,
-            child: CustomBackButton(),
+            child: IconButton(
+              splashRadius: 20,
+              onPressed: onMenuTap,
+              icon: Icon(
+                Icons.menu,
+                size: 28,
+                color: Theme.of(context).colorScheme.primary,
+              ),
+            ),
           ),
 
           // Search and Notification Icons

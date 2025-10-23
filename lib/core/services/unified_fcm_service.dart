@@ -104,14 +104,22 @@ class UnifiedFcmService {
   /// Initialize Firebase with proper configuration
   Future<void> _initializeFirebase() async {
     try {
-      await Firebase.initializeApp(
-        options: DefaultFirebaseOptions.currentPlatform,
-      );
+      // Check if Firebase is already initialized
+      try {
+        Firebase.app(); // This will throw if not initialized
+        AppLogger.info('Firebase already initialized, skipping initialization', tag: 'FCM');
+      } catch (e) {
+        // Firebase not initialized, proceed with initialization
+        AppLogger.info('Firebase not initialized, initializing now...', tag: 'FCM');
+        await Firebase.initializeApp(
+          options: DefaultFirebaseOptions.currentPlatform,
+        );
+        AppLogger.success('Firebase initialized with proper configuration', tag: 'FCM');
+      }
       
       // Enable auto-initialization
       await FirebaseMessaging.instance.setAutoInitEnabled(true);
       
-      AppLogger.success('Firebase initialized with proper configuration', tag: 'FCM');
     } catch (e) {
       AppLogger.error('Firebase initialization failed', tag: 'FCM', error: e);
       rethrow;

@@ -8,6 +8,8 @@ import 'package:nepika/core/widgets/custom_text_field.dart';
 import 'package:nepika/core/widgets/selection_button.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/di/injection_container.dart';
+import 'package:nepika/core/services/local_notification_service.dart';
+import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/reminders/bloc/reminder_event.dart';
 import 'package:nepika/features/reminders/bloc/reminder_state.dart';
@@ -83,33 +85,10 @@ bool get _isFormValid {
     final match = timeRegex.firstMatch(timeText);
     if (match == null) return 'Invalid time format';
 
-    final hour = int.parse(match.group(1)!);
-    final period = match.group(3)!;
+    // Remove time range restrictions - users can set reminders for any time
+    // Morning and Night are just labels, not time restrictions
     
-    // Convert to 24-hour format for easier validation
-    int hour24 = hour;
-    if (period == 'AM' && hour == 12) {
-      hour24 = 0;
-    } else if (period == 'PM' && hour != 12) {
-      hour24 = hour + 12;
-    }
-
-    switch (_selectedType!) {
-      case ReminderType.morning:
-        // Morning routine: 5 AM to 12 PM (5-12 in 24-hour format)
-        if (hour24 < 5 || hour24 > 12) {
-          return 'Morning routine reminders should be between 5:00 AM and 12:00 PM';
-        }
-        break;
-      case ReminderType.night:
-        // Night routine: 6 PM to 11 PM (18-23 in 24-hour format)
-        if (hour24 < 18 || hour24 > 23) {
-          return 'Night routine reminders should be between 6:00 PM and 11:00 PM';
-        }
-        break;
-    }
-    
-    return null; // No error
+    return null; // No time restrictions
   }
 
   Widget _buildReminderButton(
@@ -189,14 +168,15 @@ bool get _isFormValid {
 
 
   TimeOfDay _getInitialTimeForRoutineType() {
+    // Use current time as default, or provide sensible defaults based on routine type
     if (_selectedType == null) return TimeOfDay.now();
     
     switch (_selectedType!) {
       case ReminderType.morning:
-        // Default to 8:00 AM for morning routine
+        // Suggest 8:00 AM for morning routine (but user can change to any time)
         return const TimeOfDay(hour: 8, minute: 0);
       case ReminderType.night:
-        // Default to 10:00 PM for night routine
+        // Suggest 10:00 PM for night routine (but user can change to any time)
         return const TimeOfDay(hour: 22, minute: 0);
     }
   }
@@ -229,12 +209,7 @@ bool get _isFormValid {
       
     );
     if (picked != null) {
-      // Validate the picked time against routine type
-      if (_selectedType != null && !_isTimeValidForRoutineType(picked)) {
-        _showTimeValidationError(picked);
-        return;
-      }
-
+      // Accept any time - no validation restrictions
       final hour = picked.hour % 12 == 0 ? 12 : picked.hour % 12;
       final minute = picked.minute.toString().padLeft(2, '0');
       final period = picked.hour >= 12 ? 'PM' : 'AM';
@@ -244,37 +219,8 @@ bool get _isFormValid {
     }
   }
 
-  bool _isTimeValidForRoutineType(TimeOfDay time) {
-    if (_selectedType == null) return true;
 
-    switch (_selectedType!) {
-      case ReminderType.morning:
-        // Morning routine: 5 AM to 12 PM (5-12 in 24-hour format)
-        return time.hour >= 5 && time.hour <= 12;
-      case ReminderType.night:
-        // Night routine: 6 PM to 11 PM (18-23 in 24-hour format)
-        return time.hour >= 18 && time.hour <= 23;
-    }
-  }
-
-  void _showTimeValidationError(TimeOfDay selectedTime) {
-    String routineTypeText = _selectedType == ReminderType.morning ? 'morning' : 'night';
-    String timeRange = _selectedType == ReminderType.morning 
-        ? '5:00 AM and 12:00 PM' 
-        : '6:00 PM and 11:00 PM';
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          'Invalid time for $routineTypeText routine. Please select a time between $timeRange.',
-        ),
-        backgroundColor: Colors.orange,
-        duration: const Duration(seconds: 4),
-      ),
-    );
-  }
-
-  void _onDonePressed(BuildContext blocContext) {
+  void _onDonePressed(BuildContext blocContext) async {
     // Validate inputs
     if (_reminderNameController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -304,6 +250,72 @@ bool get _isFormValid {
       return;
     }
 
+    // Check for notification permissions (Android only)
+    if (_reminderEnabled) {
+      try {
+        final notificationService = LocalNotificationService.instance;
+        final hasExactAlarmPermission = await notificationService.requestExactAlarmPermission();
+        
+        if (!hasExactAlarmPermission) {
+          if (!mounted) return;
+          
+          // Show permission dialog
+          final bool? shouldContinue = await showDialog<bool>(
+            context: context,
+            builder: (BuildContext context) {
+              return AlertDialog(
+                title: const Text('Notification Permission Required'),
+                content: const Text(
+                  'To schedule reminders, this app needs permission to set exact alarms. '
+                  'Please enable "Alarms & reminders" permission in settings.\n\n'
+                  'You can continue without notifications, but reminders won\'t work.'
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(false),
+                    child: const Text('Continue without notifications'),
+                  ),
+                  TextButton(
+                    onPressed: () => Navigator.of(context).pop(true),
+                    child: const Text('Try again'),
+                  ),
+                ],
+              );
+            },
+          );
+          
+          if (shouldContinue == true) {
+            // User wants to try again, call this method recursively
+            if (mounted) {
+              _onDonePressed(blocContext);
+            }
+            return;
+          } else if (shouldContinue == false) {
+            // User wants to continue without notifications
+            setState(() {
+              _reminderEnabled = false;
+            });
+          } else {
+            // User dismissed dialog
+            return;
+          }
+        }
+      } catch (e) {
+        print('Permission check error: $e');
+        if (!mounted) return;
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Unable to check notification permissions. Saving reminder without notifications.'),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        setState(() {
+          _reminderEnabled = false;
+        });
+      }
+    }
+
     try {
       final time24Hour = _convertTo24HourFormat(_reminderTimeController.text);
       
@@ -317,20 +329,188 @@ bool get _isFormValid {
       print('Reminder Enabled: $_reminderEnabled');
       print('========================');
       
-      blocContext.read<ReminderBloc>().add(
-        AddReminderEvent(
-          reminderName: _reminderNameController.text.trim(),
-          reminderTime: time24Hour,
-          reminderDays: _mapReminderDays(_selectedDay!),
-          reminderType: _mapReminderType(_selectedType!),
-          reminderEnabled: _reminderEnabled,
+      if (mounted) {
+        blocContext.read<ReminderBloc>().add(
+          AddReminderEvent(
+            reminderName: _reminderNameController.text.trim(),
+            reminderTime: time24Hour,
+            reminderDays: _mapReminderDays(_selectedDay!),
+            reminderType: _mapReminderType(_selectedType!),
+            reminderEnabled: _reminderEnabled,
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error in _onDonePressed: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _testImmediateNotification() async {
+    try {
+      print('=== IMMEDIATE NOTIFICATION TEST ===');
+      
+      final localService = LocalNotificationService.instance;
+      print('Testing immediate notification...');
+      
+      final success = await localService.showImmediateNotification(
+        title: 'NEPIKA Immediate Test',
+        body: 'This notification should appear instantly!',
+      );
+      
+      print('Immediate notification result: $success');
+      print('==================================');
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success 
+              ? 'Immediate notification sent! Should appear now.'
+              : 'Failed to send immediate notification. Check console for details.',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 3),
         ),
       );
     } catch (e) {
-      print('Error in _onDonePressed: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: ${e.toString()}')),
+      print('Error in immediate notification test: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _runDiagnostics() async {
+    try {
+      print('=== COMPREHENSIVE NOTIFICATION DIAGNOSTICS ===');
+      
+      final localService = LocalNotificationService.instance;
+      final diagnostics = await localService.runDiagnostics();
+      
+      print('Diagnostic Results:');
+      diagnostics.forEach((key, value) {
+        print('  $key: $value');
+      });
+      print('==============================================');
+      
+      if (!mounted) return;
+      
+      // Show results in a dialog
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Notification Diagnostics'),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: diagnostics.entries.map((entry) => 
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text('${entry.key}: ${entry.value}', 
+                    style: const TextStyle(fontSize: 12)),
+                )
+              ).toList(),
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Close'),
+            ),
+          ],
+        ),
       );
+    } catch (e) {
+      print('Error in diagnostics: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Diagnostics error: ${e.toString()}')),
+        );
+      }
+    }
+  }
+
+  Future<void> _testNotifications() async {
+    try {
+      print('=== NOTIFICATION DIAGNOSTIC TEST ===');
+      
+      // 1. Test Local Notification Service
+      final localService = LocalNotificationService.instance;
+      print('Local Notification Service Status: ${localService.getStatus()}');
+      
+      // 2. Test exact alarm permission
+      final hasExactAlarmPermission = await localService.requestExactAlarmPermission();
+      print('Exact Alarm Permission: $hasExactAlarmPermission');
+      
+      // 3. Test notifications enabled
+      final notificationsEnabled = await localService.areNotificationsEnabled();
+      print('Notifications Enabled: $notificationsEnabled');
+      
+      // 4. Test FCM Service
+      final fcmService = UnifiedFcmService.instance;
+      print('FCM Service Status: ${fcmService.getStatus()}');
+      
+      // 5. Schedule a test notification for 10 seconds from now using immediate scheduling
+      print('Scheduling immediate test notification for 10 seconds from now...');
+      
+      final success = await localService.testNotification(
+        title: 'NEPIKA Test Notification',
+        body: 'This is a test notification scheduled 10 seconds ago',
+        delaySeconds: 10,
+      );
+      
+      // 6. Also test a 30-second delayed reminder using the reminder scheduling system
+      print('Also testing 30-second scheduled reminder...');
+      final now = DateTime.now().add(const Duration(seconds: 30));
+      final timeString30s = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
+      
+      final success30s = await localService.scheduleReminder(
+        reminderId: 'test_30s_${DateTime.now().millisecondsSinceEpoch}',
+        reminderName: 'Test 30s Scheduled',
+        time24Hour: timeString30s,
+        reminderDays: 'Daily',
+        reminderType: 'Test',
+        isEnabled: true,
+      );
+      
+      print('30-second scheduled reminder result: $success30s');
+      
+      print('Test notification scheduled: $success');
+      print('====================================');
+      
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            success 
+              ? 'Test notification scheduled for 10 seconds from now. Check console for diagnostic info.'
+              : 'Failed to schedule test notification. Check console for details.',
+          ),
+          backgroundColor: success ? Colors.green : Colors.red,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+      
+    } catch (e) {
+      print('Error in notification test: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Test failed: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -552,6 +732,37 @@ bool get _isFormValid {
                               },
                             ),
                              const SizedBox(height: 10),
+                             
+                             // Debug: Test Notification Buttons
+                             Row(
+                               children: [
+                                 Expanded(
+                                   child: CustomButton(
+                                     isDisabled: false,
+                                     text: 'Immediate Test',
+                                     onPressed: () => _testImmediateNotification(),
+                                   ),
+                                 ),
+                                 const SizedBox(width: 4),
+                                 Expanded(
+                                   child: CustomButton(
+                                     isDisabled: false,
+                                     text: 'Scheduled Test',
+                                     onPressed: () => _testNotifications(),
+                                   ),
+                                 ),
+                                 const SizedBox(width: 4),
+                                 Expanded(
+                                   child: CustomButton(
+                                     isDisabled: false,
+                                     text: 'Diagnostics',
+                                     onPressed: () => _runDiagnostics(),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                             const SizedBox(height: 10),
+                             
                              CustomButton(
                                isDisabled: !_isFormValid || isLoading,
                                text: isLoading ? 'Saving...' : 'Done',

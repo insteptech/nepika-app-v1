@@ -231,3 +231,67 @@ final response = await ApiBase().uploadMultipart(
 - Access theme colors through `Theme.of(context).colorScheme` or custom ColorPalette
 - Implement responsive design principles
 - Create reusable components when patterns repeat
+
+## Firebase & Notifications
+
+### Firebase Integration
+- Firebase Core and Messaging configured for push notifications
+- `firebase.json` configuration file for deployment settings
+- FCM tokens managed via `UnifiedFcmService.instance` (singleton pattern)
+- Background message handler in `core/services/fcm_background_handler.dart`
+- Local notification service integrated with `flutter_local_notifications`
+
+### Push Notification Architecture
+- **UnifiedFcmService**: Main FCM service handling token management and message processing
+- **LocalNotificationService**: Handles local notification display and scheduling
+- **FcmTokenService**: Legacy service (use UnifiedFcmService instead)
+- **ReminderBloc**: Manages scheduled reminders with local notifications
+- Background message handling configured in `main.dart`
+
+### Notification Flow
+1. FCM token obtained and saved to backend via `SaveFcmTokenUseCase`
+2. Backend sends push notifications to FCM
+3. `firebaseMessagingBackgroundHandler` processes background messages
+4. `LocalNotificationService` displays notifications to user
+5. Foreground message handling via `UnifiedFcmService`
+
+### Server-Sent Events (SSE)
+- Real-time notification system documented in `FLUTTER_SSE_INTEGRATION_GUIDE.md`
+- NotificationBloc handles SSE connections for live updates
+- Supports notification types: like, reply, follow, mention
+- Auto-deletion when actions are reversed (unlike, unfollow, etc.)
+
+### Reminders System
+- Daily skincare routine reminders with `ReminderBloc`
+- Local notification scheduling via `LocalNotificationService`
+- Time zone support with `timezone` package
+- User-configurable reminder settings in dashboard
+
+## Advanced Architecture
+
+### Hybrid Community State Management
+- Three-layer architecture documented in `HYBRID_COMMUNITY_ARCHITECTURE.md`:
+  - **L1 RAM State Manager**: In-memory state for instant updates
+  - **L2 Database Layer**: Persistent local storage with SharedPreferences
+  - **L3 Server Sync**: Delta sync and real-time events
+- `HybridPostsBloc` provides optimistic updates and offline support
+- Centralized state management via `CommunityStateManager`
+
+### Additional Implementation Notes
+
+#### Firebase Setup Requirements
+- Ensure `GoogleService-Info.plist` (iOS) and `google-services.json` (Android) are properly configured
+- Initialize Firebase in `main.dart` before app starts
+- FCM token management is handled automatically by `UnifiedFcmService`
+
+#### Notification Best Practices
+- Use `LocalNotificationService.instance` for local notifications
+- Handle notification permissions properly
+- Process background messages in `fcm_background_handler.dart`
+- Test notifications on both iOS and Android devices
+
+# important-instruction-reminders
+Do what has been asked; nothing more, nothing less.
+NEVER create files unless they're absolutely necessary for achieving your goal.
+ALWAYS prefer editing an existing file to creating a new one.
+NEVER proactively create documentation files (*.md) or README files. Only create documentation files if explicitly requested by the User.

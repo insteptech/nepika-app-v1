@@ -44,37 +44,37 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyDY1ecvnLO94Q7NUFT3liol-WDbUT7wBXM',
-    appId: '1:1075434774461:web:nepika-web-app',
-    messagingSenderId: '1075434774461',
-    projectId: 'nepika-ai',
-    authDomain: 'nepika-ai.firebaseapp.com',
-    storageBucket: 'nepika-ai.firebasestorage.app',
+    apiKey: 'AIzaSyC1v33JhBQA56GiohKMlMzPs7o7KdRQENc',
+    appId: '1:443222788965:web:bb4a6e19cff7a57c106f8c',
+    messagingSenderId: '443222788965',
+    projectId: 'nepika-87cc7',
+    authDomain: 'nepika-87cc7.firebaseapp.com',
+    storageBucket: 'nepika-87cc7.firebasestorage.app',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyARFuWhBP7pxyxb-wPudX-ZL79U5Lw9wr8',
-    appId: '1:1075434774461:android:0805973ab36af68f05bcd4',
-    messagingSenderId: '1075434774461',
-    projectId: 'nepika-ai',
-    storageBucket: 'nepika-ai.firebasestorage.app',
+    apiKey: 'AIzaSyC2-6KHY2ZP6Y-Bb44Jas0I7KjdN_LxM4Y',
+    appId: '1:429514031239:android:0ac5a35299da86a3577822',
+    messagingSenderId: '429514031239',
+    projectId: 'nepika-c189e',
+    storageBucket: 'nepika-c189e.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDY1ecvnLO94Q7NUFT3liol-WDbUT7wBXM',
-    appId: '1:1075434774461:ios:3431aedde55c9f4f05bcd4',
-    messagingSenderId: '1075434774461',
-    projectId: 'nepika-ai',
-    storageBucket: 'nepika-ai.firebasestorage.app',
+    apiKey: 'AIzaSyAzuAQ_972NTH0lzDY5GJvzbCaReFg2GoU',
+    appId: '1:429514031239:ios:8309989be3164a00577822',
+    messagingSenderId: '429514031239',
+    projectId: 'nepika-c189e',
+    storageBucket: 'nepika-c189e.firebasestorage.app',
     iosBundleId: 'com.assisted.nepika',
   );
 
   static const FirebaseOptions macos = FirebaseOptions(
-    apiKey: 'AIzaSyDY1ecvnLO94Q7NUFT3liol-WDbUT7wBXM',
-    appId: '1:1075434774461:ios:3431aedde55c9f4f05bcd4',
-    messagingSenderId: '1075434774461',
-    projectId: 'nepika-ai',
-    storageBucket: 'nepika-ai.firebasestorage.app',
+    apiKey: 'AIzaSyAILTnmXHnkvsU4sTI822IsyqcznFZOCCQ',
+    appId: '1:443222788965:ios:ac1db9d43fc57629106f8c',
+    messagingSenderId: '443222788965',
+    projectId: 'nepika-87cc7',
+    storageBucket: 'nepika-87cc7.firebasestorage.app',
     iosBundleId: 'com.assisted.nepika',
   );
 }
