@@ -18,7 +18,7 @@ class AppRepositoryImpl extends AppRepository {
   @override
   Future<Map<String, dynamic>> fetchSubscriptionPlan({required String token}) async {
     final response = await apiBase.request(
-      path: '${Env.baseUrl}${ApiEndpoints.subscriptionPlanInfo}',
+      path: '${Env.baseUrl}${ApiEndpoints.paymentPlans}',
       method: 'GET',
       headers: {'Authorization': 'Bearer $token'},
     );

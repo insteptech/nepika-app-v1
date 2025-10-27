@@ -9,6 +9,7 @@ import 'screens/community_home_screen.dart';
 import 'screens/community_search_screen.dart';
 import 'screens/user_profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
+import 'screens/community_settings_screen.dart';
 import 'utils/community_navigation.dart';
 
 /// Main entry point for the Community feature
@@ -159,6 +160,12 @@ class CommunityFactory {
         currentProfileImage: currentProfileImage,
       );
     }
+  }
+
+  /// Create community settings screen
+  static Widget createCommunitySettingsScreen() {
+    debugPrint('🏗️ CommunityFactory: Creating Community Settings Screen');
+    return const CommunitySettingsScreen();
   }
 }
 

@@ -400,3 +400,114 @@ class BlockStatusError extends ProfileState {
 
   BlockStatusError(this.message);
 }
+
+// Follow Request System States
+class ReceivedFollowRequestsLoading extends ProfileState {}
+
+class ReceivedFollowRequestsLoaded extends ProfileState {
+  final List<FollowRequestEntity> requests;
+  final int total;
+  final int page;
+  final int pageSize;
+  final bool hasMore;
+
+  ReceivedFollowRequestsLoaded({
+    required this.requests,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.hasMore,
+  });
+}
+
+class ReceivedFollowRequestsError extends ProfileState {
+  final String message;
+
+  ReceivedFollowRequestsError(this.message);
+}
+
+class SentFollowRequestsLoading extends ProfileState {}
+
+class SentFollowRequestsLoaded extends ProfileState {
+  final List<FollowRequestEntity> requests;
+  final int total;
+  final int page;
+  final int pageSize;
+  final bool hasMore;
+
+  SentFollowRequestsLoaded({
+    required this.requests,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.hasMore,
+  });
+}
+
+class SentFollowRequestsError extends ProfileState {
+  final String message;
+
+  SentFollowRequestsError(this.message);
+}
+
+class FollowRequestActionLoading extends ProfileState {
+  final String requestId;
+  final String action; // "accept", "decline", "cancel"
+
+  FollowRequestActionLoading({
+    required this.requestId,
+    required this.action,
+  });
+}
+
+class FollowRequestActionSuccess extends ProfileState {
+  final String requestId;
+  final String action;
+  final String message;
+
+  FollowRequestActionSuccess({
+    required this.requestId,
+    required this.action,
+    required this.message,
+  });
+}
+
+class FollowRequestActionError extends ProfileState {
+  final String requestId;
+  final String action;
+  final String message;
+
+  FollowRequestActionError({
+    required this.requestId,
+    required this.action,
+    required this.message,
+  });
+}
+
+class FollowRequestStatusLoading extends ProfileState {
+  final String targetUserId;
+
+  FollowRequestStatusLoading({required this.targetUserId});
+}
+
+class FollowRequestStatusLoaded extends ProfileState {
+  final String targetUserId;
+  final String? status;
+  final bool hasRequest;
+
+  FollowRequestStatusLoaded({
+    required this.targetUserId,
+    this.status,
+    required this.hasRequest,
+  });
+}
+
+class FollowRequestStatusError extends ProfileState {
+  final String targetUserId;
+  final String message;
+
+  FollowRequestStatusError({
+    required this.targetUserId,
+    required this.message,
+  });
+}

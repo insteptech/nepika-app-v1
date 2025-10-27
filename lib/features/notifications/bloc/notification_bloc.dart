@@ -3,11 +3,13 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../domain/notifications/entities/notification_entities.dart';
+import '../../../domain/notifications/repositories/notification_repository.dart';
 import 'notification_event.dart';
 import 'notification_state.dart';
 
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final NotificationService _notificationService;
+  final NotificationRepository _notificationRepository;
   late final StreamSubscription _notificationSubscription;
   late final StreamSubscription _deletedNotificationSubscription;
   late final StreamSubscription _unreadCountSubscription;
@@ -20,7 +22,9 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   NotificationBloc({
     NotificationService? notificationService,
+    required NotificationRepository notificationRepository,
   }) : _notificationService = notificationService ?? NotificationService.instance,
+       _notificationRepository = notificationRepository,
        super(const NotificationInitial()) {
     
     // Set up event handlers
@@ -34,6 +38,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     on<MarkAllNotificationsAsSeen>(_onMarkAllNotificationsAsSeen);
     on<ConnectionStatusChanged>(_onConnectionStatusChanged);
     on<ClearAllNotifications>(_onClearAllNotifications);
+    
+    // API fetch event handlers
+    on<FetchAllNotifications>(_onFetchAllNotifications);
+    on<FetchNotificationsByType>(_onFetchNotificationsByType);
+    on<RefreshNotifications>(_onRefreshNotifications);
 
     // Set up stream subscriptions
     _setupStreamSubscriptions();
@@ -168,13 +177,16 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) {
     _currentFilter = event.filter;
 
-    emit(NotificationLoaded(
-      notifications: _notifications,
-      filteredNotifications: _getFilteredNotifications(),
-      unreadCount: _unreadCount,
-      isConnected: _isConnected,
-      currentFilter: _currentFilter,
-    ));
+    // Fetch notifications based on new filter
+    if (_currentFilter == NotificationFilter.all) {
+      add(const FetchAllNotifications(limit: 20, offset: 0));
+    } else {
+      add(FetchNotificationsByType(
+        type: _currentFilter.apiType,
+        limit: 20,
+        offset: 0,
+      ));
+    }
   }
 
   void _onUnreadCountUpdated(
@@ -208,11 +220,21 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     try {
-      final success = await _notificationService.markAllAsSeen();
+      final success = await _notificationRepository.markAllNotificationsAsSeen();
       if (!success) {
         emit(NotificationError(
           message: 'Failed to mark notifications as seen',
           notifications: _notifications,
+          unreadCount: _unreadCount,
+          isConnected: _isConnected,
+          currentFilter: _currentFilter,
+        ));
+      } else {
+        // Reset unread count to 0
+        _unreadCount = 0;
+        emit(NotificationLoaded(
+          notifications: _notifications,
+          filteredNotifications: _getFilteredNotifications(),
           unreadCount: _unreadCount,
           isConnected: _isConnected,
           currentFilter: _currentFilter,
@@ -274,6 +296,96 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     return _notifications.where((notification) =>
       _currentFilter.shouldShowNotification(notification.type)
     ).toList();
+  }
+
+  // API fetch event handlers
+  Future<void> _onFetchAllNotifications(
+    FetchAllNotifications event,
+    Emitter<NotificationState> emit,
+  ) async {
+    try {
+      emit(NotificationLoading());
+      
+      final response = await _notificationRepository.getAllNotifications(
+        limit: event.limit,
+        offset: event.offset,
+      );
+      
+      _notifications = response.notifications;
+      _unreadCount = response.unreadCount;
+      
+      emit(NotificationLoaded(
+        notifications: _notifications,
+        filteredNotifications: _getFilteredNotifications(),
+        unreadCount: _unreadCount,
+        isConnected: _isConnected,
+        currentFilter: _currentFilter,
+      ));
+    } catch (e) {
+      debugPrint('❌ NotificationBloc: Failed to fetch notifications: $e');
+      emit(NotificationError(
+        message: 'Failed to load notifications: $e',
+        notifications: _notifications,
+        unreadCount: _unreadCount,
+        isConnected: _isConnected,
+        currentFilter: _currentFilter,
+      ));
+    }
+  }
+
+  Future<void> _onFetchNotificationsByType(
+    FetchNotificationsByType event,
+    Emitter<NotificationState> emit,
+  ) async {
+    try {
+      emit(NotificationLoading());
+      
+      final response = await _notificationRepository.getNotificationsByType(
+        type: event.type,
+        limit: event.limit,
+        offset: event.offset,
+      );
+      
+      _notifications = response.notifications;
+      _unreadCount = response.unreadCount;
+      
+      emit(NotificationLoaded(
+        notifications: _notifications,
+        filteredNotifications: _notifications, // Already filtered by API
+        unreadCount: _unreadCount,
+        isConnected: _isConnected,
+        currentFilter: _currentFilter,
+      ));
+    } catch (e) {
+      debugPrint('❌ NotificationBloc: Failed to fetch notifications by type: $e');
+      emit(NotificationError(
+        message: 'Failed to load notifications: $e',
+        notifications: _notifications,
+        unreadCount: _unreadCount,
+        isConnected: _isConnected,
+        currentFilter: _currentFilter,
+      ));
+    }
+  }
+
+  Future<void> _onRefreshNotifications(
+    RefreshNotifications event,
+    Emitter<NotificationState> emit,
+  ) async {
+    try {
+      // Use current filter to determine which API to call
+      if (_currentFilter == NotificationFilter.all) {
+        add(const FetchAllNotifications(limit: 20, offset: 0));
+      } else {
+        add(FetchNotificationsByType(
+          type: _currentFilter.apiType,
+          limit: 20,
+          offset: 0,
+        ));
+      }
+    } catch (e) {
+      debugPrint('❌ NotificationBloc: Failed to refresh notifications: $e');
+    }
   }
 
   @override

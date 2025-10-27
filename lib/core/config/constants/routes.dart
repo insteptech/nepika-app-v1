@@ -74,6 +74,9 @@ class AppRoutes {
   
   // Subscription Routes
   static const String subscription = '/subscription';
+  static const String subscriptionPlans = '/subscription-plans';
+  static const String subscriptionManagement = '/subscription-management';
+  static const String pricing = '/pricing';
   static const String paymentMethod = '/payment-method';
   
   // History Routes
@@ -83,6 +86,7 @@ class AppRoutes {
   // Settings Routes
   static const String notifications = '/notifications';
   static const String notificationDebug = '/notification-debug';
+  static const String blockedUsers = '/blocked-users';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';
   static const String about = '/about';
@@ -149,4 +153,5 @@ class CommunityRoutes {
   static const String userProfile = '/community/user-profile';
   static const String searchUsers = '/community/search-users';
   static const String createProfile = '/community/create-profile';
+  static const String communitySettings = '/community/settings';
 }

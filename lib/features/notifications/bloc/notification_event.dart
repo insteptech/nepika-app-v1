@@ -78,3 +78,40 @@ class ConnectionStatusChanged extends NotificationEvent {
 class ClearAllNotifications extends NotificationEvent {
   const ClearAllNotifications();
 }
+
+// API Fetch Events
+class FetchAllNotifications extends NotificationEvent {
+  final int limit;
+  final int offset;
+
+  const FetchAllNotifications({
+    this.limit = 20,
+    this.offset = 0,
+  });
+
+  @override
+  List<Object> get props => [limit, offset];
+}
+
+class FetchNotificationsByType extends NotificationEvent {
+  final String type;
+  final int limit;
+  final int offset;
+
+  const FetchNotificationsByType({
+    required this.type,
+    this.limit = 20,
+    this.offset = 0,
+  });
+
+  @override
+  List<Object> get props => [type, limit, offset];
+}
+
+class RefreshNotifications extends NotificationEvent {
+  const RefreshNotifications();
+}
+
+class LoadMoreNotifications extends NotificationEvent {
+  const LoadMoreNotifications();
+}

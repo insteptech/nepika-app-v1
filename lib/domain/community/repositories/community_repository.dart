@@ -109,6 +109,39 @@ abstract class CommunityRepository {
     required String userId,
   });
 
+  // Follow Request System
+  Future<FollowRequestsListEntity> getReceivedFollowRequests({
+    required String token,
+    int page = 1,
+    int pageSize = 20,
+  });
+
+  Future<FollowRequestsListEntity> getSentFollowRequests({
+    required String token,
+    int page = 1,
+    int pageSize = 20,
+  });
+
+  Future<FollowRequestActionEntity> acceptFollowRequest({
+    required String token,
+    required String requestId,
+  });
+
+  Future<FollowRequestActionEntity> declineFollowRequest({
+    required String token,
+    required String requestId,
+  });
+
+  Future<FollowRequestActionEntity> cancelFollowRequest({
+    required String token,
+    required String targetUserId,
+  });
+
+  Future<FollowRequestStatusEntity> checkFollowRequestStatus({
+    required String token,
+    required String targetUserId,
+  });
+
   // Block System
   Future<BlockResponseEntity> blockUser({
     required String token,

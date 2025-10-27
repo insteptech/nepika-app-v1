@@ -241,7 +241,7 @@ class CommunityNavigation {
     String? currentProfileImage,
   }) async {
     try {
-      final result = await Navigator.of(context).push<Map<String, dynamic>>(
+      final result = await Navigator.of(context, rootNavigator: true).push<Map<String, dynamic>>(
         MaterialPageRoute(
           builder: (newContext) {
             // Try to get ProfileBloc from the original context, handle gracefully if not available

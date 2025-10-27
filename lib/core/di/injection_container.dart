@@ -32,6 +32,44 @@ import '../../features/reminders/bloc/reminder_bloc.dart';
 // Local Notifications
 import '../services/local_notification_service.dart';
 
+// Community
+import '../../data/community/datasources/community_local_datasource.dart';
+import '../../data/community/repositories/community_repository_impl.dart';
+import '../../domain/community/repositories/community_repository.dart';
+import '../../domain/community/usecases/get_received_follow_requests.dart';
+import '../../domain/community/usecases/get_sent_follow_requests.dart';
+import '../../domain/community/usecases/accept_follow_request.dart';
+import '../../domain/community/usecases/decline_follow_request.dart';
+import '../../domain/community/usecases/cancel_follow_request.dart';
+import '../../domain/community/usecases/check_follow_request_status.dart';
+import '../../features/community/bloc/blocs/posts_bloc.dart';
+import '../../features/community/bloc/blocs/user_search_bloc.dart';
+import '../../features/community/bloc/blocs/profile_bloc.dart';
+import '../../features/community/managers/like_state_manager.dart';
+
+// Notifications
+import '../../data/notifications/repositories/notification_repository_impl.dart';
+import '../../domain/notifications/repositories/notification_repository.dart';
+import '../../features/notifications/bloc/notification_bloc.dart';
+
+// Blocked Users
+import '../../data/blocked_users/repositories/blocked_users_repository_impl.dart';
+import '../../domain/blocked_users/repositories/blocked_users_repository.dart';
+import '../../features/blocked_users/bloc/blocked_users_bloc.dart';
+
+// Payments
+import '../../data/payments/datasources/payments_remote_datasource.dart';
+import '../../data/payments/repositories/payments_repository_impl.dart';
+import '../../domain/payments/repositories/payments_repository.dart';
+import '../../domain/payments/usecases/get_payment_plans.dart';
+import '../../domain/payments/usecases/get_stripe_config.dart';
+import '../../domain/payments/usecases/create_checkout_session.dart';
+import '../../domain/payments/usecases/get_subscription_status.dart';
+import '../../domain/payments/usecases/get_subscription_details.dart';
+import '../../domain/payments/usecases/cancel_subscription.dart';
+import '../../domain/payments/usecases/reactivate_subscription.dart';
+import '../../features/payments/bloc/payment_bloc.dart';
+
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
   
@@ -148,6 +186,145 @@ class ServiceLocator {
       () => ReminderBloc(
         addReminderUseCase: get<AddReminder>(),
         localNotificationService: get<LocalNotificationService>(),
+      ),
+    );
+
+    // Community - Data sources
+    _registerLazySingleton<CommunityLocalDataSource>(
+      CommunityLocalDataSourceImpl(),
+    );
+
+    // Community - Repository
+    _registerLazySingleton<CommunityRepository>(
+      CommunityRepositoryImpl(
+        get<ApiBase>(),
+        get<CommunityLocalDataSource>(),
+      ),
+    );
+
+    // Community - Use cases
+    _registerLazySingleton<GetReceivedFollowRequestsUseCase>(
+      GetReceivedFollowRequestsUseCase(get<CommunityRepository>()),
+    );
+    _registerLazySingleton<GetSentFollowRequestsUseCase>(
+      GetSentFollowRequestsUseCase(get<CommunityRepository>()),
+    );
+    _registerLazySingleton<AcceptFollowRequestUseCase>(
+      AcceptFollowRequestUseCase(get<CommunityRepository>()),
+    );
+    _registerLazySingleton<DeclineFollowRequestUseCase>(
+      DeclineFollowRequestUseCase(get<CommunityRepository>()),
+    );
+    _registerLazySingleton<CancelFollowRequestUseCase>(
+      CancelFollowRequestUseCase(get<CommunityRepository>()),
+    );
+    _registerLazySingleton<CheckFollowRequestStatusUseCase>(
+      CheckFollowRequestStatusUseCase(get<CommunityRepository>()),
+    );
+
+    // Community - Like State Manager (Singleton with delayed initialization)
+    _registerLazySingleton<LikeStateManager>(
+      LikeStateManager(),
+    );
+
+    // Community - BLoCs (Lazy Singletons for cross-screen navigation stability)
+    _registerLazySingleton<PostsBloc>(
+      () {
+        final likeStateManager = get<LikeStateManager>();
+        final repository = get<CommunityRepository>();
+        
+        // Initialize LikeStateManager if not already initialized
+        likeStateManager.initialize(repository);
+        
+        return PostsBloc(
+          repository: repository,
+          likeStateManager: likeStateManager,
+        );
+      }(),
+    );
+    
+    _registerLazySingleton<UserSearchBloc>(
+      UserSearchBloc(
+        repository: get<CommunityRepository>(),
+      ),
+    );
+    
+    _registerLazySingleton<ProfileBloc>(
+      ProfileBloc(
+        repository: get<CommunityRepository>(),
+      ),
+    );
+
+    // Notifications - Repository
+    _registerLazySingleton<NotificationRepository>(
+      NotificationRepositoryImpl(
+        apiBase: get<ApiBase>(),
+      ),
+    );
+
+    // Notifications - Bloc (Factory)
+    _registerFactory<NotificationBloc>(
+      () => NotificationBloc(
+        notificationRepository: get<NotificationRepository>(),
+      ),
+    );
+
+    // Blocked Users - Repository  
+    // Types: BlockedUsersRepository, BlockedUsersRepositoryImpl, BlockedUsersBloc
+    _registerLazySingleton<BlockedUsersRepository>(
+      BlockedUsersRepositoryImpl(get<ApiBase>()),
+    );
+
+    // Blocked Users - Bloc (Factory)
+    _registerFactory<BlockedUsersBloc>(
+      () => BlockedUsersBloc(
+        repository: get<BlockedUsersRepository>(),
+      ),
+    );
+
+    // Payments - Data sources
+    _registerLazySingleton<PaymentsRemoteDataSource>(
+      PaymentsRemoteDataSourceImpl(get<ApiBase>()),
+    );
+
+    // Payments - Repository
+    _registerLazySingleton<PaymentsRepository>(
+      PaymentsRepositoryImpl(get<PaymentsRemoteDataSource>()),
+    );
+
+    // Payments - Use cases
+    _registerLazySingleton<GetPaymentPlans>(
+      GetPaymentPlans(get<PaymentsRepository>()),
+    );
+    _registerLazySingleton<GetStripeConfig>(
+      GetStripeConfig(get<PaymentsRepository>()),
+    );
+    _registerLazySingleton<CreateCheckoutSession>(
+      CreateCheckoutSession(get<PaymentsRepository>()),
+    );
+    _registerLazySingleton<GetSubscriptionStatus>(
+      GetSubscriptionStatus(get<PaymentsRepository>()),
+    );
+    _registerLazySingleton<GetSubscriptionDetails>(
+      GetSubscriptionDetails(get<PaymentsRepository>()),
+    );
+    _registerLazySingleton<CancelSubscription>(
+      CancelSubscription(get<PaymentsRepository>()),
+    );
+    _registerLazySingleton<ReactivateSubscription>(
+      ReactivateSubscription(get<PaymentsRepository>()),
+    );
+
+    // Payments - Bloc (Factory)
+    _registerFactory<PaymentBloc>(
+      () => PaymentBloc(
+        getPaymentPlans: get<GetPaymentPlans>(),
+        getStripeConfig: get<GetStripeConfig>(),
+        createCheckoutSession: get<CreateCheckoutSession>(),
+        getSubscriptionStatus: get<GetSubscriptionStatus>(),
+        getSubscriptionDetails: get<GetSubscriptionDetails>(),
+        cancelSubscription: get<CancelSubscription>(),
+        reactivateSubscription: get<ReactivateSubscription>(),
       ),
     );
   }

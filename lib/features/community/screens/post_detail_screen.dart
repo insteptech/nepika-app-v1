@@ -156,24 +156,16 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     Future.delayed(const Duration(seconds: 2), () {
       if (mounted && _loadedPost == null && _token != null) {
         debugPrint('PostDetailScreen: SAFETY CHECK - No post loaded after 2 seconds, forcing request');
-        try {
-          context.read<PostsBloc>().add(
-            FetchSinglePost(token: _token!, postId: widget.postId),
-          );
-        } catch (e) {
-          debugPrint('PostDetailScreen: Safety check failed: $e');
-        }
+        _safelyAddPostsBlocEvent(
+          FetchSinglePost(token: _token!, postId: widget.postId),
+        );
       }
       
       if (mounted && _localComments.isEmpty && !_commentsLoaded && _token != null) {
         debugPrint('PostDetailScreen: SAFETY CHECK - No comments loaded after 2 seconds, forcing request');
-        try {
-          context.read<PostsBloc>().add(
-            FetchPostComments(token: _token!, postId: widget.postId),
-          );
-        } catch (e) {
-          debugPrint('PostDetailScreen: Comments safety check failed: $e');
-        }
+        _safelyAddPostsBlocEvent(
+          FetchPostComments(token: _token!, postId: widget.postId),
+        );
       }
     });
   }
@@ -218,7 +210,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
 
   void _loadUserProfile() {
     if (_token != null && _userId != null) {
-      context.read<ProfileBloc>().add(
+      _safelyAddProfileBlocEvent(
         GetCommunityProfile(token: _token!, userId: _userId!),
       );
     }
@@ -255,7 +247,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
       dispatchAfterListeners(() {
         try {
           debugPrint('PostDetailScreen: Dispatching FetchSinglePost event with cache buster');
-          context.read<PostsBloc>().add(
+          _safelyAddPostsBlocEvent(
             FetchSinglePost(
               token: _token!, 
               postId: widget.postId,
@@ -288,7 +280,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     try {
       if (mounted && _token != null) {
         debugPrint('PostDetailScreen: Retrying post load');
-        context.read<PostsBloc>().add(
+        _safelyAddPostsBlocEvent(
           FetchSinglePost(
             token: _token!, 
             postId: widget.postId,
@@ -316,7 +308,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
       dispatchAfterListeners(() {
         try {
           debugPrint('PostDetailScreen: Dispatching FetchPostComments event');
-          context.read<PostsBloc>().add(
+          _safelyAddPostsBlocEvent(
             FetchPostComments(
               token: _token!,
               postId: widget.postId,
@@ -346,7 +338,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     try {
       if (mounted && _token != null) {
         debugPrint('PostDetailScreen: Retrying comments load');
-        context.read<PostsBloc>().add(
+        _safelyAddPostsBlocEvent(
           FetchPostComments(
             token: _token!,
             postId: widget.postId,
@@ -519,7 +511,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     }
     
     if (_token != null) {
-      context.read<PostsBloc>().add(
+      _safelyAddPostsBlocEvent(
         LoadMoreComments(
           token: _token!,
           postId: widget.postId,
@@ -1030,7 +1022,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     );
 
     // Add the comment via the BLoC
-    context.read<PostsBloc>().add(
+    _safelyAddPostsBlocEvent(
       CreatePost(token: _token!, postData: createPostData),
     );
 
@@ -1065,6 +1057,38 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     debugPrint('PostDetail: Checking like status - postId: ${post.postId}, userId: $_userId, serverLiked: $serverLikeStatus, passedLikeStatus: ${widget.currentLikeStatus}, finalStatus: $finalLikeStatus');
     
     return finalLikeStatus;
+  }
+
+  /// Safely adds events to PostsBloc with proper state checking
+  void _safelyAddPostsBlocEvent(PostsEvent event) {
+    if (!mounted) return;
+    
+    try {
+      final postsBloc = context.read<PostsBloc>();
+      if (!postsBloc.isClosed) {
+        postsBloc.add(event);
+      } else {
+        debugPrint('PostDetailScreen: Cannot add event to closed PostsBloc: ${event.runtimeType}');
+      }
+    } catch (e) {
+      debugPrint('PostDetailScreen: Error adding event to PostsBloc: $e');
+    }
+  }
+
+  /// Safely adds events to ProfileBloc with proper state checking
+  void _safelyAddProfileBlocEvent(ProfileEvent event) {
+    if (!mounted) return;
+    
+    try {
+      final profileBloc = context.read<ProfileBloc>();
+      if (!profileBloc.isClosed) {
+        profileBloc.add(event);
+      } else {
+        debugPrint('PostDetailScreen: Cannot add event to closed ProfileBloc: ${event.runtimeType}');
+      }
+    } catch (e) {
+      debugPrint('PostDetailScreen: Error adding event to ProfileBloc: $e');
+    }
   }
 }
 

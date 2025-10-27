@@ -138,6 +138,71 @@ class FetchFollowing extends ProfileEvent {
   });
 }
 
+// Follow Request System Events
+class FetchReceivedFollowRequests extends ProfileEvent {
+  final String token;
+  final int page;
+  final int pageSize;
+
+  FetchReceivedFollowRequests({
+    required this.token,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+}
+
+class FetchSentFollowRequests extends ProfileEvent {
+  final String token;
+  final int page;
+  final int pageSize;
+
+  FetchSentFollowRequests({
+    required this.token,
+    this.page = 1,
+    this.pageSize = 20,
+  });
+}
+
+class AcceptFollowRequest extends ProfileEvent {
+  final String token;
+  final String requestId;
+
+  AcceptFollowRequest({
+    required this.token,
+    required this.requestId,
+  });
+}
+
+class DeclineFollowRequest extends ProfileEvent {
+  final String token;
+  final String requestId;
+
+  DeclineFollowRequest({
+    required this.token,
+    required this.requestId,
+  });
+}
+
+class CancelFollowRequest extends ProfileEvent {
+  final String token;
+  final String targetUserId;
+
+  CancelFollowRequest({
+    required this.token,
+    required this.targetUserId,
+  });
+}
+
+class CheckFollowRequestStatus extends ProfileEvent {
+  final String token;
+  final String targetUserId;
+
+  CheckFollowRequestStatus({
+    required this.token,
+    required this.targetUserId,
+  });
+}
+
 // User Posts Events
 class FetchUserThreads extends ProfileEvent {
   final String token;

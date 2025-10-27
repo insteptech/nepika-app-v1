@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../notifications/widgets/notification_badge.dart';
 import '../../notifications/bloc/notification_bloc.dart';
 import '../../notifications/bloc/notification_event.dart';
+import '../../../core/di/injection_container.dart' as di;
 
 /// Community header component with logo, hamburger menu, search, and notifications
 /// Follows Single Responsibility Principle - only handles header display
@@ -65,29 +66,29 @@ class CommunityHeader extends SliverPersistentHeaderDelegate {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 // Search Icon
-                IconButton(
-                  splashRadius: 10,
-                  // constraints: BoxConstraints(
-                  //   maxHeight: 30
-                  // ),
-                  onPressed: onSearchTap,
-                  icon: AnimatedContainer(
-                    duration: const Duration(milliseconds: 100),
-                    // padding: const EdgeInsets.all(8),
-                    child: Image.asset(
-                      'assets/icons/search_icon.png',
-                      height: searchHeight,
-                                        color: Theme.of(context).colorScheme.primary,
+                // IconButton(
+                //   splashRadius: 10,
+                //   // constraints: BoxConstraints(
+                //   //   maxHeight: 30
+                //   // ),
+                //   onPressed: onSearchTap,
+                //   icon: AnimatedContainer(
+                //     duration: const Duration(milliseconds: 100),
+                //     // padding: const EdgeInsets.all(8),
+                //     child: Image.asset(
+                //       'assets/icons/search_icon.png',
+                //       height: searchHeight,
+                //                         color: Theme.of(context).colorScheme.primary,
 
-                    ),
-                  ),
-                ),
+                //     ),
+                //   ),
+                // ),
                 
                 // const SizedBox(width: 9),
                 
                 // Notification Badge
                 BlocProvider(
-                  create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+                  create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
                   child: NotificationBadge(
                       iconSize: searchHeight,
                       iconColor: Theme.of(context).colorScheme.primary,

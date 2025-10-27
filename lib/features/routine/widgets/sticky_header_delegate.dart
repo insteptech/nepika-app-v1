@@ -29,8 +29,11 @@ class StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
     if ((isFirstHeader || showAnimatedBackButton) && title != null) {
-      // Check if header is stuck to top - when shrinkOffset equals the difference
-      final isStuckToTop = shrinkOffset > 0;
+      // Check if header is stuck to top using both shrink and overlap detection
+      // Use a minimum shrink threshold and overlapsContent for accurate detection
+      final minShrinkThreshold = 20.0; // Minimum pixels shrunk before considering stuck
+      final hasShrunk = shrinkOffset >= minShrinkThreshold;
+      final isStuckToTop = overlapsContent || hasShrunk;
       
       return Container(
         color: backgroundColor ?? Theme.of(context).scaffoldBackgroundColor,

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:convert';
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_state.dart';
 import '../bloc/notification_event.dart';
@@ -7,6 +9,8 @@ import '../widgets/notification_item.dart';
 import '../widgets/notification_filter_tabs.dart';
 import '../../../domain/notifications/entities/notification_entities.dart';
 import '../../../core/widgets/back_button.dart';
+import '../../../core/config/constants/app_constants.dart';
+import '../../community/utils/community_navigation.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -16,12 +20,30 @@ class NotificationsScreen extends StatefulWidget {
 }
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
+  String? _token;
+  String? _userId;
+
   @override
   void initState() {
     super.initState();
-    // Mark all notifications as seen when screen opens
+    _loadUserData();
+    // Only mark notifications as seen if there are unread notifications
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<NotificationBloc>().add(const MarkAllNotificationsAsSeen());
+      final bloc = context.read<NotificationBloc>();
+      final state = bloc.state;
+      
+      // Check if there are unread notifications before making API call
+      int unreadCount = 0;
+      if (state is NotificationLoaded) {
+        unreadCount = state.unreadCount;
+      } else if (state is NotificationDisconnected) {
+        unreadCount = state.unreadCount;
+      }
+      
+      // Only call mark as seen if there are actually unread notifications
+      if (unreadCount > 0) {
+        bloc.add(const MarkAllNotificationsAsSeen());
+      }
     });
   }
 
@@ -180,6 +202,24 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
+  Future<void> _loadUserData() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final token = prefs.getString(AppConstants.accessTokenKey);
+      final userData = prefs.getString(AppConstants.userDataKey);
+      
+      if (token != null && userData != null && mounted) {
+        final userDataJson = jsonDecode(userData);
+        setState(() {
+          _token = token;
+          _userId = userDataJson['id']?.toString();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading user data: $e');
+    }
+  }
+
   void _handleNotificationTap(NotificationEntity notification) {
     // Handle notification tap based on type
     switch (notification.type) {
@@ -187,23 +227,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       case NotificationType.reply:
       case NotificationType.mention:
         // Navigate to post detail if postId is available
-        if (notification.postId != null) {
-          // TODO: Navigate to post detail screen
-          // Navigator.pushNamed(
-          //   context,
-          //   CommunityRoutes.postDetail,
-          //   arguments: {'postId': notification.postId},
-          // );
+        if (notification.postId != null && _token != null && _userId != null) {
+          CommunityNavigation.navigateToPostDetail(
+            context,
+            postId: notification.postId!,
+            token: _token,
+            userId: _userId,
+          );
         }
         break;
       case NotificationType.follow:
+      case NotificationType.followRequest:
+      case NotificationType.followRequestAccepted:
         // Navigate to user profile
-        // TODO: Navigate to user profile screen
-        // Navigator.pushNamed(
-        //   context,
-        //   CommunityRoutes.userProfile,
-        //   arguments: {'userId': notification.actor.id},
-        // );
+        if (_token != null && _userId != null) {
+          CommunityNavigation.navigateToUserProfile(
+            context,
+            userId: notification.actor.id,
+          );
+        }
         break;
       case NotificationType.notificationDeleted:
         // This shouldn't be tappable

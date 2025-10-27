@@ -37,6 +37,14 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<BlockUser>(_onBlockUser);
     on<UnblockUser>(_onUnblockUser);
     on<CheckBlockStatus>(_onCheckBlockStatus);
+
+    // Follow request system events
+    on<FetchReceivedFollowRequests>(_onFetchReceivedFollowRequests);
+    on<FetchSentFollowRequests>(_onFetchSentFollowRequests);
+    on<AcceptFollowRequest>(_onAcceptFollowRequest);
+    on<DeclineFollowRequest>(_onDeclineFollowRequest);
+    on<CancelFollowRequest>(_onCancelFollowRequest);
+    on<CheckFollowRequestStatus>(_onCheckFollowRequestStatus);
   }
 
   // Profile Management Handlers
@@ -602,6 +610,169 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
       debugPrint('ProfileBloc: Error in _onCheckBlockStatus: $e');
       debugPrint('ProfileBloc: Stack trace: $stackTrace');
       emit(BlockStatusError(e.toString()));
+    }
+  }
+
+  // Follow Request System Handlers
+  Future<void> _onFetchReceivedFollowRequests(
+    FetchReceivedFollowRequests event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(ReceivedFollowRequestsLoading());
+    try {
+      final requestsList = await repository.getReceivedFollowRequests(
+        token: event.token,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+      emit(ReceivedFollowRequestsLoaded(
+        requests: requestsList.requests,
+        total: requestsList.total,
+        page: requestsList.page,
+        pageSize: requestsList.pageSize,
+        hasMore: requestsList.hasMore,
+      ));
+    } catch (e, stackTrace) {
+      debugPrint('ProfileBloc: Error in _onFetchReceivedFollowRequests: $e');
+      debugPrint('ProfileBloc: Stack trace: $stackTrace');
+      emit(ReceivedFollowRequestsError(e.toString()));
+    }
+  }
+
+  Future<void> _onFetchSentFollowRequests(
+    FetchSentFollowRequests event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(SentFollowRequestsLoading());
+    try {
+      final requestsList = await repository.getSentFollowRequests(
+        token: event.token,
+        page: event.page,
+        pageSize: event.pageSize,
+      );
+      emit(SentFollowRequestsLoaded(
+        requests: requestsList.requests,
+        total: requestsList.total,
+        page: requestsList.page,
+        pageSize: requestsList.pageSize,
+        hasMore: requestsList.hasMore,
+      ));
+    } catch (e, stackTrace) {
+      debugPrint('ProfileBloc: Error in _onFetchSentFollowRequests: $e');
+      debugPrint('ProfileBloc: Stack trace: $stackTrace');
+      emit(SentFollowRequestsError(e.toString()));
+    }
+  }
+
+  Future<void> _onAcceptFollowRequest(
+    AcceptFollowRequest event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(FollowRequestActionLoading(
+      requestId: event.requestId,
+      action: 'accept',
+    ));
+    try {
+      final result = await repository.acceptFollowRequest(
+        token: event.token,
+        requestId: event.requestId,
+      );
+      emit(FollowRequestActionSuccess(
+        requestId: event.requestId,
+        action: 'accept',
+        message: result.message,
+      ));
+    } catch (e, stackTrace) {
+      debugPrint('ProfileBloc: Error in _onAcceptFollowRequest: $e');
+      debugPrint('ProfileBloc: Stack trace: $stackTrace');
+      emit(FollowRequestActionError(
+        requestId: event.requestId,
+        action: 'accept',
+        message: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onDeclineFollowRequest(
+    DeclineFollowRequest event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(FollowRequestActionLoading(
+      requestId: event.requestId,
+      action: 'decline',
+    ));
+    try {
+      final result = await repository.declineFollowRequest(
+        token: event.token,
+        requestId: event.requestId,
+      );
+      emit(FollowRequestActionSuccess(
+        requestId: event.requestId,
+        action: 'decline',
+        message: result.message,
+      ));
+    } catch (e, stackTrace) {
+      debugPrint('ProfileBloc: Error in _onDeclineFollowRequest: $e');
+      debugPrint('ProfileBloc: Stack trace: $stackTrace');
+      emit(FollowRequestActionError(
+        requestId: event.requestId,
+        action: 'decline',
+        message: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onCancelFollowRequest(
+    CancelFollowRequest event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(FollowRequestActionLoading(
+      requestId: event.targetUserId,
+      action: 'cancel',
+    ));
+    try {
+      final result = await repository.cancelFollowRequest(
+        token: event.token,
+        targetUserId: event.targetUserId,
+      );
+      emit(FollowRequestActionSuccess(
+        requestId: event.targetUserId,
+        action: 'cancel',
+        message: result.message,
+      ));
+    } catch (e, stackTrace) {
+      debugPrint('ProfileBloc: Error in _onCancelFollowRequest: $e');
+      debugPrint('ProfileBloc: Stack trace: $stackTrace');
+      emit(FollowRequestActionError(
+        requestId: event.targetUserId,
+        action: 'cancel',
+        message: e.toString(),
+      ));
+    }
+  }
+
+  Future<void> _onCheckFollowRequestStatus(
+    CheckFollowRequestStatus event,
+    Emitter<ProfileState> emit,
+  ) async {
+    emit(FollowRequestStatusLoading(targetUserId: event.targetUserId));
+    try {
+      final status = await repository.checkFollowRequestStatus(
+        token: event.token,
+        targetUserId: event.targetUserId,
+      );
+      emit(FollowRequestStatusLoaded(
+        targetUserId: event.targetUserId,
+        status: status.status,
+        hasRequest: status.hasRequest,
+      ));
+    } catch (e, stackTrace) {
+      debugPrint('ProfileBloc: Error in _onCheckFollowRequestStatus: $e');
+      debugPrint('ProfileBloc: Stack trace: $stackTrace');
+      emit(FollowRequestStatusError(
+        targetUserId: event.targetUserId,
+        message: e.toString(),
+      ));
     }
   }
 }
