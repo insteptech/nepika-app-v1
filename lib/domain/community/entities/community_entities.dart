@@ -604,6 +604,7 @@ class CommunityProfileEntity {
   final Map<String, dynamic>? settings;
   final bool isSelf;
   final bool isFollowing;
+  final String? followRequestStatus; // null, "pending", "accepted", "declined"
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -623,6 +624,7 @@ class CommunityProfileEntity {
     this.settings,
     this.isSelf = false,
     this.isFollowing = false,
+    this.followRequestStatus,
     required this.createdAt,
     this.updatedAt,
   });
@@ -644,6 +646,7 @@ class CommunityProfileEntity {
       settings: json['settings'] as Map<String, dynamic>?,
       isSelf: json['is_self'] as bool? ?? false,
       isFollowing: json['is_following'] as bool? ?? false,
+      followRequestStatus: json['follow_request_status']?.toString(),
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'].toString())
           : DateTime.now(),
@@ -741,10 +744,12 @@ class FollowUserEntity {
 
 class FollowResponseEntity {
   final bool isFollowing;
+  final String? followRequestStatus;
   final String message;
 
   FollowResponseEntity({
     required this.isFollowing,
+    this.followRequestStatus,
     required this.message,
   });
 
@@ -752,6 +757,7 @@ class FollowResponseEntity {
     final data = json['data'] ?? json;
     return FollowResponseEntity(
       isFollowing: data['is_following'] as bool? ?? false,
+      followRequestStatus: data['follow_request_status']?.toString(),
       message: data['message']?.toString() ?? json['message']?.toString() ?? '',
     );
   }
@@ -968,6 +974,149 @@ class UserSearchResponseEntity {
       page: data['page'] ?? 1,
       pageSize: data['page_size'] ?? 10,
       hasMore: data['has_more'] ?? false,
+    );
+  }
+}
+
+// Follow Request System Entities
+
+class FollowRequestEntity {
+  final String id;
+  final String requesterId;
+  final String targetId;
+  final String status; // "pending", "accepted", "declined"
+  final DateTime createdAt;
+  final DateTime? updatedAt;
+  
+  // Enriched user info (when listing requests)
+  final String? requesterUsername;
+  final String? requesterProfileImageUrl;
+  final bool? requesterIsVerified;
+  final String? targetUsername;
+  final String? targetProfileImageUrl;
+  final bool? targetIsVerified;
+
+  FollowRequestEntity({
+    required this.id,
+    required this.requesterId,
+    required this.targetId,
+    required this.status,
+    required this.createdAt,
+    this.updatedAt,
+    this.requesterUsername,
+    this.requesterProfileImageUrl,
+    this.requesterIsVerified,
+    this.targetUsername,
+    this.targetProfileImageUrl,
+    this.targetIsVerified,
+  });
+
+  factory FollowRequestEntity.fromJson(Map<String, dynamic> json) {
+    return FollowRequestEntity(
+      id: json['id']?.toString() ?? '',
+      requesterId: json['requester_id']?.toString() ?? '',
+      targetId: json['target_id']?.toString() ?? '',
+      status: json['status']?.toString() ?? '',
+      createdAt: json['created_at'] != null 
+          ? DateTime.parse(json['created_at'].toString())
+          : DateTime.now(),
+      updatedAt: json['updated_at'] != null 
+          ? DateTime.parse(json['updated_at'].toString())
+          : null,
+      requesterUsername: json['requester_username']?.toString(),
+      requesterProfileImageUrl: json['requester_profile_image_url']?.toString(),
+      requesterIsVerified: json['requester_is_verified'] as bool?,
+      targetUsername: json['target_username']?.toString(),
+      targetProfileImageUrl: json['target_profile_image_url']?.toString(),
+      targetIsVerified: json['target_is_verified'] as bool?,
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'id': id,
+      'requester_id': requesterId,
+      'target_id': targetId,
+      'status': status,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+      'requester_username': requesterUsername,
+      'requester_profile_image_url': requesterProfileImageUrl,
+      'requester_is_verified': requesterIsVerified,
+      'target_username': targetUsername,
+      'target_profile_image_url': targetProfileImageUrl,
+      'target_is_verified': targetIsVerified,
+    };
+  }
+}
+
+class FollowRequestsListEntity {
+  final List<FollowRequestEntity> requests;
+  final int total;
+  final int page;
+  final int pageSize;
+  final bool hasMore;
+
+  FollowRequestsListEntity({
+    required this.requests,
+    required this.total,
+    required this.page,
+    required this.pageSize,
+    required this.hasMore,
+  });
+
+  factory FollowRequestsListEntity.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    return FollowRequestsListEntity(
+      requests: (data['requests'] as List<dynamic>?)
+          ?.map((request) => FollowRequestEntity.fromJson(request as Map<String, dynamic>))
+          .toList() ?? [],
+      total: data['total'] ?? 0,
+      page: data['page'] ?? 1,
+      pageSize: data['page_size'] ?? 20,
+      hasMore: data['has_more'] ?? false,
+    );
+  }
+}
+
+class FollowRequestStatusEntity {
+  final String? status; // null, "pending", "accepted", "declined"
+  final bool hasRequest;
+
+  FollowRequestStatusEntity({
+    this.status,
+    required this.hasRequest,
+  });
+
+  factory FollowRequestStatusEntity.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    return FollowRequestStatusEntity(
+      status: data['status']?.toString(),
+      hasRequest: data['has_request'] as bool? ?? false,
+    );
+  }
+}
+
+class FollowRequestActionEntity {
+  final bool success;
+  final String message;
+  final String requestId;
+  final String status;
+
+  FollowRequestActionEntity({
+    required this.success,
+    required this.message,
+    required this.requestId,
+    required this.status,
+  });
+
+  factory FollowRequestActionEntity.fromJson(Map<String, dynamic> json) {
+    final data = json['data'] ?? {};
+    return FollowRequestActionEntity(
+      success: data['success'] as bool? ?? false,
+      message: data['message']?.toString() ?? json['message']?.toString() ?? '',
+      requestId: data['request_id']?.toString() ?? '',
+      status: data['status']?.toString() ?? '',
     );
   }
 }

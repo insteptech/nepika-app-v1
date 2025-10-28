@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_stripe/flutter_stripe.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
 import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
@@ -18,13 +20,18 @@ import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
 import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
 import 'package:nepika/features/dashboard/main.dart';
 import 'package:nepika/features/products/main.dart';
-import 'package:nepika/features/error_pricing/main.dart';
+import 'package:nepika/features/error_pricing/screens/pricing_screen.dart';
+import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';
 import 'package:nepika/features/auth/auth_module.dart' as auth_feature;
 import 'package:nepika/features/auth/screens/phone_entry_screen.dart';
 import 'package:nepika/features/auth/screens/otp_verification_screen.dart';
 import 'package:nepika/features/community/main.dart';
 import 'package:nepika/features/notifications/screens/notifications_screen.dart';
 import 'package:nepika/features/notifications/screens/notification_debug_screen.dart';
+import 'package:nepika/features/community/bloc/blocs/posts_bloc.dart';
+import 'package:nepika/features/community/bloc/blocs/user_search_bloc.dart';
+import 'package:nepika/features/community/bloc/blocs/profile_bloc.dart';
+import 'package:nepika/features/blocked_users/screens/blocked_users_screen.dart';
 import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
@@ -59,6 +66,9 @@ void main() async {
   final sharedPreferences = await SharedPreferences.getInstance();
   await SharedPrefsHelper.init();
   await di.ServiceLocator.init();
+
+  // Initialize Stripe
+  Stripe.publishableKey = AppConstants.stripePublishableKey;
 
   // Initialize local notification service
   try {
@@ -119,6 +129,7 @@ class MyApp extends StatelessWidget {
         initialRoute: AppRoutes.splash,
         navigatorObservers: [RouteObserver<PageRoute>()],
         onGenerateRoute: (RouteSettings settings) {
+          debugPrint('🚨 Route requested: ${settings.name}');
           switch (settings.name) {
             case AppRoutes.splash:
               return MaterialPageRoute(builder: (_) => const SplashScreen());
@@ -176,6 +187,11 @@ class MyApp extends StatelessWidget {
                 builder: (_) => CommunityFactory.createUserProfileScreen(),
                 settings: settings,
               );
+            case CommunityRoutes.communitySettings:
+              debugPrint('🚨 Route matched: Community Settings');
+              return MaterialPageRoute(
+                builder: (_) => CommunityFactory.createCommunitySettingsScreen(),
+              );
             case AppRoutes.dashboardAllProducts:
               return MaterialPageRoute(
                 builder: (_) => const ProductsScreen(),
@@ -214,18 +230,47 @@ class MyApp extends StatelessWidget {
                 ),
               );
             case AppRoutes.subscription:
+            case AppRoutes.pricing:
+            case AppRoutes.subscriptionPlans:
+            case AppRoutes.subscriptionManagement:
               return MaterialPageRoute(builder: (_) => const PricingScreen());
             case AppRoutes.notifications:
               return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider(
+                      create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
+                    ),
+                    BlocProvider(
+                      create: (context) => di.sl<PostsBloc>(),
+                    ),
+                    BlocProvider(
+                      create: (context) => di.sl<UserSearchBloc>(),
+                    ),
+                    BlocProvider(
+                      create: (context) => di.sl<ProfileBloc>(),
+                    ),
+                  ],
                   child: const NotificationsScreen(),
                 ),
               );
             case AppRoutes.notificationDebug:
               return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+                builder: (_) => MultiBlocProvider(
+                  providers: [
+                    BlocProvider(
+                      create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
+                    ),
+                    BlocProvider(
+                      create: (context) => di.sl<PostsBloc>(),
+                    ),
+                    BlocProvider(
+                      create: (context) => di.sl<UserSearchBloc>(),
+                    ),
+                    BlocProvider(
+                      create: (context) => di.sl<ProfileBloc>(),
+                    ),
+                  ],
                   child: const NotificationDebugScreen(),
                 ),
               );
@@ -235,6 +280,10 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.termsOfUse:
               return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
+            case AppRoutes.blockedUsers:
+              return MaterialPageRoute(
+                builder: (_) => const BlockedUsersScreen(),
+              );
             case AppRoutes.scanResultDetails:
               final args = settings.arguments as Map<String, dynamic>?;
               final reportId = args?['reportId'] as String?;

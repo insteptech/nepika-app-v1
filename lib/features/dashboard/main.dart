@@ -10,6 +10,7 @@ import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/face_scan/screens/scan_result_details_screen.dart';
 import 'package:nepika/features/community/main.dart';
+import 'package:nepika/core/di/injection_container.dart' as di;
 
 import 'screens/dashboard_screen.dart';
 import 'screens/image_gallery_screen.dart';
@@ -46,7 +47,7 @@ class DashboardWithNotifications extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+      create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
       child: const Dashboard(),
     );
   }
@@ -60,7 +61,7 @@ class DashboardWithScanResults extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
-      create: (context) => NotificationBloc()..add(const ConnectToNotificationStream()),
+      create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
       child: DashboardWithInitialRoute(
         initialRoute: AppRoutes.dashboardScanResultDetails,
         arguments: {'reportId': reportId},
@@ -301,17 +302,19 @@ class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
   }
 
   Widget _buildAnimatedNavBar() {
+    const double navBarHeight = 80.0; // Use consistent 80px height
     return AnimatedBuilder(
       animation: _navBarAnimation,
       builder: (context, child) {
         return SizedBox(
-          height: _navBarAnimation.value * kBottomNavigationBarHeight + 50,
+          height: _navBarAnimation.value * navBarHeight,
           child: ClipRect(
             child: Transform.translate(
-              offset: Offset(0, (1 - _navBarAnimation.value) * kBottomNavigationBarHeight),
+              offset: Offset(0, (1 - _navBarAnimation.value) * navBarHeight),
               child: DashboardNavBar(
                 selectedIndex: _selectedIndex,
                 onNavBarTap: _onNavBarTap,
+                height: navBarHeight, // Force exact 80px height
               ),
             ),
           ),
@@ -624,17 +627,19 @@ class _DashboardState extends State<Dashboard>
   }
 
   Widget _buildAnimatedNavBar() {
+    const double navBarHeight = 80.0; // Use consistent 80px height
     return AnimatedBuilder(
       animation: _navBarAnimation,
       builder: (context, child) {
         return SizedBox(
-          height: _navBarAnimation.value * kBottomNavigationBarHeight + 50,
+          height: _navBarAnimation.value * navBarHeight,
           child: ClipRect(
             child: Transform.translate(
-              offset: Offset(0, (1 - _navBarAnimation.value) * kBottomNavigationBarHeight),
+              offset: Offset(0, (1 - _navBarAnimation.value) * navBarHeight),
               child: DashboardNavBar(
                 selectedIndex: _selectedIndex,
                 onNavBarTap: _onNavBarTap,
+                height: navBarHeight, // Force exact 80px height
               ),
             ),
           ),

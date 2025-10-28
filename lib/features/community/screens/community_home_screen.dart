@@ -193,24 +193,30 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     Navigator.of(context).pop(); // Close drawer first
     
     switch (index) {
-      case 0: // Community Home
+      case 0: // Home
         // Already on community home, just refresh
         _refreshPosts();
         break;
       case 1: // Search
         _navigateToSearch();
         break;
-      case 2: // Notifications
-        Navigator.of(context).pushNamed(AppRoutes.notificationDebug);
+      case 2: // Community Settings
+        debugPrint('🚨 Navigating to: ${CommunityRoutes.communitySettings}');
+        Navigator.of(context, rootNavigator: true).pushNamed(CommunityRoutes.communitySettings);
         break;
-      case 3: // Profile
-        Navigator.of(context).pushNamed(CommunityRoutes.userProfile);
-        break;
-      case 4: // Settings
-        Navigator.of(context).pushNamed(AppRoutes.dashboardSettings);
+      case 3: // Dashboard
+        Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.dashboardHome);
         break;
     }
   }
+
+  void _onUserInfoTap() {
+    Navigator.of(context).pop(); // Close drawer first
+Navigator.of(context, rootNavigator: true).pushNamed(
+            AppRoutes.communityUserProfile,
+            arguments: {'userId': _userId!},
+          );
+            }
 
   List<DrawerItem> _buildDrawerItems() {
     return [
@@ -223,16 +229,12 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
         icon: Icons.search_outlined,
       ),
       const DrawerItem(
-        title: 'Notifications',
-        icon: Icons.notifications_outlined,
-      ),
-      const DrawerItem(
-        title: 'Profile',
-        icon: Icons.person_outline,
-      ),
-      const DrawerItem(
-        title: 'Settings',
+        title: 'Community Settings',
         icon: Icons.settings_outlined,
+      ),
+      const DrawerItem(
+        title: 'Dashboard',
+        icon: Icons.dashboard_outlined,
       ),
     ];
   }
@@ -240,83 +242,320 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
   Widget _buildCommunityDrawer() {
     return Drawer(
       backgroundColor: Theme.of(context).colorScheme.onTertiary,
-      child: Column(
-        children: [
-          // Header
-          Container(
-            height: 100,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.only(
+          topLeft: Radius.circular(0),
+          bottomLeft: Radius.circular(0),
+          topRight: Radius.circular(0),
+          bottomRight: Radius.circular(0),
+        ),
+      ),
+      child: SafeArea(
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            children: [
+              // User Info Section (Clickable)
+              _buildUserInfoSection(),
+              
+              // First Divider
+              _buildDivider(),
+              
+              // Navigation Menu Items
+              _buildMenuItems(),
+              
+              // Full width divider line
+              _buildFullWidthDivider(),
+              
+              // Other Links section
+              _buildOtherLinksSection(),
+              
+              // Add some bottom spacing instead of Spacer
+              const SizedBox(height: 40),
+              
+              // Create Post Button at bottom
+              _buildCreatePostButton(),
+              
+              // Additional bottom padding to ensure content is accessible
+              const SizedBox(height: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildUserInfoSection() {
+    return Material(
+      color: Colors.transparent,
+      borderRadius: BorderRadius.circular(8),
+      child: InkWell(
+        borderRadius: BorderRadius.circular(8),
+        onTap: _onUserInfoTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8),
+          child: Row(
+            children: [
+              // Avatar
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(22),
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                ),
+                child: Icon(
+                  Icons.person,
+                  size: 24,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
+              ),
+              
+              const SizedBox(width: 12),
+              
+              // Name only (no email as per your modification)
+              Expanded(
+                child: Text(
+                  _currentUserProfile?.username ?? 'Community User',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                    color: Theme.of(context).colorScheme.onSurface,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              
+              // Arrow indicator
+              Icon(
+                Icons.arrow_forward_ios,
+                size: 16,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      height: 1,
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1),
+    );
+  }
+
+  Widget _buildMenuItems() {
+    return Column(
+      children: _buildDrawerItems().asMap().entries.map((entry) {
+        final index = entry.key;
+        final item = entry.value;
+        
+        return Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          child: Material(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(8),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(8),
+              onTap: () => _onDrawerItemTap(index),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.transparent,
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      item.icon,
+                      size: 24,
+                      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: Text(
+                        item.title,
+                        style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                          fontWeight: FontWeight.w500,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+      }).toList(),
+    );
+  }
+
+  Widget _buildFullWidthDivider() {
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 16),
+      height: 1,
+      width: double.infinity,
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+    );
+  }
+
+  Widget _buildOtherLinksSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Small dull heading
+        Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 12),
+          child: Text(
+            'Other Links',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+              fontWeight: FontWeight.w500,
+              fontSize: 12,
+            ),
+          ),
+        ),
+        
+        // Edit Profile
+        _buildOtherLinkItem(
+          title: 'Edit Profile',
+          icon: Icons.edit_outlined,
+          onTap: () async {
+            Navigator.of(context).pop(); // Close drawer
+            
+            if (_token != null) {
+              // Navigate to edit profile screen using CommunityNavigation
+              await CommunityNavigation.navigateToEditProfile(
+                context,
+                token: _token!,
+                currentUsername: _currentUserProfile?.username,
+                currentBio: _currentUserProfile?.bio,
+                currentProfileImage: _currentUserProfile?.profileImageUrl,
+              );
+            } else {
+              // Show error if token is not available
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Unable to edit profile. Please try again.'),
+                  backgroundColor: Colors.red,
+                ),
+              );
+            }
+          },
+        ),
+        
+        // Blocked Users
+        _buildOtherLinkItem(
+          title: 'Blocked Users',
+          icon: Icons.block_outlined,
+          onTap: () {
+            Navigator.of(context).pop(); // Close drawer
+            // Navigate to blocked users screen
+            Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.blockedUsers);
+          },
+        ),
+        
+        // Reports
+        // _buildOtherLinkItem(
+        //   title: 'Reports',
+        //   icon: Icons.report_outlined,
+        //   onTap: () {
+        //     Navigator.of(context).pop(); // Close drawer
+        //     // Navigate to reports screen
+        //     Navigator.of(context, rootNavigator: true).pushNamed('/reports');
+        //   },
+        // ),
+      ],
+    );
+  }
+
+  Widget _buildOtherLinkItem({
+    required String title,
+    required IconData icon,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(8),
+        child: InkWell(
+          borderRadius: BorderRadius.circular(8),
+          onTap: onTap,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
             decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(8),
+              color: Colors.transparent,
+            ),
+            child: Row(
+              children: [
+                Icon(
+                  icon,
+                  size: 24,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    title,
+                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCreatePostButton() {
+    return Container(
+      width: double.infinity,
+      child: OutlinedButton(
+        onPressed: () {
+          Navigator.of(context).pop(); // Close drawer
+          _navigateToCreatePost();
+        },
+        style: OutlinedButton.styleFrom(
+          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          foregroundColor: Theme.of(context).colorScheme.primary,
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          side: BorderSide(
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+            width: 0,
+          ),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.add,
+              size: 20,
               color: Theme.of(context).colorScheme.primary,
             ),
-            child: Center(
-              child: Text(
-                'Community',
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
+            const SizedBox(width: 8),
+            Text(
+              'Create Post',
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: Theme.of(context).colorScheme.primary,
+                fontWeight: FontWeight.w600,
               ),
             ),
-          ),
-          
-          // Navigation Items
-          Expanded(
-            child: ListView.builder(
-              padding: EdgeInsets.zero,
-              itemCount: _buildDrawerItems().length,
-              itemBuilder: (context, index) {
-                final item = _buildDrawerItems()[index];
-                return ListTile(
-                  leading: Icon(
-                    item.icon,
-                    color: Theme.of(context).colorScheme.primary,
-                  ),
-                  title: Text(
-                    item.title,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                  onTap: () => _onDrawerItemTap(index),
-                );
-              },
-            ),
-          ),
-          
-          // Create Post Button
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop(); // Close drawer
-                _navigateToCreatePost();
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Theme.of(context).colorScheme.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 50),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(25),
-                ),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.add, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Create Post',
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

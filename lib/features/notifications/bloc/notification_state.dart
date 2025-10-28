@@ -46,6 +46,8 @@ class NotificationLoaded extends NotificationState {
     int? unreadCount,
     bool? isConnected,
     NotificationFilter? currentFilter,
+    bool? isLoadingMore,
+    bool? hasReachedMax,
   }) {
     return NotificationLoaded(
       notifications: notifications ?? this.notifications,

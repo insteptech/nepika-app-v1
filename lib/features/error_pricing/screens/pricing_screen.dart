@@ -1,12 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
+import 'package:nepika/core/di/injection_container.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nepika/data/app/repositories/app_repository.dart';
 import 'package:nepika/presentation/bloc/app/app_bloc.dart';
 import 'package:nepika/presentation/bloc/app/app_event.dart';
 import 'package:nepika/presentation/bloc/app/app_state.dart';
+import 'package:nepika/features/payments/bloc/payment_bloc.dart';
+import 'package:nepika/features/payments/bloc/payment_event.dart';
+import 'package:nepika/features/payments/bloc/payment_state.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
@@ -16,20 +23,64 @@ class PricingScreen extends StatefulWidget {
 }
 
 class _PricingScreenState extends State<PricingScreen> {
-  final String token = '';
+  String token = '';
   int selectedPlanIndex = 0;
+  late PaymentBloc _paymentBloc;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _paymentBloc = ServiceLocator.get<PaymentBloc>();
+    _getToken();
+  }
+
+  void _getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    final accessToken = prefs.getString(AppConstants.accessTokenKey);
+    setState(() {
+      token = accessToken ?? '';
+    });
+  }
+
+  @override
+  void dispose() {
+    _paymentBloc.close();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
-      body: BlocProvider(
-        create: (context) =>
-            AppBloc(appRepository: AppRepositoryImpl(ApiBase()))
-              ..add(AppSubscriptions(token)),
+      body: MultiBlocProvider(
+        providers: [
+          BlocProvider(
+            create: (context) =>
+                AppBloc(appRepository: AppRepositoryImpl(ApiBase()))
+                  ..add(AppSubscriptions(token)),
+          ),
+          BlocProvider.value(value: _paymentBloc),
+        ],
         child: SafeArea(
-          child: BlocBuilder<AppBloc, AppState>(
+          child: BlocListener<PaymentBloc, PaymentState>(
+            listener: (context, state) {
+              if (state is CheckoutSessionCreated) {
+                _launchCheckoutUrl(state.session.url);
+              } else if (state is PaymentError) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(state.message),
+                    backgroundColor: Colors.red,
+                  ),
+                );
+              }
+              setState(() {
+                _isLoading = state is PaymentLoading;
+              });
+            },
+            child: BlocBuilder<AppBloc, AppState>(
             builder: (context, state) {
               Map<String, dynamic> data = {};
               List<dynamic> features = [];
@@ -37,8 +88,51 @@ class _PricingScreenState extends State<PricingScreen> {
 
               if (state is AppSubscriptionLoaded) {
                 data = state.subscriptionPlan;
-                features = data['features'] ?? [];
-                plans = data['plans'] ?? [];
+                
+                // Extract plans from the API response structure
+                final plansData = data['plans'] as List<dynamic>? ?? [];
+                plans = plansData.map((plan) => {
+                  'name': plan['name'],
+                  'price': plan['price'],
+                  'billingPeriod': plan['duration'],
+                  'stripe_price_id': plan['stripe_price_id'],
+                }).toList();
+                
+                // Extract features from the first plan's plan_details
+                if (plansData.isNotEmpty) {
+                  final firstPlan = plansData.first;
+                  final planDetails = firstPlan['plan_details'] as List<dynamic>? ?? [];
+                  features = planDetails.map((detail) => {
+                    'title': detail.toString(),
+                  }).toList();
+                }
+              }
+              
+              // Add fallback data if no features/plans loaded
+              if (features.isEmpty) {
+                features = [
+                  {'title': 'Unlimited face scans per month'},
+                  {'title': 'Detailed skin analysis across all 9 parameters'},
+                  {'title': 'Advanced AI recommendations'},
+                  {'title': 'Priority customer support'},
+                ];
+              }
+              
+              if (plans.isEmpty) {
+                plans = [
+                  {
+                    'name': 'Nepika Premium Monthly',
+                    'price': 6.99,
+                    'billingPeriod': 'monthly',
+                    'stripe_price_id': 'price_1SLe3b9GE4oycUj8rjX69Us8',
+                  },
+                  {
+                    'name': 'Nepika Premium Yearly',
+                    'price': 60.00,
+                    'billingPeriod': 'yearly',
+                    'stripe_price_id': 'price_1SLe3c9GE4oycUj8rjX69Us9',
+                  }
+                ];
               }
 
               return SingleChildScrollView(
@@ -127,8 +221,6 @@ class _PricingScreenState extends State<PricingScreen> {
                             Expanded(
                               child: Text(
                                 feature['title'] ?? '',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
                                 style: theme.textTheme.headlineLarge
                               ),
                             ),
@@ -183,10 +275,10 @@ class _PricingScreenState extends State<PricingScreen> {
                                 ),
                               ),
                               Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                                crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
                                   Text(
-                                    '\$${plan['price'] ?? ''}.00',
+                                    '\$${plan['price'] ?? ''}',
                                     textAlign: TextAlign.left,
                                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                     color: isSelected
@@ -218,8 +310,8 @@ class _PricingScreenState extends State<PricingScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: CustomButton(
                         text: 'Continue',
-                        isLoading: false,
-                        onPressed: () {},
+                        isLoading: _isLoading,
+                        onPressed: _isLoading ? null : () => _onContinuePressed(plans),
                       ),
                     ),
                     const SizedBox(height: 20),
@@ -245,9 +337,68 @@ class _PricingScreenState extends State<PricingScreen> {
                 ),
               );
             },
+            ),
           ),
         ),
       ),
     );
+  }
+
+  void _onContinuePressed(List<dynamic> plans) {
+    if (plans.isEmpty || selectedPlanIndex >= plans.length) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a valid plan'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final selectedPlan = plans[selectedPlanIndex];
+    final priceId = selectedPlan['stripe_price_id']?.toString() ?? '';
+    final billingPeriod = selectedPlan['billingPeriod']?.toString().toLowerCase() ?? '';
+    
+    if (priceId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid plan selected'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    
+    // Map billing period to interval
+    String interval;
+    if (billingPeriod.contains('month')) {
+      interval = 'monthly';
+    } else if (billingPeriod.contains('year')) {
+      interval = 'yearly';
+    } else {
+      interval = 'monthly'; // Default
+    }
+
+    // Create checkout session with the selected plan
+    _paymentBloc.add(CreateCheckoutSessionEvent(
+      priceId: priceId,
+      interval: interval,
+    ));
+  }
+
+  Future<void> _launchCheckoutUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not launch payment page'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 }

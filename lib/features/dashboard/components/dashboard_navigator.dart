@@ -156,22 +156,31 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
       canPop: false,
       onPopInvokedWithResult: _handlePopInvoked,
       child: Scaffold(
-        body: Navigator(
-          key: _navigatorKey,
-          initialRoute: AppRoutes.dashboardHome,
-          observers: [
-            _DashboardRouteObserver(
-              onRouteChanged: (route) {
-                if (mounted && _currentRoute != route) {
-                  _resetNavBarVisibility();
-                  setState(() => _currentRoute = route);
-                }
-              },
+        body: Stack(
+          children: [
+            Navigator(
+              key: _navigatorKey,
+              initialRoute: AppRoutes.dashboardHome,
+              observers: [
+                _DashboardRouteObserver(
+                  onRouteChanged: (route) {
+                    if (mounted && _currentRoute != route) {
+                      _resetNavBarVisibility();
+                      setState(() => _currentRoute = route);
+                    }
+                  },
+                ),
+              ],
+              onGenerateRoute: _generateRoute,
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: _buildAnimatedNavBar(),
             ),
           ],
-          onGenerateRoute: _generateRoute,
         ),
-        bottomNavigationBar: _buildAnimatedNavBar(),
       ),
     );
   }
@@ -190,18 +199,24 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
   }
 
   Widget _buildAnimatedNavBar() {
+    const double strictNavBarHeight = 80.0; // Strict 80px height as requested
+    
     return AnimatedBuilder(
       animation: _navBarAnimation,
       builder: (context, child) {
-        return SizedBox(
-          height: _navBarAnimation.value * kBottomNavigationBarHeight + 50,
-          child: ClipRect(
-            child: Transform.translate(
-              offset: Offset(
-                  0, (1 - _navBarAnimation.value) * kBottomNavigationBarHeight),
+        return Container(
+          height: _navBarAnimation.value * strictNavBarHeight,
+          clipBehavior: Clip.hardEdge,
+          decoration: const BoxDecoration(),
+          child: Transform.translate(
+            offset: Offset(0, (1 - _navBarAnimation.value) * strictNavBarHeight),
+            child: SizedBox(
+              height: strictNavBarHeight,
               child: DashboardNavBar(
                 selectedIndex: _selectedIndex,
                 onNavBarTap: _onNavBarTap,
+                height: strictNavBarHeight, // Force exact 80px height
+                scanButtonSize: 60.0, // Increase scan button to fit 80px height better
               ),
             ),
           ),

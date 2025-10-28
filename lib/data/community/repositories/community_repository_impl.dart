@@ -917,6 +917,173 @@ class CommunityRepositoryImpl implements CommunityRepository {
     }
   }
 
+  // Follow Request System
+  @override
+  Future<FollowRequestsListEntity> getReceivedFollowRequests({
+    required String token,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final response = await apiBase.request(
+        path: '/community/follow-requests/received',
+        method: 'GET',
+        headers: {'Authorization': 'Bearer $token'},
+        query: {
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      
+      debugPrint('Repository: getReceivedFollowRequests response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return FollowRequestsListEntity.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to fetch received follow requests');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in getReceivedFollowRequests: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<FollowRequestsListEntity> getSentFollowRequests({
+    required String token,
+    int page = 1,
+    int pageSize = 20,
+  }) async {
+    try {
+      final response = await apiBase.request(
+        path: '/community/follow-requests/sent',
+        method: 'GET',
+        headers: {'Authorization': 'Bearer $token'},
+        query: {
+          'page': page.toString(),
+          'page_size': pageSize.toString(),
+        },
+      );
+      
+      debugPrint('Repository: getSentFollowRequests response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return FollowRequestsListEntity.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to fetch sent follow requests');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in getSentFollowRequests: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<FollowRequestActionEntity> acceptFollowRequest({
+    required String token,
+    required String requestId,
+  }) async {
+    try {
+      final response = await apiBase.request(
+        path: '/community/follow-requests/accept/$requestId',
+        method: 'POST',
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      debugPrint('Repository: acceptFollowRequest response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return FollowRequestActionEntity.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to accept follow request');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in acceptFollowRequest: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<FollowRequestActionEntity> declineFollowRequest({
+    required String token,
+    required String requestId,
+  }) async {
+    try {
+      final response = await apiBase.request(
+        path: '/community/follow-requests/decline/$requestId',
+        method: 'POST',
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      debugPrint('Repository: declineFollowRequest response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return FollowRequestActionEntity.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to decline follow request');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in declineFollowRequest: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<FollowRequestActionEntity> cancelFollowRequest({
+    required String token,
+    required String targetUserId,
+  }) async {
+    try {
+      final response = await apiBase.request(
+        path: '/community/follow-requests/cancel/$targetUserId',
+        method: 'DELETE',
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      debugPrint('Repository: cancelFollowRequest response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return FollowRequestActionEntity.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to cancel follow request');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in cancelFollowRequest: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
+  @override
+  Future<FollowRequestStatusEntity> checkFollowRequestStatus({
+    required String token,
+    required String targetUserId,
+  }) async {
+    try {
+      final response = await apiBase.request(
+        path: '/community/follow-requests/status/$targetUserId',
+        method: 'GET',
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      
+      debugPrint('Repository: checkFollowRequestStatus response: ${response.statusCode}');
+      
+      if (response.statusCode == 200 && response.data['status'] == 'success') {
+        return FollowRequestStatusEntity.fromJson(response.data);
+      } else {
+        throw Exception(response.data['message'] ?? 'Failed to check follow request status');
+      }
+    } catch (e, stackTrace) {
+      debugPrint('Repository: Error in checkFollowRequestStatus: $e');
+      debugPrint('Repository: Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   // Legacy methods for backward compatibility
   @override
   Future<UserSearchEntity> searchUsers({

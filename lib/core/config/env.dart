@@ -1,5 +1,5 @@
 class Env {
-static const String backendBase = "https://1673410fe8b1.ngrok-free.app";
+static const String backendBase = "https://49d9c07f7d89.ngrok-free.app";
   // static const String backendBase = "http://localhost:8000";
   // static const String backendBase = "http://nepika-prod-alb-1555129520.us-east-1.elb.amazonaws.com"; 
   static const String baseUrl = "$backendBase/api/v1"; 

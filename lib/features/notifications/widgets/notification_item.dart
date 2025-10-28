@@ -20,6 +20,10 @@ class NotificationItem extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         decoration: BoxDecoration(
+          // Add blue background for unread notifications
+          color: !notification.isRead 
+              ? Colors.blue.withValues(alpha: 0.05)
+              : null,
           border: Border(
             bottom: BorderSide(
               color: theme.dividerColor.withValues(alpha: 0.2),
@@ -45,7 +49,7 @@ class NotificationItem extends StatelessWidget {
                   ),
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(24),
-                    child: notification.actor.profileImageUrl != null
+                    child: notification.actor.profileImageUrl != null && notification.actor.profileImageUrl!.isNotEmpty
                         ? Image.network(
                             notification.actor.profileImageUrl!,
                             fit: BoxFit.cover,
@@ -92,9 +96,11 @@ class NotificationItem extends StatelessWidget {
                   // User name, verification badge, and timestamp
                   Row(
                     children: [
-                      // Username
+                      // Full name (as per API structure)
                       Text(
-                        notification.actor.username,
+                        notification.actor.fullName.isNotEmpty 
+                            ? notification.actor.fullName 
+                            : notification.actor.username,
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.w600,
@@ -102,22 +108,6 @@ class NotificationItem extends StatelessWidget {
                         ),
                       ),
                       
-                      const SizedBox(width: 4),
-                      
-                      // Verification badge (if needed)
-                      Container(
-                        width: 16,
-                        height: 16,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF4192EF),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.star,
-                          size: 10,
-                          color: Colors.white,
-                        ),
-                      ),
                       
                       const Spacer(),
                       
@@ -125,8 +115,8 @@ class NotificationItem extends StatelessWidget {
                       Text(
                         _formatTimestamp(notification.createdAt),
                         style: TextStyle(
-                          fontSize: 16,
-                          color: theme.textTheme.bodySmall?.color,
+                          fontSize: 12,
+                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -134,38 +124,30 @@ class NotificationItem extends StatelessWidget {
                   
                   const SizedBox(height: 2),
                   
-                  // Notification message
-                  Text(
-                    _getNotificationMessage(),
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: theme.textTheme.bodyMedium?.color,
+                  // Notification message with post content if available
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: theme.textTheme.bodyMedium?.color,
+                      ),
+                      children: [
+                        TextSpan(text: _getNotificationMessage()),
+                        if (notification.post != null && notification.post!.content.isNotEmpty)
+                          TextSpan(
+                            text: ' "${notification.post!.content}"',
+                            style: TextStyle(
+                              fontStyle: FontStyle.italic,
+                              color: theme.textTheme.bodySmall?.color,
+                            ),
+                          ),
+                      ],
                     ),
                   ),
                 ],
               ),
             ),
             
-            const SizedBox(width: 16),
-            
-            // Replies button (matching Figma design)
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 8),
-              decoration: BoxDecoration(
-                border: Border.all(
-                  color: theme.dividerColor.withValues(alpha: 0.5),
-                  width: 1,
-                ),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text(
-                'Replies',
-                style: TextStyle(
-                  fontSize: 16,
-                  color: theme.textTheme.bodyLarge?.color,
-                ),
-              ),
-            ),
           ],
         ),
       ),
@@ -201,6 +183,10 @@ class NotificationItem extends StatelessWidget {
         return Icons.chat_bubble;
       case NotificationType.follow:
         return Icons.person_add;
+      case NotificationType.followRequest:
+        return Icons.person_add_outlined;
+      case NotificationType.followRequestAccepted:
+        return Icons.person_add_alt_1;
       case NotificationType.mention:
         return Icons.alternate_email;
       case NotificationType.notificationDeleted:
@@ -216,6 +202,10 @@ class NotificationItem extends StatelessWidget {
         return const Color(0xFF3898ED); // Blue
       case NotificationType.follow:
         return const Color(0xFF7441F5); // Purple
+      case NotificationType.followRequest:
+        return const Color(0xFF7441F5); // Purple
+      case NotificationType.followRequestAccepted:
+        return const Color(0xFF28A745); // Green
       case NotificationType.mention:
         return const Color(0xFFFF8C00); // Orange
       case NotificationType.notificationDeleted:
@@ -226,23 +216,37 @@ class NotificationItem extends StatelessWidget {
   String _getNotificationMessage() {
     switch (notification.type) {
       case NotificationType.like:
-        return 'Liked your photo';
+        return 'liked your post';
       case NotificationType.reply:
-        return 'Replied to your post';
+        return 'replied to your post';
       case NotificationType.follow:
-        return 'Followed you';
+        return 'started following you';
+      case NotificationType.followRequest:
+        return 'requested to follow you';
+      case NotificationType.followRequestAccepted:
+        return 'accepted your follow request';
       case NotificationType.mention:
-        return 'Mentioned you';
+        return 'mentioned you in a post';
       case NotificationType.notificationDeleted:
-        return 'Deleted notification';
+        return 'deleted notification';
     }
   }
 
   String _formatTimestamp(DateTime dateTime) {
     final now = DateTime.now();
     final difference = now.difference(dateTime);
+    
+    // Debug logging to help diagnose timing issues
+    debugPrint('Notification timestamp: ${dateTime.toIso8601String()}');
+    debugPrint('Current time: ${now.toIso8601String()}');
+    debugPrint('Difference: ${difference.inMinutes} minutes');
 
-    if (difference.inMinutes < 1) {
+    // Handle negative differences (future times)
+    if (difference.isNegative) {
+      return 'now';
+    }
+
+    if (difference.inSeconds < 60) {
       return 'now';
     } else if (difference.inMinutes < 60) {
       return '${difference.inMinutes}m';

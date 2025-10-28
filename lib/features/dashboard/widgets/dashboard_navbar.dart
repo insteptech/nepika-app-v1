@@ -1,18 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
-import 'package:nepika/core/config/constants/theme.dart';
 
 const double kNavBarIconSize = 22.0;
 const double kScanIconSize = 24.0;
+const double kNavBarHeight = 80.0; // Configurable navbar height
+const double kScanButtonSize = 48.0; // Configurable scan button size
+const double kIconTextSpacing = 3.0; // Configurable spacing
 
 class DashboardNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int index, String route) onNavBarTap;
+  final double? height; // Optional height parameter
+  final double? scanButtonSize; // Optional scan button size
 
   const DashboardNavBar({
     super.key,
     required this.selectedIndex,
     required this.onNavBarTap,
+    this.height,
+    this.scanButtonSize,
   });
 
   @override
@@ -67,68 +73,92 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final buttonWidth = screenWidth / _icons.length;
+    final navBarHeight = widget.height ?? kNavBarHeight;
     
     return Container(
-      padding: const EdgeInsets.only(top: 10, bottom: 25),
+      height: navBarHeight,
       color: Colors.transparent,
       child: Row(
         children: List.generate(_icons.length, (index) {
           final isActive = index == widget.selectedIndex;
           final iconPath = isActive ? _filledIcons[index] : _icons[index];
           
-          return SizedBox(
-            width: buttonWidth,
-            child: IconButton(
-              onPressed: () => _onTabTapped(index),
-              padding: const EdgeInsets.symmetric(vertical: 8),
-              splashRadius: 100,
-              iconSize: index == 2 ? 55 : kNavBarIconSize + 8,
-              icon: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (index == 2) ...[
-                    // Scan icon - larger with circular background
-                    Container(
-                      width: 55,
-                      height: 55,
-                      alignment: Alignment.center,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: Image.asset(
-                        iconPath,
-                        width: kScanIconSize,
-                        height: kScanIconSize,
-                        color: Theme.of(context).colorScheme.onSecondary,
-                      ),
-                    ),
-                  ] else ...[
-                    // Regular tab icon
-                    Image.asset(
-                      iconPath,
-                      width: kNavBarIconSize,
-                      height: kNavBarIconSize,
-                      color: Theme.of(context).
-                      colorScheme.primary,
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _navRoutesName[index],
-                      style: isActive
-                          ? Theme.of(context).textTheme.bodySmall!.hint(context)
-                          : Theme.of(context).textTheme.bodySmall!.secondary(context),
-                      textAlign: TextAlign.center,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ],
+          return Expanded(
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _onTabTapped(index),
+                // Custom splash color that covers full height and width/5 with no radius
+                splashColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                highlightColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.zero, // No radius as requested
+                child: Container(
+                  height: navBarHeight,
+                  width: double.infinity,
+                  child: index == 2 
+                    ? _buildScanItem(context, iconPath, navBarHeight)
+                    : _buildRegularItem(context, iconPath, isActive, index, navBarHeight),
+                ),
               ),
             ),
           );
         }),
+      ),
+    );
+  }
+
+  Widget _buildScanItem(BuildContext context, String iconPath, double navBarHeight) {
+    final scanSize = navBarHeight * 0.7;
+    return Center(
+      child: Container(
+        width: scanSize,
+        height: scanSize,
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.primary,
+          shape: BoxShape.circle,
+        ),
+        child: Center(
+          child: Image.asset(
+            iconPath,
+            width: scanSize * 0.5,
+            height: scanSize * 0.5,
+            color: Theme.of(context).colorScheme.onTertiary,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRegularItem(BuildContext context, String iconPath, bool isActive, int index, double navBarHeight) {
+    final iconSize = navBarHeight * 0.25;
+    final textSize = navBarHeight * 0.14;
+    
+    return Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            iconPath,
+            width: iconSize,
+            height: iconSize,
+            color: isActive
+                ? Theme.of(context).colorScheme.primary
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+          ),
+          SizedBox(height: 2),
+          Text(
+            _navRoutesName[index],
+            style: TextStyle(
+              fontSize: textSize,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
+              color: isActive
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+              height: 1.0,
+            ),
+            textAlign: TextAlign.center,
+          ),
+        ],
       ),
     );
   }
