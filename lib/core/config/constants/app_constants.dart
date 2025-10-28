@@ -19,6 +19,9 @@ class AppConstants {
   static const String refreshTokenKey = 'refresh_token';
   static const String termsAcceptedKey = 'terms_accepted';
   
+  // Stripe Configuration
+  static const String stripePublishableKey = 'pk_test_51SLdrA9GE4oycUj8FAO2gQPPhqYf250IeBwy4JZc9U6EntFKQw6EfDdRHl16vAr2vMiphDQhsFOTRf8RnBVMDvL800OnDeZxyd';
+  
   // Animation Durations
   static const Duration defaultAnimationDuration = Duration(milliseconds: 300);
   static const Duration scanAnimationDuration = Duration(seconds: 3);

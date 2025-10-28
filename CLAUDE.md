@@ -17,11 +17,17 @@ NEPIKA is a modern Flutter application designed for beauty and skincare enthusia
 - `flutter pub upgrade` - Upgrade dependencies
 - `flutter analyze` - Run static analysis (uses flutter_lints)
 - `flutter test` - Run unit tests
+- `flutter test test/specific_test.dart` - Run a specific test file
 - `flutter doctor` - Check Flutter installation and dependencies
+
+### Code Generation Commands
+- `dart run build_runner build` - Generate injectable and other code
+- `dart run build_runner build --delete-conflicting-outputs` - Regenerate all code (resolves conflicts)
 
 ### Development Workflow
 - `flutter pub get` after any pubspec.yaml changes
 - `flutter clean && flutter pub get` when facing dependency issues
+- `dart run build_runner build` after dependency injection changes
 - `flutter analyze` to check for linting issues before commits
 
 ## Architecture

@@ -26,6 +26,13 @@ class ApiEndpoints {
 
   static const String dashboard = '/dashboard/welcome';
   static const String subscriptionPlanInfo = '/subscription/plans/info';
+  static const String paymentPlans = '/payments/plans';
+  static const String stripeConfig = '/payments/config';
+  static const String createCheckoutSession = '/payments/create-checkout-session';
+  static const String subscriptionStatus = '/payments/subscription/status';
+  static const String subscriptionDetails = '/payments/subscription';
+  static const String cancelSubscription = '/payments/subscription/cancel';
+  static const String reactivateSubscription = '/payments/subscription/reactivate';
 
 
   // # it need condition slug at end of this endpoint
