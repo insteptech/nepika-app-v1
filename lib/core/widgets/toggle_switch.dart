@@ -24,12 +24,6 @@ class _ToggleSwitchState extends State<ToggleSwitch> {
     isOn = widget.value;
   }
 
-  void _toggleSwitch() {
-    setState(() {
-      isOn = !isOn;
-    });
-    widget.onChanged(isOn);
-  }
 
   @override
   void didUpdateWidget(covariant ToggleSwitch oldWidget) {
@@ -41,47 +35,27 @@ class _ToggleSwitchState extends State<ToggleSwitch> {
 
   @override
   Widget build(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
-   final Color backgroundColor = isOn
-    ? Theme.of(context).colorScheme.primary
-    :  isDark ? Colors.grey.withValues(alpha: 0.4) : Colors.grey.withValues(alpha: 0.7);
-
-
-
-
-    final Color knobColor = AppTheme.whiteBlack;
-
-    return GestureDetector(
-      onTap: _toggleSwitch,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 250),
-        width: 50,
-        height: 29,
-        padding: const EdgeInsets.all(4),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(32),
-          color: backgroundColor,
-        ),
-        child: AnimatedAlign(
-          duration: const Duration(milliseconds: 200),
-          alignment: isOn ? Alignment.centerRight : Alignment.centerLeft,
-          child: Container(
-            width: 20,
-            height: 20,
-            decoration: BoxDecoration(
-              color: knobColor,
-              shape: BoxShape.circle,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black26,
-                  blurRadius: 2,
-                  offset: Offset(0, 1),
-                ),
-              ],
-            ),
-          ),
-        ),
+    final theme = Theme.of(context);
+    
+    return SizedBox(
+      width: 58,
+      height: 35,
+      child: Switch(
+        value: isOn,
+        onChanged: (value) {
+          setState(() {
+            isOn = value;
+          });
+          widget.onChanged(value);
+        },
+        activeColor: AppTheme.whiteBlack,
+        activeTrackColor: AppTheme.primaryColor,
+        inactiveThumbColor: AppTheme.whiteBlack,
+        inactiveTrackColor: (theme.brightness == Brightness.dark 
+            ? AppTheme.textSecondaryDark 
+            : AppTheme.textSecondaryLight).withValues(alpha: 0.3),
+        trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+        materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
       ),
     );
   }

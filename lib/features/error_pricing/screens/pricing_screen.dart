@@ -71,6 +71,8 @@ class _PricingScreenState extends State<PricingScreen> {
                 _launchCheckoutUrl(state.session.url);
               } else if (state is SubscriptionCanceled) {
                 _handleCancellationSuccess(state.details);
+              } else if (state is SubscriptionReactivated) {
+                _handleReactivationSuccess(state.details);
               } else if (state is PaymentError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -845,7 +847,7 @@ class _PricingScreenState extends State<PricingScreen> {
                 width: double.infinity,
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.errorContainer,
+                  color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Row(
@@ -860,7 +862,7 @@ class _PricingScreenState extends State<PricingScreen> {
                       child: Text(
                         'Your subscription will not renew automatically',
                         style: theme.textTheme.bodySmall?.copyWith(
-                          color: theme.colorScheme.error,
+                          color: theme.colorScheme.onSurface,
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -1044,7 +1046,7 @@ class _PricingScreenState extends State<PricingScreen> {
                           cancelAtPeriodEnd ? 'Expires Soon' : 'Active',
                           style: theme.textTheme.bodySmall?.copyWith(
                             color: cancelAtPeriodEnd 
-                                ? theme.colorScheme.error 
+                                ? theme.colorScheme.onSurface 
                                 : theme.colorScheme.onPrimary,
                             fontWeight: FontWeight.w600,
                           ),
@@ -1129,7 +1131,7 @@ class _PricingScreenState extends State<PricingScreen> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(12),
                       decoration: BoxDecoration(
-                        color: theme.colorScheme.errorContainer,
+                        color: theme.colorScheme.errorContainer.withValues(alpha: 0.3),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: Row(
@@ -1144,7 +1146,7 @@ class _PricingScreenState extends State<PricingScreen> {
                             child: Text(
                               'Your subscription will not renew automatically',
                               style: theme.textTheme.bodySmall?.copyWith(
-                                color: theme.colorScheme.error,
+                                color: theme.colorScheme.onSurface,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
@@ -1190,12 +1192,7 @@ class _PricingScreenState extends State<PricingScreen> {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(context);
-                    // TODO: Implement reactivate subscription
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('Reactivation feature coming soon'),
-                      ),
-                    );
+                    _reactivateSubscription();
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
@@ -1209,6 +1206,7 @@ class _PricingScreenState extends State<PricingScreen> {
                     'Reactivate Subscription',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
+                      // color: theme.colorScheme.onTertiary,
                     ),
                   ),
                 ),
@@ -1508,32 +1506,30 @@ class _PricingScreenState extends State<PricingScreen> {
       cancelImmediately: cancelImmediately,
     ));
   }
+
+  void _reactivateSubscription() {
+    _paymentBloc.add(ReactivateSubscriptionEvent());
+  }
   
   void _handleCancellationSuccess(dynamic subscriptionDetails) {
     final theme = Theme.of(context);
     final originalContext = context; // Capture the original context
     
-    showDialog(
+    showModalBottomSheet(
       context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) => Dialog(
-        backgroundColor: Colors.transparent,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 20),
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: theme.brightness == Brightness.dark 
-                ? AppTheme.surfaceColorDark 
-                : AppTheme.surfaceColorLight,
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withValues(alpha: 0.1),
-                blurRadius: 20,
-                offset: const Offset(0, 8),
-              ),
-            ],
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) => Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
           ),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -1579,7 +1575,7 @@ class _PricingScreenState extends State<PricingScreen> {
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: () {
-                    Navigator.pop(dialogContext); // Close success dialog
+                    Navigator.pop(bottomSheetContext); // Close success bottom sheet
                     Navigator.pop(originalContext); // Close pricing screen
                     // Refresh the subscription data using the original context
                     originalContext.read<AppBloc>().add(AppSubscriptions(token));
@@ -1604,7 +1600,100 @@ class _PricingScreenState extends State<PricingScreen> {
             ],
           ),
         ),
-      ),
+      // ),
+    );
+  }
+
+  void _handleReactivationSuccess(dynamic subscriptionDetails) {
+    final theme = Theme.of(context);
+    final originalContext = context; // Capture the original context
+    
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) => Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Success icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.successColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.refresh,
+                  color: AppTheme.successColor,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Subscription Reactivated',
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.brightness == Brightness.dark 
+                      ? AppTheme.textPrimaryDark 
+                      : AppTheme.textPrimaryLight,
+                ),
+              ),
+              const SizedBox(height: 8),
+              
+              Text(
+                'Your subscription has been successfully reactivated and will continue renewing automatically.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: theme.brightness == Brightness.dark 
+                      ? AppTheme.textSecondaryDark 
+                      : AppTheme.textSecondaryLight,
+                  height: 1.4,
+                ),
+              ),
+              const SizedBox(height: 24),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(bottomSheetContext); // Close success bottom sheet
+                    Navigator.pop(originalContext); // Close pricing screen
+                    // Refresh the subscription data using the original context
+                    originalContext.read<AppBloc>().add(AppSubscriptions(token));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: AppTheme.whiteBlack,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Done',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.whiteBlack,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      // ),
     );
   }
 }

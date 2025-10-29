@@ -32,6 +32,7 @@ import 'package:nepika/features/community/bloc/blocs/posts_bloc.dart';
 import 'package:nepika/features/community/bloc/blocs/user_search_bloc.dart';
 import 'package:nepika/features/community/bloc/blocs/profile_bloc.dart';
 import 'package:nepika/features/blocked_users/screens/blocked_users_screen.dart';
+import 'package:nepika/features/community/screens/edit_profile_screen.dart';
 import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
@@ -280,6 +281,19 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.termsOfUse:
               return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
+            case AppRoutes.editProfile:
+              return MaterialPageRoute(
+                builder: (_) {
+                  // Get user data from arguments or shared preferences
+                  final args = settings.arguments as Map<String, dynamic>?;
+                  return EditProfileScreen(
+                    token: args?['token'] ?? '',
+                    currentUsername: args?['currentUsername'],
+                    currentBio: args?['currentBio'],
+                    currentProfileImage: args?['currentProfileImage'],
+                  );
+                },
+              );
             case AppRoutes.blockedUsers:
               return MaterialPageRoute(
                 builder: (_) => const BlockedUsersScreen(),
