@@ -30,14 +30,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.11.0"
-  app_links:
-    dependency: "direct main"
-    description:
-      name: app_links
-      sha256: "3ced568a5d9e309e99af71285666f1f3117bddd0bd5b3317979dccc1a40cada4"
-      url: "https://pub.dev"
-    source: hosted
-    version: "3.5.1"
   archive:
     dependency: transitive
     description:
@@ -446,22 +438,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.17.5"
-  firebase_dynamic_links:
-    dependency: "direct main"
-    description:
-      name: firebase_dynamic_links
-      sha256: "47b8c8a8546d8a7f9000edb90848549f20b137d814ee7e0407b3d43b8445e282"
-      url: "https://pub.dev"
-    source: hosted
-    version: "5.5.7"
-  firebase_dynamic_links_platform_interface:
-    dependency: transitive
-    description:
-      name: firebase_dynamic_links_platform_interface
-      sha256: "72e7810635f908ce060c5803c7acb29116c5b6befc73e90446c52722bc9506a2"
-      url: "https://pub.dev"
-    source: hosted
-    version: "0.2.6+35"
   firebase_messaging:
     dependency: "direct main"
     description:
@@ -661,14 +637,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.3"
-  go_router:
-    dependency: "direct main"
-    description:
-      name: go_router
-      sha256: b465e99ce64ba75e61c8c0ce3d87b66d8ac07f0b35d0a7e0263fcfc10f99e836
-      url: "https://pub.dev"
-    source: hosted
-    version: "13.2.5"
   google_mlkit_commons:
     dependency: transitive
     description:
@@ -693,14 +661,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.2"
-  gtk:
-    dependency: transitive
-    description:
-      name: gtk
-      sha256: e8ce9ca4b1df106e4d72dad201d345ea1a036cc12c360f1a7d5a758f78ffa42c
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.1.0"
   http:
     dependency: "direct main"
     description:

@@ -165,10 +165,9 @@ class _OtpInputFieldState extends State<OtpInputField> {
 
   @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: List.generate(widget.length, (index) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(widget.length, (index) {
         final bool hasFocus = _focusNodes[index].hasFocus;
 
         return Container(
@@ -240,7 +239,6 @@ class _OtpInputFieldState extends State<OtpInputField> {
           ),
         );
       }),
-      ),
     );
   }
 }

@@ -570,7 +570,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         });
 
         if (mounted) {
-          final route = state.authResponse.user.activeStep == 1
+          final route = state.authResponse.user.activeStep == 1 || state.authResponse.user.activeStep == 0
               ? AppRoutes.userInfo
               : AppRoutes.dashboardHome;
 

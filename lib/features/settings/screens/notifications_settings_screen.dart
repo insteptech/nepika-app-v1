@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
-import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/dashboard/widgets/delete_account_dialog.dart';
 import 'package:provider/provider.dart';
 
@@ -48,12 +47,10 @@ class _NotificationsSettingsScreenState
       ),
       SettingsOptionData.toggle(
         'Dark Mode',
-        toggleValue: false,
+        toggleValue: themeNotifier.themeMode == ThemeMode.dark,
         onToggle: (value) async {
           debugPrint('Dark Mode Toggled: $value');
-          themeNotifier.toggleTheme(value);
-          await SharedPrefsHelper().setBool('Dark Mode', value);
-          setState(() {});
+          await themeNotifier.toggleTheme(value);
         },
       ),
       SettingsOptionData.option(

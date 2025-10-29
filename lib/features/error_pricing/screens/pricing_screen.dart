@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:shimmer/shimmer.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/core/di/injection_container.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
@@ -14,6 +14,7 @@ import 'package:nepika/presentation/bloc/app/app_state.dart';
 import 'package:nepika/features/payments/bloc/payment_bloc.dart';
 import 'package:nepika/features/payments/bloc/payment_event.dart';
 import 'package:nepika/features/payments/bloc/payment_state.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 
 class PricingScreen extends StatefulWidget {
   const PricingScreen({super.key});
@@ -68,6 +69,8 @@ class _PricingScreenState extends State<PricingScreen> {
             listener: (context, state) {
               if (state is CheckoutSessionCreated) {
                 _launchCheckoutUrl(state.session.url);
+              } else if (state is SubscriptionCanceled) {
+                _handleCancellationSuccess(state.details);
               } else if (state is PaymentError) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
@@ -82,57 +85,124 @@ class _PricingScreenState extends State<PricingScreen> {
             },
             child: BlocBuilder<AppBloc, AppState>(
             builder: (context, state) {
-              Map<String, dynamic> data = {};
-              List<dynamic> features = [];
-              List<dynamic> plans = [];
+              if (state is AppSubscriptionLoading) {
+                return _buildLoadingSkeleton(theme);
+              }
 
-              if (state is AppSubscriptionLoaded) {
-                data = state.subscriptionPlan;
-                
-                // Extract plans from the API response structure
-                final plansData = data['plans'] as List<dynamic>? ?? [];
-                plans = plansData.map((plan) => {
-                  'name': plan['name'],
-                  'price': plan['price'],
-                  'billingPeriod': plan['duration'],
-                  'stripe_price_id': plan['stripe_price_id'],
-                }).toList();
-                
-                // Extract features from the first plan's plan_details
+              if (state is AppSubscriptionError) {
+                return Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error, size: 64, color: theme.colorScheme.error),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Failed to load pricing plans',
+                        style: theme.textTheme.headlineSmall,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        state.message,
+                        style: theme.textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 16),
+                      ElevatedButton(
+                        onPressed: () {
+                          context.read<AppBloc>().add(AppSubscriptions(token));
+                        },
+                        child: const Text('Retry'),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              // Show loading for initial state or any unhandled state
+              if (state is AppInitial || state is! AppSubscriptionLoaded) {
+                return _buildLoadingSkeleton(theme);
+              }
+
+              // Extract data from loaded state
+              final data = state.subscriptionPlan;
+              
+              // Check if user has active subscription
+              final hasSubscription = data['has_subscription'] == true;
+              final currentPlan = data['current_plan'];
+              
+              // Access plans - handle different API response structures
+              List<dynamic> plansData = [];
+              try {
+                // Try different possible plan locations
+                plansData = data['plans'] as List<dynamic>? ?? [];
+                if (plansData.isEmpty) {
+                  plansData = data['other_plans'] as List<dynamic>? ?? [];
+                }
+                // If still empty, try nested structure
+                if (plansData.isEmpty && data['data'] != null) {
+                  plansData = data['data']['plans'] as List<dynamic>? ?? [];
+                  if (plansData.isEmpty) {
+                    plansData = data['data']['other_plans'] as List<dynamic>? ?? [];
+                  }
+                }
+              } catch (e) {
+                plansData = [];
+              }
+              
+              final plans = plansData.map((plan) {
+                try {
+                  // Handle different price field structures
+                  String priceDisplay = '';
+                  dynamic priceValue = 0.0;
+                  
+                  if (plan['price'] is String) {
+                    priceDisplay = plan['price']?.toString() ?? '\$0.00';
+                    priceValue = plan['price_amount'] ?? 0.0;
+                  } else if (plan['price'] is num) {
+                    priceValue = plan['price'] ?? 0.0;
+                    priceDisplay = '\$${priceValue.toStringAsFixed(2)}';
+                  }
+                  
+                  // Handle different duration/interval fields
+                  String billingPeriod = plan['interval']?.toString() ?? plan['duration']?.toString() ?? '';
+                  
+                  return {
+                    'name': plan['name']?.toString() ?? '',
+                    'price': priceValue, 
+                    'priceDisplay': priceDisplay, 
+                    'billingPeriod': billingPeriod, 
+                    'stripe_price_id': plan['stripe_price_id']?.toString() ?? '',
+                  };
+                } catch (e) {
+                  return {
+                    'name': '',
+                    'price': 0.0, 
+                    'priceDisplay': '\$0.00', 
+                    'billingPeriod': '', 
+                    'stripe_price_id': '',
+                  };
+                }
+              }).toList();
+              
+              // Extract features from the first plan
+              List<Map<String, dynamic>> features = [];
+              try {
                 if (plansData.isNotEmpty) {
                   final firstPlan = plansData.first;
-                  final planDetails = firstPlan['plan_details'] as List<dynamic>? ?? [];
-                  features = planDetails.map((detail) => {
-                    'title': detail.toString(),
+                  // Try 'features' first, then 'plan_details'
+                  List<dynamic> planFeatures = firstPlan['features'] as List<dynamic>? ?? 
+                                               firstPlan['plan_details'] as List<dynamic>? ?? [];
+                  features = planFeatures.map((feature) => {
+                    'title': feature?.toString() ?? ''
                   }).toList();
                 }
+              } catch (e) {
+                features = [];
               }
-              
-              // Add fallback data if no features/plans loaded
-              if (features.isEmpty) {
-                features = [
-                  {'title': 'Unlimited face scans per month'},
-                  {'title': 'Detailed skin analysis across all 9 parameters'},
-                  {'title': 'Advanced AI recommendations'},
-                  {'title': 'Priority customer support'},
-                ];
-              }
-              
-              if (plans.isEmpty) {
-                plans = [
-                  {
-                    'name': 'Nepika Premium Monthly',
-                    'price': 6.99,
-                    'billingPeriod': 'monthly',
-                    'stripe_price_id': 'price_1SLe3b9GE4oycUj8rjX69Us8',
-                  },
-                  {
-                    'name': 'Nepika Premium Yearly',
-                    'price': 60.00,
-                    'billingPeriod': 'yearly',
-                    'stripe_price_id': 'price_1SLe3c9GE4oycUj8rjX69Us9',
-                  }
-                ];
+
+              // If no data loaded yet, show skeleton
+              if (plans.isEmpty && features.isEmpty) {
+                return _buildLoadingSkeleton(theme);
               }
 
               return SingleChildScrollView(
@@ -182,15 +252,26 @@ class _PricingScreenState extends State<PricingScreen> {
                     ),
                     const SizedBox(height: 30),
                     Text(
-                      data['title'] ?? 'Nepika Premium',
+                      'Nepika Premium',
                       style: theme.textTheme.displaySmall
                     ),
                     const SizedBox(height: 5),
                     Text(
-                      data['subtitle'] ?? 'Know what touches your skin',
-                      style: theme.textTheme.headlineMedium!.secondary(context)
+                      'Know what touches your skin',
+                      style: theme.textTheme.headlineMedium?.copyWith(
+                        color: theme.brightness == Brightness.dark 
+                            ? const Color(0xFFB0B0B0)
+                            : const Color(0xFF7F7F7F),
+                      ),
                     ),
-                    const SizedBox(height: 45),
+                    const SizedBox(height: 30),
+
+                    // Current subscription info
+                    if (hasSubscription && currentPlan != null)
+                      _buildCurrentSubscriptionCard(currentPlan, theme),
+                    
+                    if (hasSubscription && currentPlan != null)
+                      const SizedBox(height: 30),
 
                     // Features
                     ...features.map(
@@ -210,11 +291,17 @@ class _PricingScreenState extends State<PricingScreen> {
                                 color: theme.colorScheme.primary.withValues(alpha: 0.08),
                               ),
                               child: Center(
-                                child: Image.asset(
-                                  'assets/icons/unlock_icon.png',
-                                  width: 18,
-                                  height: 18,
-                                ),
+                                child: hasSubscription 
+                                    ? Icon(
+                                        Icons.check,
+                                        color: theme.colorScheme.primary,
+                                        size: 20,
+                                      )
+                                    : Image.asset(
+                                        'assets/icons/unlock_icon.png',
+                                        width: 18,
+                                        height: 18,
+                                      ),
                               ),
                             ),
                             const SizedBox(width: 20),
@@ -229,94 +316,103 @@ class _PricingScreenState extends State<PricingScreen> {
                       ),
                     ),
 
-                    const SizedBox(height: 24),
+                    // Only show plans if user doesn't have active subscription
+                    if (!hasSubscription) ...[
+                      const SizedBox(height: 24),
 
-                    // Plans
-                    ...List.generate(plans.length, (index) {
-                      final plan = plans[index];
-                      final isSelected = selectedPlanIndex == index;
-                      return GestureDetector(
-                        onTap: () => setState(() => selectedPlanIndex = index),
-                        child: Container(
-                          margin: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 20,
-                            vertical: 13,
-                          ),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? theme.colorScheme.primary
-                                : Colors.transparent,
-                            border: Border.all(color: theme.colorScheme.primary),
-                            borderRadius: BorderRadius.circular(40),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(
-                                isSelected
-                                    ? Icons.radio_button_checked
-                                    : Icons.radio_button_off,
-                                color: isSelected
-                                    ? theme.colorScheme.onSecondary
-                                    : theme.colorScheme.primary,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Text(
-                                  plan['name'] ?? '',
-                                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                                    color: isSelected
-                                        ? theme.colorScheme.onSecondary
-                                        : theme.colorScheme.primary,
-                                  ),
+                      // Plans
+                      ...List.generate(plans.length, (index) {
+                        final plan = plans[index];
+                        final isSelected = selectedPlanIndex == index;
+                        return GestureDetector(
+                          onTap: () => setState(() => selectedPlanIndex = index),
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 10,
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 13,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? theme.colorScheme.primary
+                                  : Colors.transparent,
+                              border: Border.all(color: theme.colorScheme.primary),
+                              borderRadius: BorderRadius.circular(40),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  isSelected
+                                      ? Icons.radio_button_checked
+                                      : Icons.radio_button_off,
+                                  color: isSelected
+                                      ? theme.colorScheme.onSecondary
+                                      : theme.colorScheme.primary,
                                 ),
-                              ),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  Text(
-                                    '\$${plan['price'] ?? ''}',
-                                    textAlign: TextAlign.left,
-                                  style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                                    color: isSelected
-                                        ? theme.colorScheme.onSecondary
-                                        : theme.colorScheme.primary,
-                                    fontWeight: FontWeight.w600
-                                    ),
-                                  ),
-                                  Text(
-                                    'Per ${plan['billingPeriod']}',
-                                    textAlign: TextAlign.left,
-                                    style: Theme.of(context).textTheme.bodyMedium!.secondary(context).copyWith(
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Text(
+                                    plan['name'] ?? '',
+                                    style: Theme.of(context).textTheme.bodyLarge?.copyWith(
                                       color: isSelected
                                           ? theme.colorScheme.onSecondary
                                           : theme.colorScheme.primary,
                                     ),
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text(
+                                      _formatPrice(plan),
+                                      textAlign: TextAlign.left,
+                                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                                      color: isSelected
+                                          ? theme.colorScheme.onSecondary
+                                          : theme.colorScheme.primary,
+                                      fontWeight: FontWeight.w600
+                                      ),
+                                    ),
+                                    Text(
+                                      'Per ${plan['billingPeriod']}',
+                                      textAlign: TextAlign.left,
+                                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                        color: isSelected
+                                            ? theme.colorScheme.onSecondary
+                                            : theme.colorScheme.primary,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                      );
-                    }),
+                        );
+                      }),
+                    ],
 
                     const SizedBox(height: 24),
 
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: CustomButton(
-                        text: 'Continue',
+                        text: hasSubscription ? 'Manage Subscription' : 'Continue',
                         isLoading: _isLoading,
-                        onPressed: _isLoading ? null : () => _onContinuePressed(plans),
+                        onPressed: _isLoading ? null : () => hasSubscription ? _onManageSubscription(currentPlan) : _onContinuePressed(plans),
                       ),
                     ),
+
+
+
+
+
+
                     const SizedBox(height: 20),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0,vertical: 15),
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
@@ -342,6 +438,12 @@ class _PricingScreenState extends State<PricingScreen> {
         ),
       ),
     );
+  }
+
+  void _onManageSubscription(Map<String, dynamic>? currentPlan) {
+    if (currentPlan != null) {
+      _showManageSubscriptionBottomSheet(currentPlan);
+    }
   }
 
   void _onContinuePressed(List<dynamic> plans) {
@@ -400,5 +502,1109 @@ class _PricingScreenState extends State<PricingScreen> {
         );
       }
     }
+  }
+
+  Widget _buildLoadingSkeleton(ThemeData theme) {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.center,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 25,
+              vertical: 20,
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Transform.rotate(
+                    angle: 45 * 3.1415926535 / 180,
+                    child: Image.asset(
+                      'assets/icons/add_icon.png',
+                      width: 28,
+                      height: 28,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Container(
+            width: 110,
+            height: 110,
+            decoration: BoxDecoration(
+              color: theme.colorScheme.onSecondary,
+              shape: BoxShape.circle,
+            ),
+            child: Padding(
+              padding: const EdgeInsets.all(18),
+              child: Image.asset(
+                'assets/images/nepika_logo_image.png',
+                color: theme.primaryIconTheme.color,
+              ),
+            ),
+          ),
+          const SizedBox(height: 30),
+          
+          // Title shimmer
+          _buildShimmerContainer(
+            width: 200,
+            height: 32,
+            theme: theme,
+          ),
+          const SizedBox(height: 5),
+          
+          // Subtitle shimmer
+          _buildShimmerContainer(
+            width: 250,
+            height: 20,
+            theme: theme,
+          ),
+          const SizedBox(height: 45),
+
+          // Features shimmer
+          ...List.generate(4, (index) => Padding(
+            padding: const EdgeInsets.only(
+              bottom: 15,
+              left: 20,
+              right: 20,
+            ),
+            child: Row(
+              children: [
+                _buildShimmerContainer(
+                  width: 45,
+                  height: 45,
+                  theme: theme,
+                  isCircle: true,
+                ),
+                const SizedBox(width: 20),
+                Expanded(
+                  child: _buildShimmerContainer(
+                    width: double.infinity,
+                    height: 18,
+                    theme: theme,
+                  ),
+                ),
+              ],
+            ),
+          )),
+
+          const SizedBox(height: 24),
+
+          // Plans shimmer
+          ...List.generate(2, (index) => Container(
+            margin: const EdgeInsets.symmetric(
+              horizontal: 16,
+              vertical: 10,
+            ),
+            child: _buildShimmerContainer(
+              width: double.infinity,
+              height: 70,
+              theme: theme,
+              borderRadius: 40,
+            ),
+          )),
+
+          const SizedBox(height: 24),
+
+          // Button shimmer
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildShimmerContainer(
+              width: double.infinity,
+              height: 48,
+              theme: theme,
+              borderRadius: 24,
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          // Bottom text shimmer
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildShimmerContainer(
+                  width: 120,
+                  height: 16,
+                  theme: theme,
+                ),
+                _buildShimmerContainer(
+                  width: 60,
+                  height: 16,
+                  theme: theme,
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildShimmerContainer({
+    required double width,
+    required double height,
+    required ThemeData theme,
+    bool isCircle = false,
+    double? borderRadius,
+  }) {
+    return Shimmer.fromColors(
+      baseColor: theme.brightness == Brightness.dark 
+          ? Colors.grey[800]! 
+          : Colors.grey[300]!,
+      highlightColor: theme.brightness == Brightness.dark 
+          ? Colors.grey[700]! 
+          : Colors.grey[100]!,
+      child: Container(
+        width: width,
+        height: height,
+        decoration: BoxDecoration(
+          color: theme.brightness == Brightness.dark 
+              ? Colors.grey[800] 
+              : Colors.grey[300],
+          shape: isCircle ? BoxShape.circle : BoxShape.rectangle,
+          borderRadius: isCircle 
+              ? null 
+              : BorderRadius.circular(borderRadius ?? 8),
+        ),
+      ),
+    );
+  }
+
+  String _formatPrice(Map<String, dynamic> plan) {
+    try {
+      // First try to use the formatted price display from API
+      final priceDisplay = plan['priceDisplay'];
+      if (priceDisplay != null && priceDisplay.toString().isNotEmpty) {
+        return priceDisplay.toString();
+      }
+
+      // Fallback to formatting the numeric price
+      final price = plan['price'];
+      if (price != null) {
+        if (price is String) {
+          return price.isNotEmpty ? price : '\$0.00';
+        } else if (price is num) {
+          return '\$${price.toStringAsFixed(2)}';
+        }
+      }
+
+      // Final fallback
+      return '\$0.00';
+    } catch (e) {
+      // Error handling - return a safe default
+      return '\$0.00';
+    }
+  }
+
+  Widget _buildCurrentSubscriptionCard(Map<String, dynamic> currentPlan, ThemeData theme) {
+    try {
+      final planName = currentPlan['name']?.toString() ?? 'Premium Plan';
+      final planPrice = currentPlan['price']?.toString() ?? currentPlan['price_amount']?.toString() ?? '';
+      final billingPeriod = currentPlan['interval']?.toString() ?? currentPlan['duration']?.toString() ?? '';
+      final nextBillingDate = currentPlan['next_billing_date']?.toString() ?? '';
+      final cancelAtPeriodEnd = currentPlan['cancel_at_period_end'] == true;
+
+      return Container(
+        margin: const EdgeInsets.symmetric(horizontal: 16),
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              theme.colorScheme.primary.withValues(alpha: 0.1),
+              theme.colorScheme.primary.withValues(alpha: 0.05),
+            ],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: theme.colorScheme.primary.withValues(alpha: 0.3),
+            width: 1,
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with status
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.check_circle,
+                        color: AppTheme.whiteBlack,
+                        size: 16,
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        _getSubscriptionStatusText(cancelAtPeriodEnd, nextBillingDate, billingPeriod),
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: AppTheme.whiteBlack,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Spacer(),
+                Icon(
+                  Icons.star,
+                  color: theme.colorScheme.primary,
+                  size: 20,
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            
+            // Plan name and price
+            Text(
+              planName,
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+                color: theme.brightness == Brightness.dark 
+                    ? AppTheme.textPrimaryDark 
+                    : AppTheme.textPrimaryLight,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                Text(
+                  _formatPlanPrice(planPrice),
+                  style: theme.textTheme.titleLarge?.copyWith(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                if (billingPeriod.isNotEmpty) ...[
+                  Text(
+                    ' / $billingPeriod',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      color: theme.brightness == Brightness.dark 
+                          ? AppTheme.textSecondaryDark 
+                          : AppTheme.textSecondaryLight,
+                    ),
+                  ),
+                ],
+              ],
+            ),
+            
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.brightness == Brightness.dark 
+                    ? AppTheme.backgroundColorDark 
+                    : AppTheme.backgroundColorLight,
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: theme.brightness == Brightness.dark 
+                      ? AppTheme.textSecondaryDark.withValues(alpha: 0.3)
+                      : AppTheme.textSecondaryLight.withValues(alpha: 0.3),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    cancelAtPeriodEnd ? Icons.event_busy : Icons.event,
+                    color: cancelAtPeriodEnd ? AppTheme.errorColor : AppTheme.primaryColor,
+                    size: 18,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      _getDetailedDateText(nextBillingDate, cancelAtPeriodEnd, billingPeriod),
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: theme.brightness == Brightness.dark 
+                            ? AppTheme.textPrimaryDark 
+                            : AppTheme.textPrimaryLight,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            
+            if (cancelAtPeriodEnd) ...[
+              const SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.errorContainer,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      color: theme.colorScheme.error,
+                      size: 18,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Your subscription will not renew automatically',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.error,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      );
+    } catch (e) {
+      return const SizedBox.shrink();
+    }
+  }
+
+  String _formatPlanPrice(String price) {
+    if (price.startsWith('\$')) {
+      return price;
+    }
+    if (price.isNotEmpty) {
+      final numPrice = double.tryParse(price);
+      if (numPrice != null) {
+        return '\$${numPrice.toStringAsFixed(2)}';
+      }
+    }
+    return '\$0.00';
+  }
+
+  String _formatDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final months = [
+        'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+      ];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  String _formatDateLocal(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      return '${date.day}/${date.month}/${date.year}';
+    } catch (e) {
+      return dateString;
+    }
+  }
+
+  int _getDaysUntilDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = date.difference(now);
+      return difference.inDays;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  String _getSubscriptionStatusText(bool cancelAtPeriodEnd, String nextBillingDate, String billingPeriod) {
+    if (cancelAtPeriodEnd) {
+      if (nextBillingDate.isNotEmpty) {
+        final daysLeft = _getDaysUntilDate(nextBillingDate);
+        if (daysLeft <= 7) {
+          return 'Expires in $daysLeft days';
+        }
+      }
+      return 'Expires Soon';
+    }
+    return 'Active';
+  }
+
+  String _getDetailedDateText(String nextBillingDate, bool cancelAtPeriodEnd, String billingPeriod) {
+    if (nextBillingDate.isEmpty) {
+      return cancelAtPeriodEnd ? 'Expires soon' : 'Active subscription';
+    }
+
+    final isMonthly = billingPeriod.toLowerCase().contains('month');
+    final daysLeft = _getDaysUntilDate(nextBillingDate);
+    
+    if (cancelAtPeriodEnd) {
+      if (isMonthly && daysLeft <= 31) {
+        return 'Expires in $daysLeft days (${_formatDateLocal(nextBillingDate)})';
+      } else {
+        return 'Expires on ${_formatDate(nextBillingDate)}';
+      }
+    } else {
+      if (isMonthly && daysLeft <= 31) {
+        return 'Renews in $daysLeft days (${_formatDateLocal(nextBillingDate)})';
+      } else {
+        return 'Next billing: ${_formatDate(nextBillingDate)}';
+      }
+    }
+  }
+
+  void _showManageSubscriptionBottomSheet(Map<String, dynamic> currentPlan) {
+    final theme = Theme.of(context);
+    final planName = currentPlan['name']?.toString() ?? 'Premium Plan';
+    final planPrice = currentPlan['price']?.toString() ?? currentPlan['price_amount']?.toString() ?? '';
+    final billingPeriod = currentPlan['interval']?.toString() ?? currentPlan['duration']?.toString() ?? '';
+    final nextBillingDate = currentPlan['next_billing_date']?.toString() ?? '';
+    final cancelAtPeriodEnd = currentPlan['cancel_at_period_end'] == true;
+    final subscriptionId = currentPlan['subscription_id']?.toString() ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Title
+            Text(
+              'Manage Subscription',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 20),
+            
+            // Subscription details card
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Plan name and status
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          planName,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: cancelAtPeriodEnd 
+                              ? theme.colorScheme.errorContainer 
+                              : theme.colorScheme.primary,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          cancelAtPeriodEnd ? 'Expires Soon' : 'Active',
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: cancelAtPeriodEnd 
+                                ? theme.colorScheme.error 
+                                : theme.colorScheme.onPrimary,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  
+                  // Price
+                  Row(
+                    children: [
+                      Text(
+                        _formatPlanPrice(planPrice),
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      if (billingPeriod.isNotEmpty) ...[
+                        Text(
+                          ' / $billingPeriod',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  
+                  // Next billing/expiry date
+                  if (nextBillingDate.isNotEmpty) ...[
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            cancelAtPeriodEnd ? Icons.event_busy : Icons.event,
+                            color: cancelAtPeriodEnd 
+                                ? theme.colorScheme.error 
+                                : theme.colorScheme.primary,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  cancelAtPeriodEnd ? 'Expires on' : 'Next billing date',
+                                  style: theme.textTheme.bodySmall?.copyWith(
+                                    color: theme.colorScheme.outline,
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _formatDate(nextBillingDate),
+                                  style: theme.textTheme.bodyLarge?.copyWith(
+                                    fontWeight: FontWeight.w600,
+                                    color: cancelAtPeriodEnd 
+                                        ? theme.colorScheme.error 
+                                        : theme.colorScheme.onSurface,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                  
+                  // Cancellation notice
+                  if (cancelAtPeriodEnd) ...[
+                    const SizedBox(height: 12),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.errorContainer,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: theme.colorScheme.error,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Your subscription will not renew automatically',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: theme.colorScheme.error,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+            const SizedBox(height: 24),
+            
+            // Cancel subscription button
+            if (!cancelAtPeriodEnd) ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    _showCancelConfirmationDialog(subscriptionId, planName, nextBillingDate);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.errorContainer,
+                    foregroundColor: theme.colorScheme.error,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Cancel Subscription',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ),
+              ),
+            ] else ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    // TODO: Implement reactivate subscription
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Reactivation feature coming soon'),
+                      ),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: theme.colorScheme.onPrimary,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: Text(
+                    'Reactivate Subscription',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 16),
+            
+            // Close button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () => Navigator.pop(context),
+                style: TextButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary.withValues(alpha: 0.1),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  'Close',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
+            ),
+            
+            // Bottom padding for safe area
+            SizedBox(height: MediaQuery.of(context).viewPadding.bottom),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _showCancelConfirmationDialog(String subscriptionId, String planName, String nextBillingDate) {
+    final theme = Theme.of(context);
+    bool cancelImmediately = false;
+    
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Container(
+        // margin: const EdgeInsets.symmetric(horizontal: 20),
+        decoration: BoxDecoration(
+          color: theme.brightness == Brightness.dark 
+              ? AppTheme.surfaceColorDark 
+              : AppTheme.surfaceColorLight,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        child: StatefulBuilder(
+          builder: (context, setDialogState) => Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Handle bar
+              Container(
+                margin: const EdgeInsets.only(top: 12),
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: theme.brightness == Brightness.dark 
+                      ? AppTheme.textSecondaryDark.withValues(alpha: 0.4)
+                      : AppTheme.textSecondaryLight.withValues(alpha: 0.4),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Header
+                    Text(
+                      'Cancel Subscription',
+                      style: theme.textTheme.headlineLarge?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: theme.brightness == Brightness.dark 
+                            ? AppTheme.textPrimaryDark 
+                            : AppTheme.textPrimaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Choose when to end your subscription',
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        color: theme.brightness == Brightness.dark 
+                            ? AppTheme.textSecondaryDark 
+                            : AppTheme.textSecondaryLight,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                
+                    // Cancellation options
+                    GestureDetector(
+                      onTap: () => setDialogState(() => cancelImmediately = false),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: !cancelImmediately 
+                              ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: !cancelImmediately 
+                                ? theme.colorScheme.primary
+                                : (theme.brightness == Brightness.dark 
+                                    ? AppTheme.textSecondaryDark 
+                                    : AppTheme.textSecondaryLight).withValues(alpha: 0.3),
+                            width: 1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              !cancelImmediately 
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: !cancelImmediately 
+                                  ? theme.colorScheme.primary
+                                  : (theme.brightness == Brightness.dark 
+                                      ? AppTheme.textSecondaryDark 
+                                      : AppTheme.textSecondaryLight),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'At end of billing period',
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: !cancelImmediately 
+                                          ? theme.colorScheme.primary
+                                          : (theme.brightness == Brightness.dark 
+                                              ? AppTheme.textPrimaryDark 
+                                              : AppTheme.textPrimaryLight),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Access until ${_formatDate(nextBillingDate)}',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.brightness == Brightness.dark 
+                                          ? AppTheme.textSecondaryDark 
+                                          : AppTheme.textSecondaryLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    
+                    // Immediate cancellation option
+                    GestureDetector(
+                      onTap: () => setDialogState(() => cancelImmediately = true),
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(
+                          color: cancelImmediately 
+                              ? AppTheme.warningColor.withValues(alpha: 0.1)
+                              : Colors.transparent,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: cancelImmediately 
+                                ? AppTheme.warningColor
+                                : (theme.brightness == Brightness.dark 
+                                    ? AppTheme.textSecondaryDark 
+                                    : AppTheme.textSecondaryLight).withValues(alpha: 0.3),
+                            width:  1,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              cancelImmediately 
+                                  ? Icons.radio_button_checked
+                                  : Icons.radio_button_off,
+                              color: cancelImmediately 
+                                  ? AppTheme.warningColor
+                                  : (theme.brightness == Brightness.dark 
+                                      ? AppTheme.textSecondaryDark 
+                                      : AppTheme.textSecondaryLight),
+                              size: 22,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Immediately',
+                                    style: theme.textTheme.bodyLarge?.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                      color: cancelImmediately 
+                                          ? AppTheme.warningColor
+                                          : (theme.brightness == Brightness.dark 
+                                              ? AppTheme.textPrimaryDark 
+                                              : AppTheme.textPrimaryLight),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Access ends now',
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: theme.brightness == Brightness.dark 
+                                          ? AppTheme.textSecondaryDark 
+                                          : AppTheme.textSecondaryLight,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    
+                    // Action buttons
+                    Row(
+                      children: [
+                        Expanded(
+                          child: OutlinedButton(
+                            onPressed: () => Navigator.pop(context),
+                            style: OutlinedButton.styleFrom(
+                              side: BorderSide(
+                                color: theme.brightness == Brightness.dark 
+                                    ? AppTheme.textSecondaryDark 
+                                    : AppTheme.textSecondaryLight,
+                              ),
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Keep Subscription',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color: theme.brightness == Brightness.dark 
+                                    ? AppTheme.textPrimaryDark 
+                                    : AppTheme.textPrimaryLight,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () {
+                              Navigator.pop(context);
+                              _cancelSubscription(cancelImmediately);
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.warningColor,
+                              foregroundColor: AppTheme.blackWhite,
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                            ),
+                            child: Text(
+                              'Cancel',
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                                color: AppTheme.blackWhite,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    
+                    // Bottom safe area
+                    SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 16),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+  
+  void _cancelSubscription(bool cancelImmediately) {
+    _paymentBloc.add(CancelSubscriptionEvent(
+      cancelImmediately: cancelImmediately,
+    ));
+  }
+  
+  void _handleCancellationSuccess(dynamic subscriptionDetails) {
+    final theme = Theme.of(context);
+    final originalContext = context; // Capture the original context
+    
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: theme.brightness == Brightness.dark 
+                ? AppTheme.surfaceColorDark 
+                : AppTheme.surfaceColorLight,
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              // Success icon
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppTheme.successColor.withValues(alpha: 0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  Icons.check_circle_outline,
+                  color: AppTheme.successColor,
+                  size: 32,
+                ),
+              ),
+              const SizedBox(height: 16),
+              
+              Text(
+                'Subscription Canceled',
+                style: theme.textTheme.headlineLarge?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: theme.brightness == Brightness.dark 
+                      ? AppTheme.textPrimaryDark 
+                      : AppTheme.textPrimaryLight,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 8),
+              
+              Text(
+                'Your subscription has been canceled successfully.',
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.brightness == Brightness.dark 
+                      ? AppTheme.textSecondaryDark 
+                      : AppTheme.textSecondaryLight,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(dialogContext); // Close success dialog
+                    Navigator.pop(originalContext); // Close pricing screen
+                    // Refresh the subscription data using the original context
+                    originalContext.read<AppBloc>().add(AppSubscriptions(token));
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.colorScheme.primary,
+                    foregroundColor: AppTheme.whiteBlack,
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                  child: Text(
+                    'Done',
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.whiteBlack,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 }
