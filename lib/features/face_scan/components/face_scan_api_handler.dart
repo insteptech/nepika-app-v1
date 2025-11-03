@@ -68,11 +68,47 @@ class FaceScanApiHandler {
           final errorMessage = responseData['error_message'] ?? 'Analysis failed';
           return FaceScanApiResult.error(errorMessage);
         }
+      } else if (response.statusCode == 403 && response.data != null) {
+        final responseData = response.data as Map<String, dynamic>;
+        
+        // Check if this is a scan limit error
+        if (responseData['success'] == false && 
+            responseData['data'] != null && 
+            responseData['data']['upgrade_required'] == true) {
+          return FaceScanApiResult.limitError(
+            message: responseData['message'] ?? 'Monthly scan limit reached',
+            limitData: responseData['data'],
+          );
+        } else {
+          return FaceScanApiResult.error('Access denied (403)');
+        }
       } else {
         return FaceScanApiResult.error('API returned status code: ${response.statusCode}');
       }
     } on DioException catch (e) {
       debugPrint('Dio Error: $e');
+      
+      // Special handling for 403 responses with limit data
+      if (e.response?.statusCode == 403 && e.response?.data != null) {
+        try {
+          final responseData = e.response!.data as Map<String, dynamic>;
+          debugPrint('403 Response data: $responseData');
+          
+          // Check if this is a scan limit error
+          if (responseData['success'] == false && 
+              responseData['data'] != null && 
+              responseData['data']['upgrade_required'] == true) {
+            debugPrint('🚫 Scan limit error detected in DioException handler');
+            return FaceScanApiResult.limitError(
+              message: responseData['message'] ?? 'Monthly scan limit reached',
+              limitData: responseData['data'],
+            );
+          }
+        } catch (parseError) {
+          debugPrint('Error parsing 403 response: $parseError');
+        }
+      }
+      
       final errorMessage = _handleDioError(e);
       return FaceScanApiResult.error(errorMessage);
     } catch (e) {
@@ -109,15 +145,19 @@ class FaceScanApiHandler {
 /// Result of face scan API call
 class FaceScanApiResult {
   final bool isSuccess;
+  final bool isLimitError;
   final String? errorMessage;
   final Map<String, dynamic>? analysisResults;
   final String? reportImageUrl;
+  final Map<String, dynamic>? limitData;
 
   const FaceScanApiResult._({
     required this.isSuccess,
+    this.isLimitError = false,
     this.errorMessage,
     this.analysisResults,
     this.reportImageUrl,
+    this.limitData,
   });
 
   factory FaceScanApiResult.success({
@@ -135,6 +175,18 @@ class FaceScanApiResult {
     return FaceScanApiResult._(
       isSuccess: false,
       errorMessage: errorMessage,
+    );
+  }
+
+  factory FaceScanApiResult.limitError({
+    required String message,
+    required Map<String, dynamic> limitData,
+  }) {
+    return FaceScanApiResult._(
+      isSuccess: false,
+      isLimitError: true,
+      errorMessage: message,
+      limitData: limitData,
     );
   }
 }

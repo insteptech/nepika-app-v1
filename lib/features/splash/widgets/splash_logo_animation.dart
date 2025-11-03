@@ -20,18 +20,18 @@ class _SplashLogoAnimationState extends State<SplashLogoAnimation>
     super.initState();
 
     _animationController = AnimationController(
-      duration: const Duration(milliseconds: 2000),
+      duration: const Duration(milliseconds: 1500), // Reduced from 2000ms to 1500ms
       vsync: this,
     );
 
-    _scaleAnimation = Tween<double>(begin: 0.5, end: 1.0).animate(
-      CurvedAnimation(parent: _animationController, curve: Curves.elasticOut),
+    _scaleAnimation = Tween<double>(begin: 0.8, end: 1.0).animate(
+      CurvedAnimation(parent: _animationController, curve: Curves.easeOutQuart), // Faster, smoother curve
     );
 
     _opacityAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
       CurvedAnimation(
         parent: _animationController,
-        curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
+        curve: const Interval(0.0, 0.6, curve: Curves.easeOut), // Slightly longer opacity animation
       ),
     );
 
@@ -61,6 +61,8 @@ class _SplashLogoAnimationState extends State<SplashLogoAnimation>
                   child: Image.asset(
                     AppAssets.appLogoStroke,
                     fit: BoxFit.contain,
+                    cacheWidth: 150, // Cache at exact display size for memory efficiency
+                    cacheHeight: 150,
                     color: ThemeHelper.isDarkMode(context) 
                         ? Theme.of(context).colorScheme.primary 
                         : Colors.white,

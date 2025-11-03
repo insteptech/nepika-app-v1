@@ -72,11 +72,13 @@ import '../../features/payments/bloc/payment_bloc.dart';
 
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
+  static bool _coreInitialized = false;
+  static bool _fullyInitialized = false;
   
   static T get<T>() {
     final service = _services[T];
     if (service == null) {
-      throw Exception('Service of type $T is not registered. Make sure to call init() first.');
+      throw Exception('Service of type $T is not registered. Core: $_coreInitialized, Full: $_fullyInitialized');
     }
     if (service is Function) {
       return service() as T;
@@ -92,15 +94,22 @@ class ServiceLocator {
     _services[T] = factory;
   }
 
-  static Future<void> init() async {
-    // External dependencies
-    final sharedPreferences = await SharedPreferences.getInstance();
+  /// Initialize only core services needed immediately
+  static void initializeCore(SharedPreferences sharedPreferences) {
+    if (_coreInitialized) return;
+    
+    // Register only essential services
     _registerLazySingleton<SharedPreferences>(sharedPreferences);
-
-    // Core
     _registerLazySingleton<SecureStorage>(SecureStorage());
     _registerLazySingleton<ApiBase>(ApiBase());
     _registerLazySingleton<NetworkInfo>(NetworkInfoImpl());
+    
+    _coreInitialized = true;
+  }
+  
+  /// Initialize remaining services in background
+  static Future<void> initializeRemaining() async {
+    if (_fullyInitialized) return;
 
     // Routine - Data sources
     _registerLazySingleton<RoutineRemoteDataSource>(
@@ -327,10 +336,21 @@ class ServiceLocator {
         reactivateSubscription: get<ReactivateSubscription>(),
       ),
     );
+    
+    _fullyInitialized = true;
+  }
+
+  /// Legacy method for backward compatibility
+  static Future<void> init() async {
+    final sharedPreferences = await SharedPreferences.getInstance();
+    initializeCore(sharedPreferences);
+    await initializeRemaining();
   }
 
   static void reset() {
     _services.clear();
+    _coreInitialized = false;
+    _fullyInitialized = false;
   }
 }
 

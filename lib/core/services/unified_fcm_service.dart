@@ -227,9 +227,9 @@ class UnifiedFcmService {
     
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
-      requestAlertPermission: false, // Already requested via FCM
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true, // Request alert permission for foreground notifications
+      requestBadgePermission: true, // Request badge permission
+      requestSoundPermission: true, // Request sound permission
       defaultPresentAlert: true,
       defaultPresentBadge: true,
       defaultPresentSound: true,
@@ -658,6 +658,7 @@ class UnifiedFcmService {
         presentAlert: true,
         presentSound: true,
         presentBadge: true,
+        interruptionLevel: InterruptionLevel.active,
       );
 
       const NotificationDetails platformDetails = NotificationDetails(

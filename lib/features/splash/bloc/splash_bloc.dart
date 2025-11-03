@@ -25,10 +25,16 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     // Initialize FCM service in background during splash animation (without token generation)
     _initializeFcmInBackground();
     
-    // Wait for animation duration
-    await Future.delayed(const Duration(seconds: 3));
+    // Start auth check and animation in parallel
+    final authCheckFuture = Future.delayed(const Duration(milliseconds: 500), () {
+      add(CheckAuthenticationStatus());
+    });
     
-    add(CheckAuthenticationStatus());
+    // Minimum animation time (1.5s) + small buffer (0.5s) = 2s max
+    final minimumSplashTime = Future.delayed(const Duration(milliseconds: 2000));
+    
+    // Wait for both to complete - animation ensures minimum time, auth check can finish early
+    await Future.wait([authCheckFuture, minimumSplashTime]);
   }
 
   /// Initialize FCM service in background without blocking splash flow
@@ -79,7 +85,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       final response = await secureClient.request(
         path: '/auth/users/validate',
         method: 'GET',
-      ).timeout(const Duration(seconds: 8));
+      ).timeout(const Duration(seconds: 3)); // Reduced from 8s to 3s
 
       if (response.statusCode == 200 && response.data != null) {
         final responseData = response.data;

@@ -130,43 +130,56 @@ class _PricingScreenState extends State<PricingScreen> {
               
               // Check if user has active subscription
               final hasSubscription = data['has_subscription'] == true;
-              final currentPlan = data['current_plan'];
+              final currentPlan = data['current_plan'] as Map<String, dynamic>?;
               
-              // Access plans - handle different API response structures
+              // Access plans - handle different API response structures with null safety
               List<dynamic> plansData = [];
               try {
-                // Try different possible plan locations
-                plansData = data['plans'] as List<dynamic>? ?? [];
-                if (plansData.isEmpty) {
-                  plansData = data['other_plans'] as List<dynamic>? ?? [];
-                }
-                // If still empty, try nested structure
-                if (plansData.isEmpty && data['data'] != null) {
-                  plansData = data['data']['plans'] as List<dynamic>? ?? [];
-                  if (plansData.isEmpty) {
-                    plansData = data['data']['other_plans'] as List<dynamic>? ?? [];
+                // Safe extraction with null checks
+                if (data.containsKey('plans') && data['plans'] != null) {
+                  plansData = List<dynamic>.from(data['plans'] ?? []);
+                } else if (data.containsKey('other_plans') && data['other_plans'] != null) {
+                  plansData = List<dynamic>.from(data['other_plans'] ?? []);
+                } else if (data.containsKey('data') && data['data'] != null) {
+                  final nestedData = data['data'] as Map<String, dynamic>?;
+                  if (nestedData != null) {
+                    if (nestedData.containsKey('plans') && nestedData['plans'] != null) {
+                      plansData = List<dynamic>.from(nestedData['plans'] ?? []);
+                    } else if (nestedData.containsKey('other_plans') && nestedData['other_plans'] != null) {
+                      plansData = List<dynamic>.from(nestedData['other_plans'] ?? []);
+                    }
                   }
                 }
               } catch (e) {
                 plansData = [];
               }
               
-              final plans = plansData.map((plan) {
+              final plans = plansData.whereType<Map<String, dynamic>>().map((plan) {
                 try {
-                  // Handle different price field structures
+                  // Handle different price field structures with null safety
                   String priceDisplay = '';
                   dynamic priceValue = 0.0;
                   
-                  if (plan['price'] is String) {
-                    priceDisplay = plan['price']?.toString() ?? '\$0.00';
-                    priceValue = plan['price_amount'] ?? 0.0;
-                  } else if (plan['price'] is num) {
-                    priceValue = plan['price'] ?? 0.0;
+                  final price = plan['price'];
+                  if (price is String && price.isNotEmpty) {
+                    priceDisplay = price;
+                    priceValue = double.tryParse(plan['price_amount']?.toString() ?? '0') ?? 0.0;
+                  } else if (price is num) {
+                    priceValue = price;
                     priceDisplay = '\$${priceValue.toStringAsFixed(2)}';
+                  } else {
+                    priceDisplay = '\$0.00';
                   }
                   
-                  // Handle different duration/interval fields
-                  String billingPeriod = plan['interval']?.toString() ?? plan['duration']?.toString() ?? '';
+                  // Handle different duration/interval fields with null safety
+                  String billingPeriod = '';
+                  final interval = plan['interval'];
+                  final duration = plan['duration'];
+                  if (interval != null && interval.toString().isNotEmpty) {
+                    billingPeriod = interval.toString();
+                  } else if (duration != null && duration.toString().isNotEmpty) {
+                    billingPeriod = duration.toString();
+                  }
                   
                   return {
                     'name': plan['name']?.toString() ?? '',
@@ -379,7 +392,9 @@ class _PricingScreenState extends State<PricingScreen> {
                                       ),
                                     ),
                                     Text(
-                                      'Per ${plan['billingPeriod']}',
+                                      plan['billingPeriod']?.toString().isNotEmpty == true 
+                                        ? 'Per ${plan['billingPeriod']}' 
+                                        : 'Per billing period',
                                       textAlign: TextAlign.left,
                                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                         color: isSelected
@@ -704,7 +719,11 @@ class _PricingScreenState extends State<PricingScreen> {
     }
   }
 
-  Widget _buildCurrentSubscriptionCard(Map<String, dynamic> currentPlan, ThemeData theme) {
+  Widget _buildCurrentSubscriptionCard(Map<String, dynamic>? currentPlan, ThemeData theme) {
+    if (currentPlan == null) {
+      return const SizedBox.shrink();
+    }
+    
     try {
       final planName = currentPlan['name']?.toString() ?? 'Premium Plan';
       final planPrice = currentPlan['price']?.toString() ?? currentPlan['price_amount']?.toString() ?? '';
@@ -892,7 +911,11 @@ class _PricingScreenState extends State<PricingScreen> {
     return '\$0.00';
   }
 
-  String _formatDate(String dateString) {
+  String _formatDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 'Date unavailable';
+    }
+    
     try {
       final date = DateTime.parse(dateString);
       final months = [
@@ -901,20 +924,28 @@ class _PricingScreenState extends State<PricingScreen> {
       ];
       return '${months[date.month - 1]} ${date.day}, ${date.year}';
     } catch (e) {
-      return dateString;
+      return 'Invalid date';
     }
   }
 
-  String _formatDateLocal(String dateString) {
+  String _formatDateLocal(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 'N/A';
+    }
+    
     try {
       final date = DateTime.parse(dateString);
       return '${date.day}/${date.month}/${date.year}';
     } catch (e) {
-      return dateString;
+      return 'N/A';
     }
   }
 
-  int _getDaysUntilDate(String dateString) {
+  int _getDaysUntilDate(String? dateString) {
+    if (dateString == null || dateString.isEmpty) {
+      return 0;
+    }
+    
     try {
       final date = DateTime.parse(dateString);
       final now = DateTime.now();
@@ -925,9 +956,9 @@ class _PricingScreenState extends State<PricingScreen> {
     }
   }
 
-  String _getSubscriptionStatusText(bool cancelAtPeriodEnd, String nextBillingDate, String billingPeriod) {
+  String _getSubscriptionStatusText(bool cancelAtPeriodEnd, String? nextBillingDate, String? billingPeriod) {
     if (cancelAtPeriodEnd) {
-      if (nextBillingDate.isNotEmpty) {
+      if (nextBillingDate != null && nextBillingDate.isNotEmpty) {
         final daysLeft = _getDaysUntilDate(nextBillingDate);
         if (daysLeft <= 7) {
           return 'Expires in $daysLeft days';
@@ -938,12 +969,12 @@ class _PricingScreenState extends State<PricingScreen> {
     return 'Active';
   }
 
-  String _getDetailedDateText(String nextBillingDate, bool cancelAtPeriodEnd, String billingPeriod) {
-    if (nextBillingDate.isEmpty) {
+  String _getDetailedDateText(String? nextBillingDate, bool cancelAtPeriodEnd, String? billingPeriod) {
+    if (nextBillingDate == null || nextBillingDate.isEmpty) {
       return cancelAtPeriodEnd ? 'Expires soon' : 'Active subscription';
     }
 
-    final isMonthly = billingPeriod.toLowerCase().contains('month');
+    final isMonthly = billingPeriod?.toLowerCase().contains('month') ?? false;
     final daysLeft = _getDaysUntilDate(nextBillingDate);
     
     if (cancelAtPeriodEnd) {
@@ -961,7 +992,11 @@ class _PricingScreenState extends State<PricingScreen> {
     }
   }
 
-  void _showManageSubscriptionBottomSheet(Map<String, dynamic> currentPlan) {
+  void _showManageSubscriptionBottomSheet(Map<String, dynamic>? currentPlan) {
+    if (currentPlan == null) {
+      return;
+    }
+    
     final theme = Theme.of(context);
     final planName = currentPlan['name']?.toString() ?? 'Premium Plan';
     final planPrice = currentPlan['price']?.toString() ?? currentPlan['price_amount']?.toString() ?? '';
@@ -1240,7 +1275,7 @@ class _PricingScreenState extends State<PricingScreen> {
     );
   }
 
-  void _showCancelConfirmationDialog(String subscriptionId, String planName, String nextBillingDate) {
+  void _showCancelConfirmationDialog(String? subscriptionId, String? planName, String? nextBillingDate) {
     final theme = Theme.of(context);
     bool cancelImmediately = false;
     
@@ -1352,7 +1387,9 @@ class _PricingScreenState extends State<PricingScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    'Access until ${_formatDate(nextBillingDate)}',
+                                    nextBillingDate != null && nextBillingDate.isNotEmpty
+                                        ? 'Access until ${_formatDate(nextBillingDate)}'
+                                        : 'Access until end of billing period',
                                     style: theme.textTheme.bodyMedium?.copyWith(
                                       color: theme.brightness == Brightness.dark 
                                           ? AppTheme.textSecondaryDark 

@@ -273,6 +273,10 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       // Turn off camera after successful API response
       await _cameraManager.dispose();
     } else {
+      debugPrint('🔴 API call failed: ${result.errorMessage}');
+      debugPrint('🔍 Is limit error: ${result.isLimitError}');
+      debugPrint('🔍 Limit data: ${result.limitData}');
+      
       setState(() {
         _apiError = result.errorMessage;
         _isProcessingAPI = false;
@@ -280,9 +284,238 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
         _detectionResults = null;
         _scanAnalysisResponse = null;
       });
+      
+      // Check if this is a scan limit error and show bottom sheet
+      if (result.isLimitError && result.limitData != null) {
+        debugPrint('🚫 Showing scan limit bottom sheet');
+        _showScanLimitBottomSheet(result.errorMessage!, result.limitData!);
+      } else {
+        debugPrint('⚠️ Regular error, not showing limit bottom sheet');
+      }
     }
   }
 
+
+  /// Show scan limit error bottom sheet
+  void _showScanLimitBottomSheet(String message, Map<String, dynamic> limitData) {
+    debugPrint('🚫 _showScanLimitBottomSheet called with message: $message');
+    debugPrint('🚫 Limit data received: $limitData');
+    
+    final theme = Theme.of(context);
+    
+    // Extract limit data
+    final scansUsed = limitData['scans_used']?.toString() ?? '0';
+    final monthlyLimit = limitData['monthly_limit']?.toString() ?? '1';
+    final nextResetDate = limitData['next_reset_date']?.toString() ?? '';
+    final plan = limitData['plan']?.toString() ?? 'free';
+    
+    debugPrint('🚫 Extracted data - Scans: $scansUsed/$monthlyLimit, Plan: $plan, Reset: $nextResetDate');
+    
+    showModalBottomSheet(
+      context: context,
+      isDismissible: false,
+      enableDrag: false,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Warning icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.orange.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: Colors.orange,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Title
+            Text(
+              'Scan Limit Reached',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.brightness == Brightness.dark 
+                    ? Colors.white 
+                    : Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            
+            // Message
+            Text(
+              message,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.brightness == Brightness.dark 
+                    ? Colors.grey[300] 
+                    : Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            
+            // Limit details
+            // Container(
+            //   width: double.infinity,
+            //   padding: const EdgeInsets.all(16),
+            //   decoration: BoxDecoration(
+            //     color: theme.brightness == Brightness.dark 
+            //         ? Colors.grey[800] 
+            //         : Colors.grey[100],
+            //     borderRadius: BorderRadius.circular(12),
+            //   ),
+            //   child: Column(
+            //     children: [
+            //       Row(
+            //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //         children: [
+            //           Text(
+            //             'Plan:',
+            //             style: theme.textTheme.bodyMedium?.copyWith(
+            //               fontWeight: FontWeight.w500,
+            //             ),
+            //           ),
+            //           Text(
+            //             plan.toUpperCase(),
+            //             style: theme.textTheme.bodyMedium?.copyWith(
+            //               fontWeight: FontWeight.w600,
+            //               color: Colors.orange,
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //       const SizedBox(height: 8),
+            //       Row(
+            //         mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //         children: [
+            //           Text(
+            //             'Scans used:',
+            //             style: theme.textTheme.bodyMedium?.copyWith(
+            //               fontWeight: FontWeight.w500,
+            //             ),
+            //           ),
+            //           Text(
+            //             '$scansUsed / $monthlyLimit',
+            //             style: theme.textTheme.bodyMedium?.copyWith(
+            //               fontWeight: FontWeight.w600,
+            //               color: Colors.red,
+            //             ),
+            //           ),
+            //         ],
+            //       ),
+            //       if (nextResetDate.isNotEmpty) ...[
+            //         const SizedBox(height: 8),
+            //         Row(
+            //           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            //           children: [
+            //             Text(
+            //               'Next reset:',
+            //               style: theme.textTheme.bodyMedium?.copyWith(
+            //                 fontWeight: FontWeight.w500,
+            //               ),
+            //             ),
+            //             Text(
+            //               _formatResetDate(nextResetDate),
+            //               style: theme.textTheme.bodyMedium?.copyWith(
+            //                 fontWeight: FontWeight.w600,
+            //               ),
+            //             ),
+            //           ],
+            //         ),
+            //       ],
+            //     ],
+            //   ),
+            // ),
+            // const SizedBox(height: 24),
+            
+            // Upgrade button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  Navigator.pushNamed(context, '/pricing'); // Navigate to pricing
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Upgrade to Premium',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  Navigator.pop(context); // Go back to previous screen
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
+            ),
+            
+            // Bottom safe area
+            SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 16),
+          ],
+        ),
+      ),
+    );
+  }
+  
+  /// Format the reset date for display
+  String _formatResetDate(String dateString) {
+    try {
+      final date = DateTime.parse(dateString);
+      final now = DateTime.now();
+      final difference = date.difference(now);
+      
+      if (difference.inDays > 0) {
+        return '${difference.inDays} days';
+      } else if (difference.inHours > 0) {
+        return '${difference.inHours} hours';
+      } else {
+        return 'Soon';
+      }
+    } catch (e) {
+      return 'Next month';
+    }
+  }
 
   Future<void> _retryInitialization() async {
     await _cameraManager.dispose();

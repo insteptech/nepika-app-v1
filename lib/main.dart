@@ -57,28 +57,16 @@ import 'core/utils/app_logger.dart';
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Lock orientation to portrait mode
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-    DeviceOrientation.portraitDown,
-  ]);
-  
-  // Initialize core dependencies first
+  // Only essential initialization - defer everything else
   final sharedPreferences = await SharedPreferences.getInstance();
-  await SharedPrefsHelper.init();
-  await di.ServiceLocator.init();
-
-  // Initialize Stripe
+  
+  // Initialize core dependencies with lazy loading pattern
+  di.ServiceLocator.initializeCore(sharedPreferences);
+  
+  // Set Stripe key synchronously (no await needed)
   Stripe.publishableKey = AppConstants.stripePublishableKey;
-
-  // Initialize local notification service
-  try {
-    await LocalNotificationService.instance.initialize();
-  } catch (e) {
-    AppLogger.error('Failed to initialize LocalNotificationService', tag: 'Main', error: e);
-  }
-
-  // Set up background message handler (FCM will be initialized from splash screen)
+  
+  // Set up background message handler early
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
   runApp(
@@ -87,6 +75,35 @@ void main() async {
       child: MyApp(sharedPreferences: sharedPreferences),
     ),
   );
+  
+  // Initialize heavy services in background after app starts
+  _initializeBackgroundServices();
+}
+
+/// Initialize heavy services in background without blocking UI
+void _initializeBackgroundServices() {
+  Future.microtask(() async {
+    try {
+      // Lock orientation (non-critical)
+      await SystemChrome.setPreferredOrientations([
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]);
+      
+      // Initialize SharedPrefsHelper
+      await SharedPrefsHelper.init();
+      
+      // Initialize remaining services
+      await di.ServiceLocator.initializeRemaining();
+      
+      // Initialize local notification service
+      await LocalNotificationService.instance.initialize();
+      
+      AppLogger.info('Background services initialized successfully', tag: 'Main');
+    } catch (e) {
+      AppLogger.error('Failed to initialize background services', tag: 'Main', error: e);
+    }
+  });
 }
 
 

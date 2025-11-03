@@ -165,9 +165,9 @@ class LocalNotificationService {
     
     const DarwinInitializationSettings iosSettings =
         DarwinInitializationSettings(
-      requestAlertPermission: false, // We'll request this separately
-      requestBadgePermission: false,
-      requestSoundPermission: false,
+      requestAlertPermission: true, // Request alert permission
+      requestBadgePermission: true, // Request badge permission
+      requestSoundPermission: true, // Request sound permission
       defaultPresentAlert: true,
       defaultPresentBadge: true,
       defaultPresentSound: true,
@@ -183,6 +183,7 @@ class LocalNotificationService {
     await _localNotifications.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: _handleNotificationTap,
+      onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTap,
     );
 
     // Create Android notification channel
@@ -190,7 +191,29 @@ class LocalNotificationService {
       await _createAndroidNotificationChannel();
     }
 
+    // Set up foreground notification presentation for iOS
+    if (Platform.isIOS) {
+      await _setupForegroundNotificationPresentation();
+    }
+
     AppLogger.success('Local notifications initialized', tag: 'Notifications');
+  }
+
+  /// Set up foreground notification presentation for iOS
+  Future<void> _setupForegroundNotificationPresentation() async {
+    final IOSFlutterLocalNotificationsPlugin? iosPlugin =
+        _localNotifications.resolvePlatformSpecificImplementation<
+            IOSFlutterLocalNotificationsPlugin>();
+
+    if (iosPlugin != null) {
+      await iosPlugin.requestPermissions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      
+      AppLogger.info('iOS foreground notification presentation configured', tag: 'Notifications');
+    }
   }
 
   /// Create Android notification channel for reminders
@@ -523,6 +546,7 @@ class LocalNotificationService {
       presentAlert: true,
       presentSound: true,
       presentBadge: true,
+      interruptionLevel: InterruptionLevel.active,
     ),
   );
 
@@ -567,6 +591,12 @@ class LocalNotificationService {
       // TODO: Implement navigation based on your app's navigation structure
       AppLogger.info('Should navigate to reminder: $reminderId', tag: 'Notifications');
     }
+  }
+
+  /// Handle background notification tap
+  @pragma('vm:entry-point')
+  static void _handleBackgroundNotificationTap(NotificationResponse response) {
+    AppLogger.info('Background reminder notification tapped: ${response.payload}', tag: 'Notifications');
   }
 
   /// Get all pending notifications (for debugging)

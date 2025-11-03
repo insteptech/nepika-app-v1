@@ -473,7 +473,7 @@ Widget build(BuildContext context) {
         debugPrint('Guidance page: Back gesture detected, disposing camera...');
         await _cameraManager.dispose();
         debugPrint('Guidance page: Camera disposed via back gesture');
-        if (mounted) {
+        if (mounted && context.mounted) {
           Navigator.of(context).pop();
         }
       }
@@ -481,23 +481,40 @@ Widget build(BuildContext context) {
     child: Scaffold(
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Column(
-            children: [
-              const SizedBox(height: 20),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.start,
-                children: [
-                  CustomBackButton(onPressed: _handleBack, label: 'Back'),
-                ],
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Responsive spacing based on screen dimensions
+            final screenHeight = constraints.maxHeight;
+            final screenWidth = constraints.maxWidth;
+            
+            return Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: screenWidth * 0.05, // 5% horizontal padding
               ),
-              const SizedBox(height: 40),
+              child: Column(
+                children: [
+                  // Top padding - 2.5% of screen height
+                  SizedBox(height: screenHeight * 0.025),
+                  
+                  // Back button section - 8% of screen height
+                  SizedBox(
+                    height: screenHeight * 0.08,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.start,
+                      children: [
+                        CustomBackButton(onPressed: _handleBack, label: 'Back'),
+                      ],
+                    ),
+                  ),
+                  
+                  // Spacing after back button - 2% of screen height
+                  SizedBox(height: screenHeight * 0.02),
 
-              // 👇 Put PageView and status indicator in one Stack
-              Expanded(
-                child: Stack(
-                  children: [
+                  // Main content area - 70% of screen height
+                  Expanded(
+                    flex: 70,
+                    child: Stack(
+                      children: [
                     PageView.builder(
                       controller: _pageController,
                       physics: const PageScrollPhysics(),
@@ -508,46 +525,88 @@ Widget build(BuildContext context) {
                       },
                       itemCount: _totalSteps,
                       itemBuilder: (context, index) {
-                        return Column(
-                          children: [
-                            LayoutBuilder(
-                              builder: (context, constraints) {
-                                final squareSize = constraints.maxWidth;
-                                return SizedBox(
-                                  width: squareSize,
-                                  height: squareSize,
-                                  child: ClipRRect(
-                                    borderRadius: BorderRadius.circular(20),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: Colors.grey.shade100,
-                                        borderRadius: BorderRadius.circular(20),
+                        return LayoutBuilder(
+                          builder: (context, constraints) {
+                            // Calculate responsive sizes based on available space
+                            final availableHeight = constraints.maxHeight;
+                            final availableWidth = constraints.maxWidth;
+                            
+                            // Image takes full width with responsive height
+                            final imageWidth = availableWidth; // Full width
+                            final maxImageHeight = availableHeight * 0.65; // 65% of available height
+                            
+                            // Make image square based on width, but constrain by height
+                            final imageHeight = imageWidth.clamp(200.0, maxImageHeight);
+                            
+                            return Column(
+                              children: [
+                                // Top spacer - responsive
+                                SizedBox(height: availableHeight * 0.02),
+                                
+                                // Image section - full width
+                                Expanded(
+                                  flex: 7,
+                                  child: SizedBox(
+                                    width: imageWidth, // Full width
+                                    height: imageHeight,
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: Container(
+                                        decoration: BoxDecoration(
+                                          color: Colors.grey.shade100,
+                                          borderRadius: BorderRadius.circular(20),
+                                        ),
+                                        child: _buildStepContent(),
                                       ),
-                                      child: _buildStepContent(),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
-                            const SizedBox(height: 40),
-                            Text(
-                              _instructionText,
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .displayLarge
-                                  ?.copyWith(fontSize: 28),
-                              textAlign: TextAlign.center,
-                            ),
-                            const Spacer(),
-                          ],
+                                ),
+                                
+                                // Spacing between image and text
+                                SizedBox(height: availableHeight * 0.04),
+                                
+                                // Text section - flexible height
+                                Expanded(
+                                  flex: 2,
+                                  child: Center(
+                                    child: Padding(
+                                      padding: EdgeInsets.symmetric(
+                                        horizontal: availableWidth * 0.05,
+                                      ),
+                                      child: FittedBox(
+                                        fit: BoxFit.scaleDown,
+                                        child: Text(
+                                          _instructionText,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .displayLarge
+                                              ?.copyWith(
+                                                fontSize: (availableWidth * 0.07).clamp(18.0, 32.0),
+                                                height: 1.2,
+                                                fontWeight: FontWeight.normal,
+                                              ),
+                                          textAlign: TextAlign.center,
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                
+                                // Bottom spacer
+                                SizedBox(height: availableHeight * 0.02),
+                              ],
+                            );
+                          },
                         );
                       },
                     ),
 
-                    // 👇 Status indicator fixed on top-right, not per page
+                    // 👇 Status indicator - only show when there's an issue or initializing
                     if (_cameraManager.errorMessage != null ||
                         _cameraManager.isInitializing ||
-                        !_cameraManager.isInitialized)
+                        (!_cameraManager.isInitialized && _cameraManager.errorMessage == null))
                       Positioned(
                         top: 16,
                         right: 16,
@@ -557,49 +616,75 @@ Widget build(BuildContext context) {
                 ),
               ),
 
-              // Progress bar
-              _buildProgressBar(),
-              const SizedBox(height: 60),
-
-              // Next/Start button
-              SizedBox(
-                width: double.infinity,
-                child: CustomButton(
-                  text: _buttonText,
-                  onPressed: _cameraManager.isInitializing ? null : _handleNext,
-                  icon: _cameraManager.isInitializing
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              Colors.white,
-                            ),
-                          ),
-                        )
-                      : const Icon(Icons.arrow_forward, color: Colors.white),
-                  iconOnLeft: false,
-                ),
-              ),
-
-              const SizedBox(height: 20),
-
-              // Security info
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.security, color: Colors.grey.shade600, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    'Secure Photo | Privacy Protected',
-                    style: Theme.of(context).textTheme.bodySmall,
+                  // Progress bar section - 5% of screen height
+                  SizedBox(
+                    height: screenHeight * 0.05,
+                    child: Center(child: _buildProgressBar()),
                   ),
+                  
+                  // Spacing before button - 3% of screen height
+                  SizedBox(height: screenHeight * 0.03),
+
+                  // Button section - 8% of screen height
+                  SizedBox(
+                    height: screenHeight * 0.08,
+                    width: double.infinity,
+                    child: CustomButton(
+                      text: _buttonText,
+                      onPressed: _cameraManager.isInitializing ? null : _handleNext,
+                      icon: _cameraManager.isInitializing
+                          ? SizedBox(
+                              width: screenWidth * 0.05, // Responsive icon size
+                              height: screenWidth * 0.05,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Colors.white,
+                                ),
+                              ),
+                            )
+                          : Icon(Icons.arrow_forward, 
+                              color: Colors.white,
+                              size: screenWidth * 0.05, // Responsive icon size
+                            ),
+                      iconOnLeft: false,
+                    ),
+                  ),
+
+                  // Spacing before security info - 2.5% of screen height
+                  SizedBox(height: screenHeight * 0.025),
+
+                  // Security info section - 4% of screen height
+                  SizedBox(
+                    height: screenHeight * 0.04,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.security, 
+                          color: Colors.grey.shade600, 
+                          size: screenWidth * 0.04, // Responsive icon size
+                        ),
+                        SizedBox(width: screenWidth * 0.02), // 2% width spacing
+                        Flexible(
+                          child: Text(
+                            'Secure Photo | Privacy Protected',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              fontSize: screenWidth * 0.035, // Responsive text size
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  // Bottom padding - 2.5% of screen height
+                  SizedBox(height: screenHeight * 0.025),
                 ],
               ),
-              const SizedBox(height: 24),
-            ],
-          ),
+            );
+          },
         ),
       ),
     ),
@@ -673,14 +758,43 @@ Widget build(BuildContext context) {
   }
 
   Widget _buildCameraStatusIndicatorBadge() {
+    // Determine current status
+    String statusText;
+    Color backgroundColor;
+    Widget icon;
+    bool showRefresh = false;
+    
+    if (_cameraManager.isInitializing) {
+      statusText = 'Initializing...';
+      backgroundColor = Colors.orange.withValues(alpha: 0.9);
+      icon = const SizedBox(
+        width: 12,
+        height: 12,
+        child: CircularProgressIndicator(
+          strokeWidth: 2,
+          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+        ),
+      );
+    } else if (_cameraManager.errorMessage != null) {
+      statusText = 'Error';
+      backgroundColor = Colors.red.withValues(alpha: 0.9);
+      icon = const Icon(Icons.error, size: 14, color: Colors.white);
+      showRefresh = true;
+    } else if (_cameraManager.isInitialized) {
+      // This should not show since we hide the badge when ready
+      statusText = 'Ready';
+      backgroundColor = Colors.green.withValues(alpha: 0.9);
+      icon = const Icon(Icons.check_circle, size: 14, color: Colors.white);
+    } else {
+      statusText = 'Loading...';
+      backgroundColor = Colors.orange.withValues(alpha: 0.9);
+      icon = const Icon(Icons.camera_alt, size: 14, color: Colors.white);
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(
-        color: _cameraManager.isInitialized
-            ? Colors.green.withValues(alpha: 0.9)
-            : _cameraManager.errorMessage != null
-            ? Colors.red.withValues(alpha: 0.9)
-            : Colors.orange.withValues(alpha: 0.9),
+        color: backgroundColor,
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
@@ -693,39 +807,17 @@ Widget build(BuildContext context) {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (_cameraManager.isInitializing)
-            const SizedBox(
-              width: 12,
-              height: 12,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-              ),
-            )
-          else
-            Icon(
-              _cameraManager.isInitialized
-                  ? Icons.check_circle
-                  : _cameraManager.errorMessage != null
-                  ? Icons.error
-                  : Icons.camera_alt,
-              size: 14,
-              color: Colors.white,
-            ),
+          icon,
           const SizedBox(width: 4),
           Text(
-            _cameraManager.isInitialized
-                ? 'Ready'
-                : _cameraManager.errorMessage != null
-                ? 'Error'
-                : 'Loading...',
+            statusText,
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: Colors.white,
             ),
           ),
-          if (_cameraManager.errorMessage != null) ...[
+          if (showRefresh) ...[
             const SizedBox(width: 6),
             GestureDetector(
               onTap: _retryCameraInit,
@@ -738,24 +830,35 @@ Widget build(BuildContext context) {
   }
 
   Widget _buildProgressBar() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 70),
-      child: Row(
-        children: List.generate(_totalSteps, (index) {
-          return Expanded(
-            child: Container(
-              height: 4,
-              margin: EdgeInsets.only(right: index < _totalSteps - 1 ? 8 : 0),
-              decoration: BoxDecoration(
-                color: index < _currentStep
-                    ? Theme.of(context).colorScheme.primary
-                    : const Color(0x3898EDFF),
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          );
-        }),
-      ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final screenWidth = constraints.maxWidth;
+        final progressBarWidth = screenWidth * 0.6; // 60% of available width
+        final barHeight = screenWidth * 0.012; // Responsive height
+        final spacing = screenWidth * 0.02; // 2% spacing between bars
+        
+        return SizedBox(
+          width: progressBarWidth,
+          child: Row(
+            children: List.generate(_totalSteps, (index) {
+              return Expanded(
+                child: Container(
+                  height: barHeight,
+                  margin: EdgeInsets.only(
+                    right: index < _totalSteps - 1 ? spacing : 0,
+                  ),
+                  decoration: BoxDecoration(
+                    color: index < _currentStep
+                        ? Theme.of(context).colorScheme.primary
+                        : const Color(0x3898EDFF),
+                    borderRadius: BorderRadius.circular(barHeight / 2),
+                  ),
+                ),
+              );
+            }),
+          ),
+        );
+      },
     );
   }
 }

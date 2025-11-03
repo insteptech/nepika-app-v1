@@ -4,6 +4,7 @@ import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
+import '../../../core/di/injection_container.dart' as di;
 import 'package:nepika/features/routine/main.dart';
 import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -14,10 +15,20 @@ import '../widgets/face_scan_card.dart';
 import '../widgets/greeting_section.dart';
 import '../widgets/image_gallery_section.dart';
 import '../widgets/progress_summary_chart.dart';
-import '../widgets/recommended_products_section.dart';
 import '../widgets/skin_score_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/conditions_section.dart';
+
+// Memoization wrapper using RepaintBoundary for performance
+Widget _memoizedWidget({
+  required Widget child,
+  required Object cacheKey,
+}) {
+  return RepaintBoundary(
+    key: ValueKey(cacheKey),
+    child: child,
+  );
+}
 
 class DashboardScreen extends StatefulWidget {
   final String? token;
@@ -45,12 +56,29 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ignore: unused_field
   bool _isPageVisible = true;
   RouteObserver<PageRoute>? _routeObserver;
+  
+  // Cached data to prevent rebuilding on every state change
+  Map<String, dynamic>? _cachedUser;
+  Map<String, dynamic>? _cachedFaceScan;
+  Map<String, dynamic>? _cachedSkinScore;
+  Map<String, dynamic>? _cachedProgressSummary;
+  Map<String, dynamic>? _cachedDailyRoutine;
+  List<Map<String, dynamic>>? _cachedImageGallery;
+  List<Map<String, dynamic>>? _cachedRecommendedProducts;
+  Map<String, dynamic>? _cachedLatestConditionResult;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _dashboardBloc = DashboardBloc(DashboardRepositoryImpl(ApiBase()));
+    
+    // Use dependency injection instead of creating new instance
+    try {
+      _dashboardBloc = di.ServiceLocator.get<DashboardBloc>();
+    } catch (e) {
+      // Fallback to creating new instance if DI not available
+      _dashboardBloc = DashboardBloc(DashboardRepositoryImpl(ApiBase()));
+    }
 
     // Focus listener removed - was causing excessive requests
     
@@ -60,12 +88,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     super.didChangeAppLifecycleState(state);
-    if (state == AppLifecycleState.resumed &&
-        _isInitialized &&
-        _token != null) {
-      debugPrint('App resumed, refreshing dashboard data');
+    if (state == AppLifecycleState.resumed) {
       _isPageVisible = true;
-      _refreshDashboard();
+      // Only refresh if app was backgrounded for more than 5 minutes
+      if (_isInitialized && _token != null && _shouldRefreshOnResume()) {
+        debugPrint('App resumed after long pause, refreshing dashboard data');
+        _refreshDashboard();
+      }
     } else if (state == AppLifecycleState.paused) {
       _isPageVisible = false;
     }
@@ -95,12 +124,8 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Called when a route has been popped off, and the current route shows up
     debugPrint('Dashboard: Returned from another screen');
     _isPageVisible = true;
-    // Only refresh if enough time has passed (30 seconds)
-    if (_isInitialized && _token != null && _shouldRefresh()) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _refreshDashboard();
-      });
-    }
+    // Don't auto-refresh when returning from other screens
+    // User can manually pull-to-refresh if needed
   }
 
   @override
@@ -110,14 +135,16 @@ class _DashboardScreenState extends State<DashboardScreen>
     _isPageVisible = false;
   }
 
-  bool _shouldRefresh() {
+  // Removed _shouldRefresh method as it's no longer used
+  // Dashboard now only refreshes on manual pull-to-refresh
+
+  bool _shouldRefreshOnResume() {
     final now = DateTime.now();
     if (_lastRefreshTime == null) {
       return true;
     }
-    // Refresh if more than 30 seconds has passed since last refresh
-    // This prevents over-requesting the /welcome endpoint
-    return now.difference(_lastRefreshTime!).inSeconds > 30;
+    // Only refresh on app resume if more than 5 minutes has passed
+    return now.difference(_lastRefreshTime!).inMinutes > 5;
   }
 
   Future<void> _loadTokenAndFetch() async {
@@ -175,48 +202,49 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   @override
   Widget build(BuildContext context) {
-    // Removed build refresh - handled by didPopNext instead
-
     return BlocProvider.value(
       value: _dashboardBloc,
       child: BlocBuilder<DashboardBloc, DashboardState>(
+        buildWhen: (previous, current) {
+          // Only rebuild when state type changes or when we get new data
+          return previous.runtimeType != current.runtimeType ||
+                 (current is DashboardLoaded && previous is! DashboardLoaded);
+        },
         builder: (context, state) {
+          _updateCachedData(state);
           return _buildDashboardContent(context, state);
         },
       ),
     );
   }
+  
+  void _updateCachedData(DashboardState state) {
+    if (state is DashboardLoaded) {
+      final dashboardData = state.dashboardData.data;
+      _cachedUser = Map<String, dynamic>.from(dashboardData['user'] ?? {});
+      _cachedFaceScan = Map<String, dynamic>.from(dashboardData['faceScan'] ?? {});
+      _cachedSkinScore = Map<String, dynamic>.from(dashboardData['skinScore'] ?? {});
+      _cachedProgressSummary = Map<String, dynamic>.from(dashboardData['progressSummary'] ?? {});
+      _cachedDailyRoutine = Map<String, dynamic>.from(dashboardData['dailyRoutine'] ?? {});
+      _cachedImageGallery = List<Map<String, dynamic>>.from(dashboardData['imageGallery'] ?? []);
+      _cachedRecommendedProducts = List<Map<String, dynamic>>.from(dashboardData['recommendedProducts'] ?? []);
+      _cachedLatestConditionResult = dashboardData['latestConditionResult'];
+    }
+  }
 
   Widget _buildDashboardContent(BuildContext context, DashboardState state) {
-    // Initialize default values
-    final Map<String, dynamic> user = {};
-    final Map<String, dynamic> faceScan = {};
-    final Map<String, dynamic> skinScore = {};
-    final Map<String, dynamic> progressSummary = {};
-    final Map<String, dynamic> dailyRoutine = {};
-    final List<Map<String, dynamic>> imageGallery = [];
-    final List<Map<String, dynamic>> recommendedProducts = [];
-    Map<String, dynamic>? latestConditionResult;
-
     final bool isLoading = state is DashboardLoading;
     final bool isError = state is DashboardError;
 
-    // Extract data if loaded
-    if (state is DashboardLoaded) {
-      final dashboardData = state.dashboardData.data;
-      user.addAll(dashboardData['user'] ?? {});
-      faceScan.addAll(dashboardData['faceScan'] ?? {});
-      skinScore.addAll(dashboardData['skinScore'] ?? {});
-      progressSummary.addAll(dashboardData['progressSummary'] ?? {});
-      dailyRoutine.addAll(dashboardData['dailyRoutine'] ?? {});
-      imageGallery.addAll(List<Map<String, dynamic>>.from(
-        dashboardData['imageGallery'] ?? [],
-      ));
-      recommendedProducts.addAll(List<Map<String, dynamic>>.from(
-        dashboardData['recommendedProducts'] ?? [],
-      ));
-      latestConditionResult = dashboardData['latestConditionResult'];
-    }
+    // Use cached data if available, otherwise use empty defaults
+    final user = _cachedUser ?? <String, dynamic>{};
+    final faceScan = _cachedFaceScan ?? <String, dynamic>{};
+    final skinScore = _cachedSkinScore ?? <String, dynamic>{};
+    final progressSummary = _cachedProgressSummary ?? <String, dynamic>{};
+    final dailyRoutine = _cachedDailyRoutine ?? <String, dynamic>{};
+    final imageGallery = _cachedImageGallery ?? <Map<String, dynamic>>[];
+    final recommendedProducts = _cachedRecommendedProducts ?? <Map<String, dynamic>>[];
+    final latestConditionResult = _cachedLatestConditionResult;
 
     return PopScope(
       canPop: false,
@@ -318,16 +346,31 @@ class _DashboardScreenState extends State<DashboardScreen>
             if (isError || isLoading)
               _buildLoadingErrorSection(context, isLoading, isError),
             SizedBox(height: isError || isLoading ? 10 : 30),
-            _buildMainCardsRow(faceScan, skinScore),
-            ConditionsSection(
-              latestConditionResult: latestConditionResult,
-              onConditionTap: (conditionName) =>
-                  _handleConditionTap(conditionName, skinScore, imageGallery),
+            _memoizedWidget(
+              cacheKey: '${faceScan.hashCode}_${skinScore.hashCode}',
+              child: _buildMainCardsRow(faceScan, skinScore),
+            ),
+            _memoizedWidget(
+              cacheKey: '${latestConditionResult.hashCode}',
+              child: ConditionsSection(
+                latestConditionResult: latestConditionResult,
+                onConditionTap: (conditionName) =>
+                    _handleConditionTap(conditionName, skinScore, imageGallery),
+              ),
             ),
             const SizedBox(height: 10),
-            _buildProgressSummarySection(progressSummary),
-            _buildDailyRoutineSection(dailyRoutine, isLoading),
-            _buildImageGallerySection(imageGallery, isLoading),
+            _memoizedWidget(
+              cacheKey: progressSummary.hashCode,
+              child: _buildProgressSummarySection(progressSummary),
+            ),
+            _memoizedWidget(
+              cacheKey: '${dailyRoutine.hashCode}_$isLoading',
+              child: _buildDailyRoutineSection(dailyRoutine, isLoading),
+            ),
+            _memoizedWidget(
+              cacheKey: '${imageGallery.hashCode}_$isLoading',
+              child: _buildImageGallerySection(imageGallery, isLoading),
+            ),
             // _buildRecommendedProductsSection(recommendedProducts, isLoading),
           ],
         ),
@@ -350,38 +393,48 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildMainCardsRow(
       Map<String, dynamic> faceScan, Map<String, dynamic> skinScore) {
-    return IntrinsicHeight(
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Expanded(
-            child: FaceScanCard(
-              faceScan: faceScan,
-              onTap: widget.onFaceScanTap,
+    return RepaintBoundary(
+      child: IntrinsicHeight(
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: RepaintBoundary(
+                child: FaceScanCard(
+                  faceScan: faceScan,
+                  onTap: widget.onFaceScanTap,
+                ),
+              ),
             ),
-          ),
-          const SizedBox(width: 16),
-          Expanded(
-            child: SkinScoreCard(skinScore: skinScore),
-          ),
-        ],
+            const SizedBox(width: 16),
+            Expanded(
+              child: RepaintBoundary(
+                child: SkinScoreCard(skinScore: skinScore),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
   Widget _buildProgressSummarySection(Map<String, dynamic> progressSummary) {
-    return Column(
-      children: [
-        const SectionHeader(
-          heading: 'Progress Summary',
-          showButton: false,
-        ),
-        ProgressSummaryChart(
-          progressSummary: progressSummary,
-          height: 280,
-          showPointsAndLabels: false,
-        ),
-      ],
+    return RepaintBoundary(
+      child: Column(
+        children: [
+          const SectionHeader(
+            heading: 'Progress Summary',
+            showButton: false,
+          ),
+          RepaintBoundary(
+            child: ProgressSummaryChart(
+              progressSummary: progressSummary,
+              height: 280,
+              showPointsAndLabels: false,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
@@ -407,55 +460,40 @@ class _DashboardScreenState extends State<DashboardScreen>
 
   Widget _buildImageGallerySection(
       List<Map<String, dynamic>> imageGallery, bool isLoading) {
-    return Column(
-      children: [
-        SectionHeader(
-          heading: 'Image Gallery',
-          showButton: true,
-          buttonText: 'View all',
-          onButtonPressed: () {
-            Navigator.of(context, rootNavigator: true).pushNamed(
-              AppRoutes.dashboardImageGallery,
-              arguments: {'images': imageGallery},
-            );
-          },
-          buttonLoading: isLoading,
-        ),
-        ImageGallerySection(
-          imageGallery: imageGallery,
-          isLoading: isLoading,
-          onShowAll: () {
-            Navigator.of(context, rootNavigator: true).pushNamed(
-              AppRoutes.dashboardImageGallery,
-              arguments: {'images': imageGallery},
-            );
-          },
-        ),
-      ],
+    return RepaintBoundary(
+      child: Column(
+        children: [
+          SectionHeader(
+            heading: 'Image Gallery',
+            showButton: true,
+            buttonText: 'View all',
+            onButtonPressed: () {
+              Navigator.of(context, rootNavigator: true).pushNamed(
+                AppRoutes.dashboardImageGallery,
+                arguments: {'images': imageGallery},
+              );
+            },
+            buttonLoading: isLoading,
+          ),
+          RepaintBoundary(
+            child: ImageGallerySection(
+              imageGallery: imageGallery,
+              isLoading: isLoading,
+              onShowAll: () {
+                Navigator.of(context, rootNavigator: true).pushNamed(
+                  AppRoutes.dashboardImageGallery,
+                  arguments: {'images': imageGallery},
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 
-  Widget _buildRecommendedProductsSection(
-      List<Map<String, dynamic>> recommendedProducts, bool isLoading) {
-    return Column(
-      children: [
-        SectionHeader(
-          heading: 'Recommend Products',
-          showButton: true,
-          buttonText: 'View all',
-          onButtonPressed: () {
-            Navigator.of(context).pushNamed(AppRoutes.dashboardAllProducts);
-          },
-          buttonLoading: isLoading,
-        ),
-        RecommendedProductsSection(
-          products: recommendedProducts,
-          scrollDirection: Axis.horizontal,
-          showTag: true,
-        ),
-      ],
-    );
-  }
+  // Removed _buildRecommendedProductsSection as it's currently commented out
+  // Can be restored if needed in the future
 
   void _handleConditionTap(
       String conditionName,
