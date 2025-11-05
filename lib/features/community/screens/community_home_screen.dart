@@ -5,6 +5,7 @@ import 'dart:convert';
 import '../../../../core/config/constants/app_constants.dart';
 import '../../../../core/config/constants/routes.dart';
 import '../../../../core/widgets/navigation/navigation_components.dart';
+import '../../../../core/widgets/notification_permission_dialog.dart';
 import '../../../../domain/community/entities/community_entities.dart';
 import '../bloc/blocs/posts_bloc.dart';
 import '../bloc/events/posts_event.dart';
@@ -44,6 +45,7 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
     super.initState();
     _loadUserDataAndPosts();
     _setupPagination();
+    _checkNotificationPermissions();
   }
 
   @override
@@ -97,6 +99,20 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
         GetCommunityProfile(token: _token!, userId: _userId!),
       );
     }
+  }
+
+  void _checkNotificationPermissions() {
+    // Use a post-frame callback to ensure the widget is built before showing dialog
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (mounted) {
+        // Wait a bit for the screen to settle
+        await Future.delayed(const Duration(milliseconds: 1500));
+        
+        if (mounted) {
+          await NotificationPermissionHelper.showPermissionDialogIfNeeded(context);
+        }
+      }
+    });
   }
 
   void _setupPagination() {
@@ -519,7 +535,7 @@ Navigator.of(context, rootNavigator: true).pushNamed(
   }
 
   Widget _buildCreatePostButton() {
-    return Container(
+    return SizedBox(
       width: double.infinity,
       child: OutlinedButton(
         onPressed: () {

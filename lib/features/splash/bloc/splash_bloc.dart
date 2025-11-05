@@ -20,21 +20,19 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     SplashStarted event,
     Emitter<SplashState> emit,
   ) async {
+    logJson('🚀 SPLASH STARTED: Beginning splash flow');
     emit(SplashAnimating());
     
     // Initialize FCM service in background during splash animation (without token generation)
     _initializeFcmInBackground();
     
-    // Start auth check and animation in parallel
-    final authCheckFuture = Future.delayed(const Duration(milliseconds: 500), () {
-      add(CheckAuthenticationStatus());
-    });
+    // Start auth check immediately (no delay needed)
+    logJson('🔍 SPLASH: Starting auth check immediately');
+    add(CheckAuthenticationStatus());
     
-    // Minimum animation time (1.5s) + small buffer (0.5s) = 2s max
-    final minimumSplashTime = Future.delayed(const Duration(milliseconds: 2000));
-    
-    // Wait for both to complete - animation ensures minimum time, auth check can finish early
-    await Future.wait([authCheckFuture, minimumSplashTime]);
+    // The CheckAuthenticationStatus handler will emit navigation states
+    // No need to wait here - the BlocListener will handle navigation
+    logJson('✅ SPLASH: Auth check initiated, waiting for state changes...');
   }
 
   /// Initialize FCM service in background without blocking splash flow
@@ -52,9 +50,11 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
     CheckAuthenticationStatus event,
     Emitter<SplashState> emit,
   ) async {
+    logJson('🔍 SPLASH: CheckAuthenticationStatus event started');
     emit(SplashCheckingAuth());
 
     try {
+      logJson('📱 SPLASH: Getting shared preferences...');
       final sharedPrefs = await SharedPreferences.getInstance();
       final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
       final prefHelper = SharedPrefsHelper();
@@ -63,13 +63,17 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       prefHelper.saveAppLanguage('en');
 
       if (accessToken != null && accessToken.isNotEmpty) {
+        logJson('🔑 SPLASH: Access token found, validating with backend...');
+        logJson('🔑 SPLASH: Token preview: ${accessToken.substring(0, 20)}...');
         // Validate token with backend
         await _validateUserToken(accessToken, emit);
       } else {
+        logJson('❌ SPLASH: No access token found, navigating to welcome');
         // No token, navigate to welcome/login
         emit(SplashNavigateToWelcome());
       }
     } catch (e) {
+      logJson('❌ SPLASH: Error in CheckAuthenticationStatus: $e');
       emit(SplashNavigateToWelcome());
     }
   }
@@ -85,7 +89,7 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       final response = await secureClient.request(
         path: '/auth/users/validate',
         method: 'GET',
-      ).timeout(const Duration(seconds: 3)); // Reduced from 8s to 3s
+      ).timeout(const Duration(seconds: 10)); // Increased from 3s to 10s for better reliability
 
       if (response.statusCode == 200 && response.data != null) {
         final responseData = response.data;
@@ -94,10 +98,19 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
         if (responseData['success'] == true) {
           final userData = responseData['data'];
           final int activeStep = userData['active_step'] ?? 1;
+          final bool onboardingCompleted = userData['onboarding_completed'] ?? false;
+
+          logJson('🔍 SPLASH DEBUG: User data received');
+          logJson('  - Active Step: $activeStep');
+          logJson('  - Onboarding Completed: $onboardingCompleted');
+          logJson('  - Will emit: SplashNavigateToOnboarding(activeStep: $activeStep)');
 
           // Navigate to onboarding regardless of completion status
           emit(SplashNavigateToOnboarding(activeStep: activeStep));
+          
+          logJson('✅ SPLASH: SplashNavigateToOnboarding state emitted');
         } else {
+          logJson('❌ SPLASH: Backend returned success: false, navigating to welcome');
           // Backend returned success: false
           emit(SplashNavigateToWelcome());
         }
@@ -117,7 +130,22 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
       
       emit(SplashNavigateToWelcome());
     } catch (e) {
-      logJson(e);
+      // Handle different exception types appropriately
+      if (e is TimeoutException) {
+        logJson({
+          'error': 'Token validation timeout',
+          'message': e.message ?? 'Request timed out',
+          'duration': e.duration?.toString(),
+          'action': 'Redirecting to welcome screen'
+        });
+      } else {
+        logJson({
+          'error': 'Token validation failed',
+          'type': e.runtimeType.toString(),
+          'message': e.toString(),
+          'action': 'Redirecting to welcome screen'
+        });
+      }
       emit(SplashNavigateToWelcome());
     }
   }

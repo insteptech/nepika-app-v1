@@ -44,6 +44,7 @@ class NotificationService {
 
   /// Connect to SSE stream
   Future<void> connect() async {
+    return;
     if (_isConnected || _httpClient != null) {
       debugPrint('🔔 NotificationService: Already connected or connecting');
       return;

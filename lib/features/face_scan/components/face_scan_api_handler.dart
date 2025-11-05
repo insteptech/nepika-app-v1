@@ -8,7 +8,7 @@ import 'package:nepika/core/network/secure_api_client.dart';
 /// Handles API communication for face scan analysis
 class FaceScanApiHandler {
   // API endpoints
-  static const String _apiEndpoint = '/training/face-analyze';
+  static const String _apiEndpoint = '/training/face-analyze-optimized';
 
   /// Initialize API client (no longer needed as we use SecureApiClient)
   void initialize() {
@@ -32,7 +32,7 @@ class FaceScanApiHandler {
         // 'user_id': userId,
       });
 
-      debugPrint('Sending image to API: $_apiEndpoint');
+      debugPrint('Sending image to this ghkjhkhkh API: $_apiEndpoint');
 
       // Use SecureApiClient for authenticated requests with multipart data
       final response = await SecureApiClient.instance.request(

@@ -108,6 +108,16 @@
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="nepika_notifications" />
 
+        <!-- Auto-initialize Firebase Messaging -->
+        <meta-data
+            android:name="firebase_messaging_auto_init_enabled"
+            android:value="true" />
+
+        <!-- Enable Firebase Analytics -->
+        <meta-data
+            android:name="firebase_analytics_collection_enabled"
+            android:value="true" />
+
         <!-- Flutter plugin config -->
         <meta-data
             android:name="flutterEmbedding"

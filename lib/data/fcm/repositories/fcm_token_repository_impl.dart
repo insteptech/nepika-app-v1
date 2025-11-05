@@ -39,6 +39,10 @@ class FcmTokenRepositoryImpl implements FcmTokenRepository {
       }
 
       AppLogger.info('Saving FCM token to backend...', tag: 'FCM_REPO');
+      AppLogger.info('POST request details:', tag: 'FCM_REPO');
+      AppLogger.info('  - Path: /auth/users/save-fcm-token', tag: 'FCM_REPO');
+      AppLogger.info('  - Token length: ${validatedToken.length}', tag: 'FCM_REPO');
+      AppLogger.info('  - Token preview: ${validatedToken.substring(0, 20)}...', tag: 'FCM_REPO');
 
       final response = await apiBase.request(
         path: '/auth/users/save-fcm-token',
@@ -48,6 +52,10 @@ class FcmTokenRepositoryImpl implements FcmTokenRepository {
           if (fcmRefreshToken != null) 'fcm_refresh_token': fcmRefreshToken,
         },
       );
+
+      AppLogger.info('FCM save response received:', tag: 'FCM_REPO');
+      AppLogger.info('  - Status: ${response.statusCode}', tag: 'FCM_REPO');
+      AppLogger.info('  - Response data: ${response.data}', tag: 'FCM_REPO');
 
       if (response.statusCode == 200 && response.data['success'] == true) {
         // Store the token locally after successful API call
@@ -166,22 +174,35 @@ class FcmTokenRepositoryImpl implements FcmTokenRepository {
     }
   }
 
-  /// Validate FCM token format
+  /// Unified FCM token validation (matches UnifiedFcmService validation)
   String? _validateToken(String token) {
-    if (token.isEmpty) return null;
-    
-    // FCM tokens are typically base64url encoded and quite long
-    if (token.length < 140) return null; // Minimum realistic length
-    
-    // Should not contain whitespace or special characters except - and _
-    final RegExp validTokenPattern = RegExp(r'^[A-Za-z0-9_-]+$');
-    if (!validTokenPattern.hasMatch(token)) return null;
-    
-    // Should not be a fallback token
-    if (token.startsWith('fcm-fallback-') || token.startsWith('fcm-error-')) {
+    // Empty check
+    if (token.isEmpty) {
+      AppLogger.warning('Empty token received in repository', tag: 'FCM_REPO');
       return null;
     }
     
+    // Minimum length check (Firebase tokens are typically 140+ chars)
+    if (token.length < 140) {
+      AppLogger.warning('Token too short in repository: ${token.length} chars', tag: 'FCM_REPO');
+      return null;
+    }
+    
+    // Format validation - FCM tokens are base64url encoded but can contain colons
+    // Firebase FCM tokens have format: [base64url]:[base64url] which is normal
+    final RegExp validTokenPattern = RegExp(r'^[A-Za-z0-9_:-]+$');
+    if (!validTokenPattern.hasMatch(token)) {
+      AppLogger.warning('Invalid token format in repository', tag: 'FCM_REPO');
+      return null;
+    }
+    
+    // Reject fallback/error tokens
+    if (token.startsWith('fcm-fallback-') || token.startsWith('fcm-error-')) {
+      AppLogger.warning('Fallback/error token received in repository', tag: 'FCM_REPO');
+      return null;
+    }
+    
+    AppLogger.success('Repository token validation passed (length: ${token.length})', tag: 'FCM_REPO');
     return token;
   }
 }

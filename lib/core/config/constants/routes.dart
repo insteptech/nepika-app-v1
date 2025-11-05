@@ -23,7 +23,7 @@ class AppRoutes {
   
   // Main App Routes
   static const String home = '/home';
-  static const String faceScan = '/face-scan';
+  static const String faceScan = '/face-scan--optimized';
   static const String scanResult = '/scan-result';
   static const String questionnaire = '/questionnaire';
   static const String products = '/products';
@@ -86,6 +86,7 @@ class AppRoutes {
   // Settings Routes
   static const String notifications = '/notifications';
   static const String notificationDebug = '/notification-debug';
+  static const String androidNotificationDebug = '/android-notification-debug';
   static const String blockedUsers = '/blocked-users';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';

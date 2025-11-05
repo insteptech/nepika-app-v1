@@ -67,12 +67,12 @@ class MainSettingsScreen extends StatelessWidget {
 
   List<SettingsOptionData> _buildSettingsOptions(BuildContext context) {
     return [
-      SettingsOptionData.option(
-        'My Products',
-        onTap: () {
-          Navigator.of(context).pushNamed(AppRoutes.dashboardAllProducts);
-        },
-      ),
+      // SettingsOptionData.option(
+      //   'My Products',
+      //   onTap: () {
+      //     Navigator.of(context).pushNamed(AppRoutes.dashboardAllProducts);
+      //   },
+      // ),
       SettingsOptionData.option(
         'Community & Engagement',
         onTap: () {

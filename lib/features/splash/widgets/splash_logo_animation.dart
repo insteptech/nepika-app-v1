@@ -53,21 +53,23 @@ class _SplashLogoAnimationState extends State<SplashLogoAnimation>
           opacity: _opacityAnimation.value,
           child: Transform.scale(
             scale: _scaleAnimation.value,
-            child: SizedBox(
+            child: Container(
               width: 150,
               height: 150,
-              child: Center(
-                child: ClipOval(
-                  child: Image.asset(
-                    AppAssets.appLogoStroke,
-                    fit: BoxFit.contain,
-                    cacheWidth: 150, // Cache at exact display size for memory efficiency
-                    cacheHeight: 150,
-                    color: ThemeHelper.isDarkMode(context) 
-                        ? Theme.of(context).colorScheme.primary 
-                        : Colors.white,
-                  ),
-                ),
+              constraints: const BoxConstraints(
+                maxWidth: 150,
+                maxHeight: 150,
+              ),
+              child: Image.asset(
+                AppAssets.appLogoStroke,
+                fit: BoxFit.contain, // keeps aspect ratio
+                width: 150,
+                height: 150,
+                cacheWidth: 150,
+                cacheHeight: 150,
+                color: ThemeHelper.isDarkMode(context)
+                    ? Theme.of(context).colorScheme.primary
+                    : Colors.white,
               ),
             ),
           ),

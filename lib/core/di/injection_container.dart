@@ -20,7 +20,6 @@ import '../../features/routine/main.dart';
 import '../../data/fcm/repositories/fcm_token_repository_impl.dart';
 import '../../domain/fcm/repositories/fcm_token_repository.dart';
 import '../../domain/fcm/usecases/save_fcm_token_usecase.dart';
-import '../services/fcm_token_service.dart';
 
 // Reminders
 import '../../data/reminders/datasources/reminder_remote_data_source.dart';
@@ -160,15 +159,9 @@ class ServiceLocator {
       SaveFcmTokenUseCase(get<FcmTokenRepository>()),
     );
 
-    // FCM - Legacy Service (Deprecated - use UnifiedFcmService.instance instead)
-    _registerLazySingleton<FcmTokenService>(
-      FcmTokenService(
-        saveFcmTokenUseCase: get<SaveFcmTokenUseCase>(),
-      ),
-    );
-
     // Note: UnifiedFcmService is a singleton accessed via UnifiedFcmService.instance
     // No need to register it in DI as it manages its own lifecycle
+    // Legacy FcmTokenService has been removed - use UnifiedFcmService.instance instead
 
     // Local Notifications Service (Singleton)
     _registerLazySingleton<LocalNotificationService>(

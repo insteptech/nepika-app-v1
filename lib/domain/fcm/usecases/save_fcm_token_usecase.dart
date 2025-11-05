@@ -1,5 +1,6 @@
 import '../entities/fcm_token_entity.dart';
 import '../repositories/fcm_token_repository.dart';
+import '../../../core/utils/app_logger.dart';
 
 class SaveFcmTokenUseCase {
   final FcmTokenRepository repository;
@@ -16,20 +17,28 @@ class SaveFcmTokenUseCase {
         throw Exception('Unable to get FCM token from device');
       }
 
+      AppLogger.info('🔍 FCM_USE_CASE: Current token: ${currentToken.substring(0, 20)}...', tag: 'FCM_USE_CASE');
+
       // 2. Check if token has changed since last save
       final hasChanged = await repository.hasTokenChanged(currentToken);
       
+      AppLogger.info('🔍 FCM_USE_CASE: Token changed: $hasChanged', tag: 'FCM_USE_CASE');
+      
       if (!hasChanged) {
-        // Token hasn't changed, return existing entity
-        final storedToken = await repository.getStoredFcmToken();
-        return FcmTokenEntity(
-          fcmToken: storedToken ?? currentToken,
-          lastUpdated: DateTime.now(),
-          isActive: true,
+        // Token hasn't changed, but let's verify it's actually saved on backend
+        AppLogger.warning('⚠️ FCM_USE_CASE: Token unchanged, but forcing save to ensure backend sync', tag: 'FCM_USE_CASE');
+        
+        // FORCE SAVE: Always save to ensure backend has the token
+        final result = await repository.saveFcmToken(
+          fcmToken: currentToken,
+          fcmRefreshToken: null,
         );
+        
+        return result;
       }
 
       // 3. Save new/changed token to backend
+      AppLogger.success('✅ FCM_USE_CASE: Saving changed token to backend', tag: 'FCM_USE_CASE');
       final result = await repository.saveFcmToken(
         fcmToken: currentToken,
         fcmRefreshToken: null, // Can be enhanced later if needed
@@ -38,6 +47,7 @@ class SaveFcmTokenUseCase {
       return result;
 
     } catch (e) {
+      AppLogger.error('❌ FCM_USE_CASE: Error - $e', tag: 'FCM_USE_CASE');
       throw Exception('Failed to save FCM token: $e');
     }
   }

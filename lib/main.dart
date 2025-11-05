@@ -40,6 +40,7 @@ import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
+import 'core/services/unified_fcm_service.dart';
 import 'data/auth/datasources/auth_remote_data_source_impl.dart';
 import 'data/auth/datasources/auth_local_data_source_impl.dart';
 import 'data/auth/repositories/auth_repository_impl.dart';
@@ -50,6 +51,7 @@ import 'features/splash/main.dart';
 import 'features/welcome/main.dart'; 
 import 'package:provider/provider.dart';
 import 'core/services/local_notification_service.dart';
+import 'core/services/android_notification_service.dart';
 import 'core/utils/app_logger.dart';
 
 // Background message handler is now in fcm_background_handler.dart
@@ -99,9 +101,30 @@ void _initializeBackgroundServices() {
       // Initialize local notification service
       await LocalNotificationService.instance.initialize();
       
+      // Initialize Android-specific notification service for better Android support
+      await AndroidNotificationService.instance.initialize();
+      
+      // Initialize FCM service for push notifications (non-blocking)
+      _initializeFcmService();
+      
       AppLogger.info('Background services initialized successfully', tag: 'Main');
     } catch (e) {
       AppLogger.error('Failed to initialize background services', tag: 'Main', error: e);
+    }
+  });
+}
+
+/// Initialize FCM service optimized for first-time users
+void _initializeFcmService() {
+  Future.microtask(() async {
+    try {
+      // Initialize FCM without token (fast, non-blocking for first-time users)
+      await UnifiedFcmService.instance.initializeWithoutToken();
+      
+      AppLogger.info('FCM service initialized for push notifications', tag: 'Main');
+    } catch (e) {
+      AppLogger.error('FCM service initialization failed (non-critical)', tag: 'Main', error: e);
+      // Don't throw - FCM failure shouldn't break the app for first-time users
     }
   });
 }

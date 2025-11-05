@@ -44,10 +44,15 @@
 	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
+	<key>BGTaskSchedulerPermittedIdentifiers</key>
+	<array>
+		<string>com.assisted.nepika.background.processing</string>
+		<string>com.assisted.nepika.background.refresh</string>
+	</array>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>
-		<string>background-processing</string>
+		<string>processing</string>
 		<string>fetch</string>
 	</array>
 	<key>UILaunchStoryboardName</key>

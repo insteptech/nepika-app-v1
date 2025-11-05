@@ -18,10 +18,6 @@ class UserImageIcon extends StatelessWidget {
   Widget build(BuildContext context) {
     final avatarUrl = author.avatarUrl;
     final hasValidUrl = avatarUrl.isNotEmpty;
-    debugPrint('\n\n\n');
-    debugPrint('Avatar URL :- ');
-    logJson(author.avatarUrl);
-    debugPrint('\n\n\n');
    
     return Material(
       color: Colors.transparent,

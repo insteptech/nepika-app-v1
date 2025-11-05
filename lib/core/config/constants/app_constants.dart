@@ -18,6 +18,8 @@ class AppConstants {
   static const String accessTokenKey = 'access_token';
   static const String refreshTokenKey = 'refresh_token';
   static const String termsAcceptedKey = 'terms_accepted';
+  static const String notificationPermissionPromptedKey = 'notification_permission_prompted';
+  static const String notificationPermissionGrantedKey = 'notification_permission_granted';
   
   // Stripe Configuration
   static const String stripePublishableKey = 'pk_test_51SLdrA9GE4oycUj8FAO2gQPPhqYf250IeBwy4JZc9U6EntFKQw6EfDdRHl16vAr2vMiphDQhsFOTRf8RnBVMDvL800OnDeZxyd';

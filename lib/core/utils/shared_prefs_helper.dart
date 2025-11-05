@@ -40,4 +40,25 @@ class SharedPrefsHelper {
     final key = AppConstants.appLanguageKey;
     return _prefs?.getString(key) ?? 'en';
   }
+
+  // Notification permission tracking
+  Future<void> setNotificationPermissionPrompted(bool prompted) async {
+    await SharedPrefsHelper.init();
+    await _prefs?.setBool(AppConstants.notificationPermissionPromptedKey, prompted);
+  }
+
+  Future<bool> hasNotificationPermissionBeenPrompted() async {
+    await SharedPrefsHelper.init();
+    return _prefs?.getBool(AppConstants.notificationPermissionPromptedKey) ?? false;
+  }
+
+  Future<void> setNotificationPermissionGranted(bool granted) async {
+    await SharedPrefsHelper.init();
+    await _prefs?.setBool(AppConstants.notificationPermissionGrantedKey, granted);
+  }
+
+  Future<bool> isNotificationPermissionGranted() async {
+    await SharedPrefsHelper.init();
+    return _prefs?.getBool(AppConstants.notificationPermissionGrantedKey) ?? false;
+  }
 }

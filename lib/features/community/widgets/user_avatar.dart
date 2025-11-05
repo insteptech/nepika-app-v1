@@ -23,10 +23,6 @@ class UserAvatar extends StatelessWidget {
     final hasValidUrl = avatarUrl.isNotEmpty;
 
 
-    debugPrint('\n\n\n');
-    debugPrint('Avatar URL :- ');
-    logJson(author.avatarUrl);
-    debugPrint('\n\n\n');
    
     return Material(
       color: Colors.transparent,

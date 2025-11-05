@@ -157,25 +157,49 @@ class _DashboardScreenState extends State<DashboardScreen>
     });
 
     if (_token != null) {
-      // Generate FCM token now that user is authenticated and on dashboard
-      _generateFcmToken();
-      
+      // FCM token generation will be triggered after dashboard response
+      // with backend token validation optimization
       _dashboardBloc.add(DashboardRequested(_token!));
     }
   }
 
-  /// Generate FCM token when user reaches dashboard
-  void _generateFcmToken() {
-    // Generate FCM token asynchronously without blocking dashboard load
-    UnifiedFcmService.instance.generateToken().then((token) {
-      if (token != null) {
-        debugPrint('✅ FCM token generated successfully from dashboard: ${token.substring(0, 20)}...');
-      } else {
-        debugPrint('⚠️ FCM token generation failed from dashboard');
+  /// Generate FCM token when user reaches dashboard (optimized for first-time users)
+  /// Now with backend token validation to avoid unnecessary saves
+  void _generateFcmToken([String? backendFcmToken]) {
+    // Use optimized token generation that checks backend token first
+    Future.microtask(() async {
+      try {
+        debugPrint('🔄 Starting optimized FCM token generation...');
+        
+        String? token;
+        if (backendFcmToken != null) {
+          // Use optimized method with backend check
+          debugPrint('🔍 Backend FCM token found, checking validity...');
+          token = await UnifiedFcmService.instance.generateTokenWithBackendCheck(backendFcmToken);
+        } else {
+          // No backend token, use normal flow
+          debugPrint('⚠️ No backend FCM token found, using normal flow...');
+          token = await UnifiedFcmService.instance.generateTokenAndEnsureSaved();
+        }
+        
+        if (token != null) {
+          debugPrint('✅ FCM token ready: ${token.substring(0, 20)}...');
+        } else {
+          debugPrint('⚠️ FCM token generation failed - will retry automatically');
+          
+          // Fallback: try background generation for retry
+          UnifiedFcmService.instance.generateTokenInBackground();
+        }
+      } catch (e) {
+        debugPrint('❌ FCM token generation error: $e');
+        
+        // Fallback: try background generation
+        try {
+          UnifiedFcmService.instance.generateTokenInBackground();
+        } catch (fallbackError) {
+          debugPrint('❌ FCM fallback also failed: $fallbackError');
+        }
       }
-    }).catchError((error) {
-      debugPrint('❌ FCM token generation error from dashboard: $error');
-      // Don't block dashboard flow for FCM failures
     });
   }
 
@@ -229,6 +253,13 @@ class _DashboardScreenState extends State<DashboardScreen>
       _cachedImageGallery = List<Map<String, dynamic>>.from(dashboardData['imageGallery'] ?? []);
       _cachedRecommendedProducts = List<Map<String, dynamic>>.from(dashboardData['recommendedProducts'] ?? []);
       _cachedLatestConditionResult = dashboardData['latestConditionResult'];
+      
+      // Extract FCM token from dashboard response for optimization
+      final backendFcmToken = _cachedUser?['fcm_token'] as String?;
+      debugPrint('🔍 Dashboard response FCM token: ${backendFcmToken?.isNotEmpty == true ? "${backendFcmToken!.substring(0, 20)}..." : "empty/null"}');
+      
+      // Use optimized FCM token generation with backend validation
+      _generateFcmToken(backendFcmToken);
     }
   }
 
