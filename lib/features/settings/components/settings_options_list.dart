@@ -36,7 +36,7 @@ class SettingsOptionsList extends StatelessWidget {
           ),
           fontSize: 16,
           fontWeight: FontWeight.w400,
-          textColor: colorScheme.onSurface,
+          textColor: option.textColor ?? colorScheme.onSurface,
           showDivider: false,
         );
       }).toList(),
@@ -62,7 +62,7 @@ class _ToggleOptionTile extends StatelessWidget {
       toggleStorageKey: option.text,
       fontSize: 16,
       fontWeight: FontWeight.w400,
-      textColor: Theme.of(context).textTheme.bodyLarge?.color,
+      textColor: option.textColor ?? Theme.of(context).textTheme.bodyLarge?.color,
       showDivider: false,
     );
   }

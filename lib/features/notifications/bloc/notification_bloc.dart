@@ -17,7 +17,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   List<NotificationEntity> _notifications = [];
   int _unreadCount = 0;
-  bool _isConnected = false;
+  bool _isConnected = false;  
   NotificationFilter _currentFilter = NotificationFilter.all;
 
   NotificationBloc({
@@ -53,10 +53,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   void _setupStreamSubscriptions() {
     // Listen for new notifications
-    _notificationSubscription = _notificationService.notificationStream.listen(
-      (notification) => add(NotificationReceived(notification)),
-      onError: (error) => debugPrint('❌ NotificationBloc: Notification stream error: $error'),
-    );
+    // _notificationSubscription = _notificationService.notificationStream.listen(
+    //   (notification) => add(NotificationReceived(notification)),
+    //   onError: (error) => debugPrint('❌ NotificationBloc: Notification stream error: $error'),
+    // );
 
     // Listen for deleted notifications
     _deletedNotificationSubscription = _notificationService.deletedNotificationStream.listen(
@@ -105,7 +105,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         currentFilter: _currentFilter,
       ));
 
-      await _notificationService.connect();
+      // await _notificationService.connect();
       
       // The connection status will be updated via the stream listener
     } catch (e) {

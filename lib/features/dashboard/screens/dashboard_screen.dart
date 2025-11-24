@@ -3,7 +3,10 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
+import 'package:nepika/features/face_scan/screens/scan_result_details_screen.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/di/injection_container.dart' as di;
 import 'package:nepika/features/routine/main.dart';
 import 'package:nepika/core/services/unified_fcm_service.dart';
@@ -27,7 +30,7 @@ Widget _memoizedWidget({
   return RepaintBoundary(
     key: ValueKey(cacheKey),
     child: child,
-  );
+  ); 
 }
 
 class DashboardScreen extends StatefulWidget {
@@ -66,13 +69,12 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>>? _cachedImageGallery;
   List<Map<String, dynamic>>? _cachedRecommendedProducts;
   Map<String, dynamic>? _cachedLatestConditionResult;
-
+  String? _latestSkinReportId;
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Use dependency injection instead of creating new instance
     try {
       _dashboardBloc = di.ServiceLocator.get<DashboardBloc>();
     } catch (e) {
@@ -84,6 +86,17 @@ class _DashboardScreenState extends State<DashboardScreen>
     
     _loadTokenAndFetch();
   }
+
+
+  Future<void> checkNotificationPermission() async {
+    debugPrint('\n\n\nChecking notification permission status\n\n\n');
+    final status = await Permission.notification.status;
+    if (status.isGranted) {
+      return;
+    }
+    await Permission.notification.request();
+  }
+
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -150,6 +163,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   Future<void> _loadTokenAndFetch() async {
     final sharedPrefs = await SharedPreferences.getInstance();
     final accessToken = sharedPrefs.getString(AppConstants.accessTokenKey);
+    // await checkNotificationPermission();
 
     setState(() {
       _token = accessToken ?? widget.token;
@@ -253,6 +267,7 @@ class _DashboardScreenState extends State<DashboardScreen>
       _cachedImageGallery = List<Map<String, dynamic>>.from(dashboardData['imageGallery'] ?? []);
       _cachedRecommendedProducts = List<Map<String, dynamic>>.from(dashboardData['recommendedProducts'] ?? []);
       _cachedLatestConditionResult = dashboardData['latestConditionResult'];
+      _latestSkinReportId = dashboardData['latestSkinReportId'] ?? '';
       
       // Extract FCM token from dashboard response for optimization
       final backendFcmToken = _cachedUser?['fcm_token'] as String?;
@@ -276,7 +291,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     final imageGallery = _cachedImageGallery ?? <Map<String, dynamic>>[];
     final recommendedProducts = _cachedRecommendedProducts ?? <Map<String, dynamic>>[];
     final latestConditionResult = _cachedLatestConditionResult;
-
+    final latestSkinReportId = _latestSkinReportId ?? '';
     return PopScope(
       canPop: false,
       child: Focus(
@@ -310,6 +325,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                           dailyRoutine,
                           imageGallery,
                           recommendedProducts,
+                          latestSkinReportId,
                         ),
                       ],
                     ),
@@ -367,7 +383,12 @@ class _DashboardScreenState extends State<DashboardScreen>
     Map<String, dynamic> dailyRoutine,
     List<Map<String, dynamic>> imageGallery,
     List<Map<String, dynamic>> recommendedProducts,
+    String latestSkinReportId,
   ) {
+
+
+
+
     return SliverPadding(
       padding: const EdgeInsets.only(left: 20,right:20, bottom:20),
       sliver: SliverToBoxAdapter(
@@ -383,10 +404,20 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
             _memoizedWidget(
               cacheKey: '${latestConditionResult.hashCode}',
-              child: ConditionsSection(
+             child: ConditionsSection(
                 latestConditionResult: latestConditionResult,
-                onConditionTap: (conditionName) =>
-                    _handleConditionTap(conditionName, skinScore, imageGallery),
+                onConditionTap: (conditionName) {
+                  logJson(latestConditionResult);
+                  debugPrint(conditionName);
+                  Navigator.of(context, rootNavigator: true).push(
+                    MaterialPageRoute(
+                      builder: (context) => ScanResultDetailsScreen(
+                        reportId: latestSkinReportId,
+                        condition: conditionName,
+                      ),
+                    ),
+                  );
+                },
               ),
             ),
             const SizedBox(height: 10),
@@ -426,8 +457,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       Map<String, dynamic> faceScan, Map<String, dynamic> skinScore) {
     return RepaintBoundary(
       child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Column(
+          spacing: 10,
+          // crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Expanded(
               child: RepaintBoundary(
@@ -437,7 +469,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                 ),
               ),
             ),
-            const SizedBox(width: 16),
+            const SizedBox(width: 26),
             Expanded(
               child: RepaintBoundary(
                 child: SkinScoreCard(skinScore: skinScore),
@@ -526,34 +558,6 @@ class _DashboardScreenState extends State<DashboardScreen>
   // Removed _buildRecommendedProductsSection as it's currently commented out
   // Can be restored if needed in the future
 
-  void _handleConditionTap(
-      String conditionName,
-      Map<String, dynamic> skinScore,
-      List<Map<String, dynamic>> imageGallery) {
-    // Get the latest report ID from imageGallery
-    String? reportId;
-    if (imageGallery.isNotEmpty) {
-      reportId = imageGallery.first['id'] as String?;
-    }
-
-    if (reportId != null) {
-      // Navigate to scan result details screen with report ID
-      Navigator.of(context, rootNavigator: true).pushNamed(
-        AppRoutes.scanResultDetails,
-        arguments: {
-          'reportId': reportId,
-        },
-      );
-    } else {
-      // Fallback: Show error if no report ID available
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('No scan results available'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
 }
 
 class _SliverAppBarDelegate extends SliverPersistentHeaderDelegate {

@@ -1,6 +1,39 @@
 import 'package:flutter/material.dart';
 
-/// Models for scan history API response
+/// ---------------- SAFETY HELPERS ----------------
+
+num _parseNum(dynamic value) {
+  if (value == null) return 0;
+  if (value is num) return value;
+  if (value is String) return num.tryParse(value) ?? 0;
+  return 0;
+}
+
+String _parseString(dynamic value) {
+  if (value == null) return '';
+  if (value is String) return value;
+  return value.toString();
+}
+
+bool _parseBool(dynamic value) {
+  if (value == null) return false;
+  if (value is bool) return value;
+  if (value is String) return (value.toLowerCase() == "true");
+  if (value is num) return value == 1;
+  return false;
+}
+
+DateTime _parseDate(dynamic value) {
+  if (value is String) {
+    try {
+      return DateTime.parse(value);
+    } catch (_) {}
+  }
+  return DateTime.now();
+}
+
+/// ---------------- MAIN RESPONSE ----------------
+
 class ScanHistoryResponse {
   final bool success;
   final int totalCount;
@@ -17,22 +50,29 @@ class ScanHistoryResponse {
   });
 
   factory ScanHistoryResponse.fromJson(Map<String, dynamic> json) {
-    final scansData = json['scans'] as List<dynamic>? ?? [];
-    final scans = scansData
-        .map((item) => ScanHistoryItem.fromJson(item as Map<String, dynamic>))
-        .toList();
+    final scansData = json['scans'];
+    final List<ScanHistoryItem> scans = [];
+
+    if (scansData is List) {
+      for (final item in scansData) {
+        if (item is Map<String, dynamic>) {
+          scans.add(ScanHistoryItem.fromJson(item));
+        }
+      }
+    }
 
     return ScanHistoryResponse(
-      success: json['success'] as bool? ?? false,
-      totalCount: json['total_count'] as int? ?? 0,
-      limit: json['limit'] as int? ?? 50,
-      offset: json['offset'] as int? ?? 0,
+      success: _parseBool(json['success']),
+      totalCount: _parseNum(json['total_count']).toInt(),
+      limit: _parseNum(json['limit']).toInt(),
+      offset: _parseNum(json['offset']).toInt(),
       scans: scans,
     );
   }
 }
 
-/// Individual scan history item
+/// ---------------- SCAN ITEM ----------------
+
 class ScanHistoryItem {
   final String id;
   final DateTime scanDate;
@@ -65,77 +105,87 @@ class ScanHistoryItem {
   });
 
   factory ScanHistoryItem.fromJson(Map<String, dynamic> json) {
+    // defensive parsing for lists
+    final issuesRaw = json['detected_issues'];
+    final detectedIssues = (issuesRaw is List)
+        ? issuesRaw.map((e) => _parseString(e)).toList()
+        : <String>[];
+
+    // defensive maps
+    final issuePercentagesRaw = json['issue_percentages'];
+    final allConditionsRaw = json['all_conditions'];
+
+    final issuePercentages = <String, double>{};
+    if (issuePercentagesRaw is Map) {
+      issuePercentagesRaw.forEach((k, v) {
+        issuePercentages[_parseString(k)] = _parseNum(v).toDouble();
+      });
+    }
+
+    final allConditions = <String, double>{};
+    if (allConditionsRaw is Map) {
+      allConditionsRaw.forEach((k, v) {
+        allConditions[_parseString(k)] = _parseNum(v).toDouble();
+      });
+    }
+
     return ScanHistoryItem(
-      id: json['id'] as String? ?? '',
-      scanDate: DateTime.parse(json['scan_date'] as String? ?? DateTime.now().toIso8601String()),
-      skinScore: json['skin_score'] as int? ?? 0,
-      skinType: SkinTypeData.fromJson(json['skin_type'] as Map<String, dynamic>? ?? {}),
-      primaryCondition: PrimaryConditionData.fromJson(json['primary_condition'] as Map<String, dynamic>? ?? {}),
-      detectedIssues: List<String>.from(json['detected_issues'] as List<dynamic>? ?? []),
-      issuePercentages: Map<String, double>.from(
-        (json['issue_percentages'] as Map<String, dynamic>? ?? {}).map(
-          (key, value) => MapEntry(key, (value as num?)?.toDouble() ?? 0.0),
-        ),
-      ),
-      allConditions: Map<String, double>.from(
-        (json['all_conditions'] as Map<String, dynamic>? ?? {}).map(
-          (key, value) => MapEntry(key, (value as num?)?.toDouble() ?? 0.0),
-        ),
-      ),
-      imageUrl: json['image_url'] as String? ?? '',
-      recommendationsCount: json['recommendations_count'] as int? ?? 0,
+      id: _parseString(json['id']),
+      scanDate: _parseDate(json['scan_date']),
+      skinScore: _parseNum(json['skin_score']).toInt(),
+      skinType: SkinTypeData.fromJson(json['skin_type'] is Map ? json['skin_type'] : {}),
+      primaryCondition: PrimaryConditionData.fromJson(
+          json['primary_condition'] is Map ? json['primary_condition'] : {}),
+      detectedIssues: detectedIssues,
+      issuePercentages: issuePercentages,
+      allConditions: allConditions,
+      imageUrl: _parseString(json['image_url']),
+      recommendationsCount: _parseNum(json['recommendations_count']).toInt(),
       areaDetectionSummary: AreaDetectionSummary.fromJson(
-        json['area_detection_summary'] as Map<String, dynamic>? ?? {},
-      ),
-      lightingOk: json['lighting_ok'] as bool? ?? false,
-      processed: json['processed'] as bool? ?? false,
+          json['area_detection_summary'] is Map ? json['area_detection_summary'] : {}),
+      lightingOk: _parseBool(json['lighting_ok']),
+      processed: _parseBool(json['processed']),
     );
   }
 
-  /// Get formatted date string for display
+  /// ---------- Extra helpers ----------
+
   String get formattedDate {
     final now = DateTime.now();
     final today = DateTime(now.year, now.month, now.day);
     final scanDay = DateTime(scanDate.year, scanDate.month, scanDate.day);
     final difference = today.difference(scanDay).inDays;
 
-    if (difference == 0) {
-      return 'Today';
-    } else if (difference == 1) {
-      return 'Yesterday';
-    } else {
-      // Format as DD Mon YYYY
-      const months = [
-        '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-        'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-      ];
-      final day = scanDate.day.toString().padLeft(2, '0');
-      final month = months[scanDate.month];
-      final year = scanDate.year.toString();
-      return '$day $month $year';
-    }
+    if (difference == 0) return 'Today';
+    if (difference == 1) return 'Yesterday';
+
+    const months = [
+      '', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
+    ];
+
+    final day = scanDate.day.toString().padLeft(2, '0');
+    final month = months[scanDate.month];
+    final year = scanDate.year.toString();
+    return '$day $month $year';
   }
 
-  /// Get skin score color based on value
   Color get skinScoreColor {
     if (skinScore >= 80) return const Color(0xFF4CAF50); // Green
     if (skinScore >= 60) return const Color(0xFFFF9800); // Orange
     return const Color(0xFFF44336); // Red
   }
 
-  /// Get top 3 detected issues for display
   List<String> get topIssues {
-    final sortedConditions = allConditions.entries.toList()
+    final sorted = allConditions.entries.toList()
       ..sort((a, b) => b.value.compareTo(a.value));
-    
-    return sortedConditions
-        .take(3)
-        .map((entry) => entry.key)
-        .toList();
+
+    return sorted.take(3).map((e) => e.key).toList();
   }
 }
 
-/// Skin type data model
+/// ---------------- SKIN TYPE ----------------
+
 class SkinTypeData {
   final String prediction;
   final double confidence;
@@ -147,13 +197,14 @@ class SkinTypeData {
 
   factory SkinTypeData.fromJson(Map<String, dynamic> json) {
     return SkinTypeData(
-      prediction: json['prediction'] as String? ?? '',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      prediction: _parseString(json['prediction']),
+      confidence: _parseNum(json['confidence']).toDouble(),
     );
   }
 }
 
-/// Primary condition data model
+/// ---------------- PRIMARY CONDITION ----------------
+
 class PrimaryConditionData {
   final String prediction;
   final double confidence;
@@ -165,13 +216,14 @@ class PrimaryConditionData {
 
   factory PrimaryConditionData.fromJson(Map<String, dynamic> json) {
     return PrimaryConditionData(
-      prediction: json['prediction'] as String? ?? '',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      prediction: _parseString(json['prediction']),
+      confidence: _parseNum(json['confidence']).toDouble(),
     );
   }
 }
 
-/// Area detection summary model
+/// ---------------- AREA DETECTION ----------------
+
 class AreaDetectionSummary {
   final int totalDetections;
   final List<String> classesFound;
@@ -184,14 +236,22 @@ class AreaDetectionSummary {
   });
 
   factory AreaDetectionSummary.fromJson(Map<String, dynamic> json) {
+    final classesRaw = json['classes_found'];
+    final classesFound = (classesRaw is List)
+        ? classesRaw.map((e) => _parseString(e)).toList()
+        : <String>[];
+
+    final classCounts = <String, int>{};
+    if (json['class_counts'] is Map) {
+      (json['class_counts'] as Map).forEach((k, v) {
+        classCounts[_parseString(k)] = _parseNum(v).toInt();
+      });
+    }
+
     return AreaDetectionSummary(
-      totalDetections: json['total_detections'] as int? ?? 0,
-      classesFound: List<String>.from(json['classes_found'] as List<dynamic>? ?? []),
-      classCounts: Map<String, int>.from(
-        (json['class_counts'] as Map<String, dynamic>? ?? {}).map(
-          (key, value) => MapEntry(key, (value as num?)?.toInt() ?? 0),
-        ),
-      ),
+      totalDetections: _parseNum(json['total_detections']).toInt(),
+      classesFound: classesFound,
+      classCounts: classCounts,
     );
   }
 }

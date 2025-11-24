@@ -54,7 +54,9 @@ dependencies:
   
   # Package Info
   package_info_plus: ^8.0.2
-  
+
+  in_app_purchase: ^3.2.3
+  in_app_purchase_storekit: ^0.4.4
   # File type detection
   mime: ^1.0.6
   uuid: ^4.5.1

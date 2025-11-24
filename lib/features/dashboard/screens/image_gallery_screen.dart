@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../../../core/api_base.dart';
 import '../../../core/widgets/back_button.dart';
 import '../models/report_image_model.dart';
@@ -7,8 +8,7 @@ import '../widgets/skeleton_loader.dart';
 import '../widgets/simple_gallery_image.dart';
 import 'image_preview_screen.dart';
 
-/// Full screen image gallery with bento grid layout
-/// Displays all user's scan images in an aesthetically pleasing grid
+/// Full screen image gallery with date-grouped bento grid layout
 class ImageGalleryScreen extends StatefulWidget {
   final List<Map<String, dynamic>>? initialImages;
 
@@ -31,7 +31,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
   String? _error;
 
   int _currentPage = 0;
-  static const int _pageSize = 6; // Further reduced for immediate loading
+  static const int _pageSize = 20;
 
   @override
   void initState() {
@@ -47,17 +47,15 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     super.dispose();
   }
 
-  /// Handle scroll events for lazy loading
   void _onScroll() {
-    // Load more when user is 600px from bottom (very aggressive preloading)
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 600) {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 600) {
       if (!_isLoadingMore && _hasMore && !_isLoading) {
         _loadMoreImages();
       }
     }
   }
 
-  /// Initial load of images
   Future<void> _loadImages() async {
     try {
       setState(() {
@@ -68,7 +66,6 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
 
       debugPrint('🖼️ Fetching report images from API...');
 
-      // Fetch images from API
       final response = await ApiBase().request(
         path: '/training/report-images',
         method: 'GET',
@@ -77,9 +74,11 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
       debugPrint('📡 Report images API response status: ${response.statusCode}');
 
       if (response.statusCode == 200) {
-        final data = ReportImagesResponse.fromJson(response.data as Map<String, dynamic>);
+        final data = ReportImagesResponse.fromJson(
+            response.data as Map<String, dynamic>);
 
-        debugPrint('✅ Loaded ${data.reports.length} images (total: ${data.totalCount})');
+        debugPrint(
+            '✅ Loaded ${data.reports.length} images (total: ${data.totalCount})');
 
         setState(() {
           _images.clear();
@@ -87,8 +86,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
           _hasMore = data.reports.length > _pageSize;
           _isLoading = false;
         });
-        
-        // Preload the next batch immediately if available
+
         if (_hasMore && data.reports.length > _pageSize) {
           Future.delayed(const Duration(milliseconds: 500), () {
             if (mounted && !_isLoadingMore) {
@@ -108,7 +106,6 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     }
   }
 
-  /// Load more images for pagination
   Future<void> _loadMoreImages() async {
     if (_isLoadingMore || !_hasMore) return;
 
@@ -121,19 +118,19 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
 
       debugPrint('📄 Loading page $_currentPage...');
 
-      // In a real implementation, you would pass page/offset to the API
-      // For now, we simulate pagination by loading all and slicing locally
       final response = await ApiBase().request(
         path: '/training/report-images',
         method: 'GET',
       );
 
       if (response.statusCode == 200) {
-        final data = ReportImagesResponse.fromJson(response.data as Map<String, dynamic>);
+        final data = ReportImagesResponse.fromJson(
+            response.data as Map<String, dynamic>);
 
         final startIndex = _currentPage * _pageSize;
         final endIndex = startIndex + _pageSize;
-        final moreImages = data.reports.skip(startIndex).take(_pageSize).toList();
+        final moreImages =
+            data.reports.skip(startIndex).take(_pageSize).toList();
 
         debugPrint('✅ Loaded ${moreImages.length} more images');
 
@@ -157,20 +154,49 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     await _loadImages();
   }
 
-  void _openImagePreview(String imageUrl, int index) {
+  void _openImagePreview(String imageUrl, int globalIndex) {
     final allImageUrls = _images.map((img) => img.imageUrl).toList();
 
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (context) => ImagePreviewScreen(
           imageUrl: imageUrl,
-          heroTag: 'gallery_image_$index',
+          heroTag: 'gallery_image_$globalIndex',
           allImageUrls: allImageUrls,
-          currentIndex: index,
-          allImages: _images, // Pass the full image data including report IDs
+          currentIndex: globalIndex,
+          allImages: _images,
         ),
       ),
     );
+  }
+
+  /// Group images by date
+  Map<String, List<ReportImage>> _groupImagesByDate() {
+    final Map<String, List<ReportImage>> grouped = {};
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    for (var image in _images) {
+      final scanDate = image.scanDate; // Already a DateTime object
+      final dateOnly = DateTime(scanDate.year, scanDate.month, scanDate.day);
+
+      String dateKey;
+      if (dateOnly == today) {
+        dateKey = 'Today';
+      } else if (dateOnly == yesterday) {
+        dateKey = 'Yesterday';
+      } else {
+        dateKey = DateFormat('MMMM d, yyyy').format(dateOnly);
+      }
+
+      if (!grouped.containsKey(dateKey)) {
+        grouped[dateKey] = [];
+      }
+      grouped[dateKey]!.add(image);
+    }
+
+    return grouped;
   }
 
   @override
@@ -217,7 +243,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
             ),
           ),
 
-          // Sticky header with animated back button and image count
+          // Sticky header
           SliverPersistentHeader(
             pinned: true,
             delegate: _ImageGalleryHeaderDelegate(
@@ -227,30 +253,68 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
             ),
           ),
 
-          // Spacing before content
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 20),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
 
-          // Bento grid images
-          SliverToBoxAdapter(
-            child: BentoGridLayout(
-              children: _buildImageWidgets(),
-            ),
-          ),
+          // Date-grouped images
+          ..._buildDateGroupedImages(),
 
-          // Loading more indicator for pagination
+          // Loading more indicator
           SliverToBoxAdapter(
             child: _buildLoadingMoreIndicator(),
           ),
 
-          // Bottom padding
-          const SliverToBoxAdapter(
-            child: SizedBox(height: 40),
-          ),
+          const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],
       ),
     );
+  }
+
+  /// Build date-grouped image sections
+  List<Widget> _buildDateGroupedImages() {
+    final groupedImages = _groupImagesByDate();
+    final List<Widget> slivers = [];
+    int globalIndex = 0;
+
+    groupedImages.forEach((dateLabel, images) {
+      // Date header
+      slivers.add(
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 0),
+            child: Text(
+              dateLabel,
+              style: Theme.of(context).textTheme.bodyLarge
+            ),
+          ),
+        ),
+      );
+
+      // Images for this date
+      slivers.add(
+        SliverToBoxAdapter(
+          child: BentoGridLayout(
+            children: images.map((image) {
+              final currentIndex = globalIndex++;
+              return BentoGridItem(
+                onTap: () => _openImagePreview(image.imageUrl, currentIndex),
+                child: SimpleGalleryImage(
+                  imageUrl: image.imageUrl,
+                  heroTag: 'gallery_image_$currentIndex',
+                  onTap: () => _openImagePreview(image.imageUrl, currentIndex),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      );
+
+      // Spacing between date sections
+      slivers.add(
+        const SliverToBoxAdapter(child: SizedBox(height: 16)),
+      );
+    });
+
+    return slivers;
   }
 
   Widget _buildLoadingState() {
@@ -276,9 +340,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
             maxHeight: 50,
           ),
         ),
-        const SliverToBoxAdapter(
-          child: SizedBox(height: 20),
-        ),
+        const SliverToBoxAdapter(child: SizedBox(height: 20)),
         const SliverToBoxAdapter(
           child: Padding(
             padding: EdgeInsets.symmetric(horizontal: 20),
@@ -420,25 +482,6 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
     );
   }
 
-  List<Widget> _buildImageWidgets() {
-    debugPrint('🎨 Building bento grid with ${_images.length} images');
-    
-    return List.generate(_images.length, (index) {
-      final image = _images[index];
-
-      return BentoGridItem(
-        onTap: () => _openImagePreview(image.imageUrl, index),
-        child: SimpleGalleryImage(
-          imageUrl: image.imageUrl,
-          heroTag: 'gallery_image_$index',
-          onTap: () => _openImagePreview(image.imageUrl, index),
-        ),
-      );
-    });
-  }
-
-
-  /// Build loading indicator for pagination
   Widget _buildLoadingMoreIndicator() {
     if (!_isLoadingMore) return const SizedBox.shrink();
 
@@ -455,7 +498,7 @@ class _ImageGalleryScreenState extends State<ImageGalleryScreen> {
   }
 }
 
-/// Custom header delegate for image gallery with title and count
+/// Custom header delegate
 class _ImageGalleryHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
@@ -474,7 +517,8 @@ class _ImageGalleryHeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => maxHeight;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     final isStuckToTop = shrinkOffset > 0;
 
     return Container(
@@ -482,7 +526,6 @@ class _ImageGalleryHeaderDelegate extends SliverPersistentHeaderDelegate {
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // Animated back button that appears when stuck
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -501,25 +544,21 @@ class _ImageGalleryHeaderDelegate extends SliverPersistentHeaderDelegate {
               ),
             ),
           ),
-
-          // Title
           Expanded(
             child: Text(
               "Image Gallery",
               style: Theme.of(context).textTheme.displaySmall,
             ),
           ),
-
-          // Image count
           Text(
             '$imageCount ${imageCount == 1 ? 'image' : 'images'}',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.color
-                  ?.withValues(alpha: 0.6),
-            ),
+                  color: Theme.of(context)
+                      .textTheme
+                      .bodyMedium
+                      ?.color
+                      ?.withValues(alpha: 0.6),
+                ),
           ),
         ],
       ),
@@ -534,7 +573,7 @@ class _ImageGalleryHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 }
 
-/// Loading header delegate with skeleton for image count
+/// Loading header delegate
 class _ImageGalleryLoadingHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
@@ -551,7 +590,8 @@ class _ImageGalleryLoadingHeaderDelegate extends SliverPersistentHeaderDelegate 
   double get maxExtent => maxHeight;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
     final isStuckToTop = shrinkOffset > 0;
 
     return Container(
@@ -559,7 +599,6 @@ class _ImageGalleryLoadingHeaderDelegate extends SliverPersistentHeaderDelegate 
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
         children: [
-          // Animated back button that appears when stuck
           AnimatedContainer(
             duration: const Duration(milliseconds: 300),
             curve: Curves.easeInOut,
@@ -578,16 +617,12 @@ class _ImageGalleryLoadingHeaderDelegate extends SliverPersistentHeaderDelegate 
               ),
             ),
           ),
-
-          // Title
           Expanded(
             child: Text(
               "Image Gallery",
               style: Theme.of(context).textTheme.displaySmall,
             ),
           ),
-
-          // Loading skeleton for count
           const HeaderCountSkeleton(),
         ],
       ),

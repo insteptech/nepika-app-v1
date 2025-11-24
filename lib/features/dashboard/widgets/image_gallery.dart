@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/config/env.dart';
-import 'package:nepika/core/widgets/authenticated_network_image.dart';
 
 class ImageGallerySection extends StatelessWidget {
   final List<Map<String, dynamic>> imageGallery;
@@ -34,7 +32,10 @@ class ImageGallerySection extends StatelessWidget {
       );
     }
 
-    if (imageGallery.isEmpty) {
+    // Filter out items with null URLs
+    final filteredGallery = imageGallery.where((img) => img['url'] != null).toList();
+    
+    if (filteredGallery.isEmpty) {
       // ❌ No images found
       return SizedBox(
         height: 135,
@@ -54,27 +55,33 @@ class ImageGallerySection extends StatelessWidget {
       height: 135,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
-        itemCount: imageGallery.length,
+        itemCount: filteredGallery.length,
         separatorBuilder: (_, __) => const SizedBox(width: 12),
         itemBuilder: (context, index) {
-          final img = imageGallery[index];
-          final imageUrl =  '${Env.baseUrl}/reports/${img['id']}/image';
-          return AuthenticatedNetworkImage(
-            imageUrl: imageUrl,
-            width: 125,
-            height: 130,
-            fit: BoxFit.cover,
+          final img = filteredGallery[index];
+          return ClipRRect(
             borderRadius: BorderRadius.circular(20),
-            placeholder: Container(
-              width: 125,
-              height: 130,
-              color: Colors.grey.shade300,
-            ),
-            errorWidget: Image.asset(
-              'assets/images/image_placeholder.png',
+            child: Image.network(
+              img['url'],
               width: 125,
               height: 130,
               fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 125,
+                  height: 130,
+                  color: Colors.grey.shade300,
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Image.asset(
+                  'assets/images/image_placeholder.png',
+                  width: 125,
+                  height: 130,
+                  fit: BoxFit.cover,
+                );
+              },
             ),
           );
         },

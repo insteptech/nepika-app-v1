@@ -78,7 +78,7 @@ class ApiEndpoints {
   // Question Endpoints
   
   // Notification Endpoints (SSE)
-  static const String notificationStream = '/community/notifications/stream';
+  // static const String notificationStream = '/community/notifications/stream';
   static const String unreadCount = '/community/notifications/unread-count';
   static const String markSeen = '/community/notifications/mark-as-seen';
 }

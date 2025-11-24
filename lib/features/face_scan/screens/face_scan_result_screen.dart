@@ -18,6 +18,8 @@ import '../components/bounding_box_painter.dart';
 import '../models/detection_models.dart';
 import '../models/scan_analysis_models.dart';
 import 'scan_result_details_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 
 /// Main face scan result page with camera, face detection, and analysis
 class FaceScanResultScreen extends StatefulWidget {
@@ -66,10 +68,12 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
   bool _showShimmerCompletion = false;
   String? _reportImageUrl;
   Map<String, dynamic>? _analysisResults;
-  String? _apiError;
   DetectionResults? _detectionResults;
   ui.Size? _actualImageSize;
   ScanAnalysisResponse? _scanAnalysisResponse;
+  
+  // Face scan info popup state
+  static const String _faceScanInfoShownKey = 'face_scan_info_popup_shown';
   
 
   @override
@@ -230,7 +234,6 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
         _capturedImage = processedFile;
         _reportImageUrl = null;
         _analysisResults = null;
-        _apiError = null;
       });
 
       // Automatically send to API after capture
@@ -243,7 +246,6 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
 
     setState(() {
       _isProcessingAPI = true;
-      _apiError = null;
       _reportImageUrl = null;
       _analysisResults = null;
     });
@@ -269,6 +271,8 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
 
       debugPrint('✅ API processing complete - Starting completion animation');
       
+      // Show one-time face scan info popup
+      await _showFaceScanInfoPopupIfNeeded();
       
       // Turn off camera after successful API response
       await _cameraManager.dispose();
@@ -278,19 +282,20 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       debugPrint('🔍 Limit data: ${result.limitData}');
       
       setState(() {
-        _apiError = result.errorMessage;
         _isProcessingAPI = false;
         _reportImageUrl = null;
         _detectionResults = null;
         _scanAnalysisResponse = null;
       });
       
-      // Check if this is a scan limit error and show bottom sheet
+      // Check if this is a scan limit error and show limit bottom sheet
       if (result.isLimitError && result.limitData != null) {
         debugPrint('🚫 Showing scan limit bottom sheet');
         _showScanLimitBottomSheet(result.errorMessage!, result.limitData!);
       } else {
-        debugPrint('⚠️ Regular error, not showing limit bottom sheet');
+        // Show general error bottom sheet for all other errors
+        debugPrint('⚠️ Showing general error bottom sheet');
+        _showErrorBottomSheet(result.errorMessage!);
       }
     }
   }
@@ -497,24 +502,127 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       ),
     );
   }
-  
-  /// Format the reset date for display
-  String _formatResetDate(String dateString) {
-    try {
-      final date = DateTime.parse(dateString);
-      final now = DateTime.now();
-      final difference = date.difference(now);
-      
-      if (difference.inDays > 0) {
-        return '${difference.inDays} days';
-      } else if (difference.inHours > 0) {
-        return '${difference.inHours} hours';
-      } else {
-        return 'Soon';
-      }
-    } catch (e) {
-      return 'Next month';
-    }
+
+  /// Show general error bottom sheet
+  void _showErrorBottomSheet(String errorMessage) {
+    debugPrint('🔴 _showErrorBottomSheet called with message: $errorMessage');
+    
+    final theme = Theme.of(context);
+    
+    showModalBottomSheet(
+      context: context,
+      isDismissible: true,
+      enableDrag: true,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => Container(
+        decoration: BoxDecoration(
+          color: theme.scaffoldBackgroundColor,
+          borderRadius: const BorderRadius.only(
+            topLeft: Radius.circular(20),
+            topRight: Radius.circular(20),
+          ),
+        ),
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Error icon
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.red.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.error_outline,
+                color: Colors.red,
+                size: 32,
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Title
+            Text(
+              'Analysis Failed',
+              style: theme.textTheme.headlineLarge?.copyWith(
+                fontWeight: FontWeight.w600,
+                color: theme.brightness == Brightness.dark 
+                    ? Colors.white 
+                    : Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            
+            // Error message
+            Text(
+              errorMessage,
+              style: theme.textTheme.bodyLarge?.copyWith(
+                color: theme.brightness == Brightness.dark 
+                    ? Colors.grey[300] 
+                    : Colors.grey[700],
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            
+            // Retry button
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  // Retry the analysis if captured image is available
+                  if (_capturedImage != null) {
+                    _sendImageToAPI(_capturedImage!);
+                  }
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: theme.colorScheme.primary,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Retry Analysis',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            
+            // Cancel button
+            SizedBox(
+              width: double.infinity,
+              child: TextButton(
+                onPressed: () {
+                  Navigator.pop(context); // Close bottom sheet
+                  Navigator.pop(context); // Go back to previous screen
+                },
+                style: TextButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
+                child: Text(
+                  'Cancel',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    color: theme.colorScheme.outline,
+                  ),
+                ),
+              ),
+            ),
+            
+            // Bottom safe area
+            SizedBox(height: MediaQuery.of(context).viewPadding.bottom + 16),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _retryInitialization() async {
@@ -523,7 +631,6 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     setState(() {
       _reportImageUrl = null;
       _analysisResults = null;
-      _apiError = null;
       _capturedImage = null;
       _isProcessingAPI = false;
       _showShimmerCompletion = false;
@@ -562,6 +669,47 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     }
   }
 
+
+  /// Calculate the actual display size of the image container
+  Size _getDisplayedImageContainerSize() {
+    final screenWidth = MediaQuery.of(context).size.width - 32; // Subtract horizontal padding
+    final screenHeight = MediaQuery.of(context).size.height;
+    final safeAreaTop = MediaQuery.of(context).padding.top;
+    final safeAreaBottom = MediaQuery.of(context).padding.bottom;
+    
+    // Reserve space for UI elements
+    const topControlsHeight = 40.0;
+    const topSpacing = 30.0;
+    const bottomButtonHeight = 80.0;
+    const analyzingTextHeight = 40.0;
+    const paddingAndSpacing = 60.0; // Include vertical padding
+    
+    // Calculate available height for Expanded area
+    final availableHeight = screenHeight - safeAreaTop - safeAreaBottom - 
+                           topControlsHeight - topSpacing - bottomButtonHeight - 
+                           analyzingTextHeight - paddingAndSpacing;
+    
+    // For aspect ratio calculation, we need to determine the actual container size
+    // This will depend on the image aspect ratio and available space
+    if (_capturedImage != null && _actualImageSize != null) {
+      final imageAspectRatio = _actualImageSize!.width / _actualImageSize!.height;
+      
+      // Calculate size constrained by both width and height
+      final widthConstrainedHeight = screenWidth / imageAspectRatio;
+      final heightConstrainedWidth = availableHeight * imageAspectRatio;
+      
+      if (widthConstrainedHeight <= availableHeight) {
+        // Width constrains the size
+        return Size(screenWidth, widthConstrainedHeight);
+      } else {
+        // Height constrains the size
+        return Size(heightConstrainedWidth, availableHeight);
+      }
+    }
+    
+    // Default fallback size
+    return Size(screenWidth, availableHeight * 0.8);
+  }
 
   /// Get the actual size of the captured image
   Future<ui.Size> _getImageSize() async {
@@ -806,7 +954,7 @@ Widget _buildNavigatingBackView() {
   }
 
   Widget _buildCompactResultView() {
-    return SingleChildScrollView(
+    return SafeArea(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Column(
@@ -818,49 +966,50 @@ Widget _buildNavigatingBackView() {
             
             const SizedBox(height: 20),
             
-            // Main content area - 60% height as before
-            Stack(
-              children: [
-                Container(
-                  height: MediaQuery.of(context).size.height * 0.6,
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade900,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Center(
+            // Main content area - use Expanded to take available space
+            Expanded(
+              child: Stack(
+                children: [
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade900,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
                     child: ClipRRect(
                       borderRadius: BorderRadius.circular(20),
-                      child: _buildMainContent(),
+                      child: _buildMainContentWithAspectRatio(),
                     ),
                   ),
-                ),
-                
-                // Condition dropdown overlay - positioned outside InteractiveViewer
-                if (_detectionResults != null)
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: _buildConditionDropdown(),
-                  ),
-              ],
+                  
+                  // Condition dropdown overlay - positioned outside InteractiveViewer
+                  if (_detectionResults != null)
+                    Positioned(
+                      bottom: 16,
+                      left: 16,
+                      right: 16,
+                      child: _buildConditionDropdown(),
+                    ),
+                ],
+              ),
             ),
 
-            // Analyzing text below camera preview (instead of overlay)
+            // Analyzing text below image area
             if (_detectionResults == null)
-              AnalyzingText(
-                isVisible: _isProcessingAPI,
-                text: 'Analyzing Image...',
-                textStyle: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 16,
-                  fontWeight: FontWeight.w500,
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 16),
+                child: AnalyzingText(
+                  isVisible: _isProcessingAPI,
+                  text: 'Analyzing Image...',
+                  textStyle: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
 
-            // const SizedBox(height: 10),
-
-            // Bottom section with analysis results (no longer expanded)
+            // Bottom section with analysis results
             _buildBottomSection(),
           ],
         ),
@@ -917,7 +1066,8 @@ Widget _buildNavigatingBackView() {
 
     final controller = _cameraManager.controller!;
     
-    if (!controller.value.isInitialized) {
+    // Check if controller is disposed or not initialized
+    if (!controller.value.isInitialized || controller.value.hasError) {
       return Container(
         width: double.infinity,
         height: double.infinity,
@@ -928,17 +1078,88 @@ Widget _buildNavigatingBackView() {
       );
     }
 
-    // Full screen camera preview with proper aspect ratio
-    return SizedBox(
-      width: double.infinity,
-      height: double.infinity,
-      child: FittedBox(
-        fit: BoxFit.cover, // This maintains aspect ratio and covers the full screen
-        child: SizedBox(
-          width: controller.value.previewSize!.height, // Swap because camera is rotated
-          height: controller.value.previewSize!.width,
-          child: CameraPreview(controller),
+    // Additional safety check to prevent disposed controller usage
+    try {
+      // Full screen camera preview with proper aspect ratio
+      return SizedBox(
+        width: double.infinity,
+        height: double.infinity,
+        child: FittedBox(
+          fit: BoxFit.cover, // This maintains aspect ratio and covers the full screen
+          child: SizedBox(
+            width: controller.value.previewSize!.height, // Swap because camera is rotated
+            height: controller.value.previewSize!.width,
+            child: CameraPreview(controller),
+          ),
         ),
+      );
+    } catch (e) {
+      debugPrint('Error building camera preview: $e');
+      return Container(
+        width: double.infinity,
+        height: double.infinity,
+        color: Colors.grey.shade900,
+        child: const Center(
+          child: Text(
+            'Camera not available',
+            style: TextStyle(color: Colors.white),
+          ),
+        ),
+      );
+    }
+  }
+
+  Widget _buildMainContentWithAspectRatio() {
+    // Captured/Processed image state with aspect ratio
+    if (_capturedImage != null) {
+      return FutureBuilder<ui.Size>(
+        future: _getImageSize(),
+        builder: (context, snapshot) {
+          if (snapshot.hasData) {
+            final imageSize = snapshot.data!;
+            final aspectRatio = imageSize.width / imageSize.height;
+            
+            return AspectRatio(
+              aspectRatio: aspectRatio,
+              child: _buildImageWidget(),
+            );
+          }
+          // While loading image dimensions, use a reasonable default aspect ratio
+          return AspectRatio(
+            aspectRatio: 3 / 4, // Common portrait aspect ratio
+            child: _buildImageWidget(),
+          );
+        },
+      );
+    }
+    
+    // Camera preview state with aspect ratio
+    if (_cameraManager.isInitialized && _cameraManager.controller != null) {
+      final controller = _cameraManager.controller!;
+      if (controller.value.isInitialized) {
+        // Get camera aspect ratio
+        final cameraAspectRatio = controller.value.aspectRatio;
+        
+        return AspectRatio(
+          aspectRatio: 1 / cameraAspectRatio, // Invert because camera is typically rotated
+          child: FaceScanCameraPreview(
+            controller: controller,
+            errorMessage: _cameraManager.errorMessage,
+            isInitializing: _cameraManager.isInitializing,
+            onRetry: _retryInitialization,
+          ),
+        );
+      }
+    }
+    
+    // Error or loading state with default aspect ratio
+    return AspectRatio(
+      aspectRatio: 3 / 4,
+      child: FaceScanCameraPreview(
+        controller: null,
+        errorMessage: _cameraManager.errorMessage,
+        isInitializing: _cameraManager.isInitializing,
+        onRetry: _retryInitialization,
       ),
     );
   }
@@ -1023,7 +1244,7 @@ Widget _buildImageWidget() {
                   imageSize: imageSize,
                   child: Image.file(
                     File(_capturedImage!.path),
-                    fit: BoxFit.cover,
+                    fit: BoxFit.contain,
                     errorBuilder: (context, error, stackTrace) {
                       return const Center(
                         child: Text(
@@ -1040,7 +1261,7 @@ Widget _buildImageWidget() {
             // Fallback: show image without bounding boxes if no detection results
             Image.file(
               File(_capturedImage!.path),
-              fit: BoxFit.cover,
+              fit: BoxFit.contain,
               errorBuilder: (context, error, stackTrace) {
                 return const Center(
                   child: Text(
@@ -1212,39 +1433,12 @@ Widget _buildImageWidget() {
     _getImageSize().then((imageSize) {
       if (!mounted) return; // Guard against unmounted widget
       
-      // Get the widget size (this is an approximation)
+      // Get the actual displayed container size
+      final containerSize = _getDisplayedImageContainerSize();
       final widgetSize = MediaQuery.of(context).size;
-      final containerHeight = widgetSize.height * 0.6; // Main container height
+      final containerHeight = containerSize.height;
       
-      // Calculate scale factors to map from image coordinates to widget coordinates
-      final scaleX = widgetSize.width / imageSize.width;
-      final scaleY = containerHeight / imageSize.height;
-      
-      // Use the smaller scale to maintain aspect ratio
-      final scale = math.min(scaleX, scaleY);
-      
-      // Scale the bounding box coordinates to widget space
-      final scaledMinX = minX * scale;
-      final scaledMinY = minY * scale;
-      final scaledMaxX = maxX * scale;
-      final scaledMaxY = maxY * scale;
-      
-      // Calculate dimensions of the detection area
-      final width = scaledMaxX - scaledMinX;
-      final height = scaledMaxY - scaledMinY;
-      
-      // Add padding around the detection area
-      const padding = 40.0;
-      final paddedWidth = width + (padding * 2);
-      final paddedHeight = height + (padding * 2);
-      
-      // Calculate zoom level to fit the detection area in the widget
-      final zoomX = widgetSize.width / paddedWidth;
-      final zoomY = containerHeight / paddedHeight;
-      final zoom = math.min(zoomX, zoomY).clamp(1.0, 2.5);
-      
-      // Calculate translation to center the detection area
-      // Account for the actual rendered image position within the container
+      // Calculate the actual image bounds within the widget when using BoxFit.contain
       final imageAspectRatio = imageSize.width / imageSize.height;
       final containerAspectRatio = widgetSize.width / containerHeight;
       
@@ -1263,13 +1457,35 @@ Widget _buildImageWidget() {
         imageOffsetX = (widgetSize.width - actualImageWidth) / 2;
       }
       
-      // Recalculate center position accounting for actual image position
-      final actualScale = actualImageWidth / imageSize.width;
-      final actualCenterX = (minX + maxX) / 2 * actualScale + imageOffsetX;
-      final actualCenterY = (minY + maxY) / 2 * actualScale + imageOffsetY;
+      // Calculate scale factor based on actual displayed image size
+      final scale = actualImageWidth / imageSize.width;
       
-      final translateX = (widgetSize.width / 2) - (actualCenterX * zoom);
-      final translateY = (containerHeight / 2) - (actualCenterY * zoom);
+      // Scale the bounding box coordinates to displayed image space and add offset
+      final scaledMinX = minX * scale + imageOffsetX;
+      final scaledMinY = minY * scale + imageOffsetY;
+      final scaledMaxX = maxX * scale + imageOffsetX;
+      final scaledMaxY = maxY * scale + imageOffsetY;
+      
+      // Calculate dimensions of the detection area
+      final width = scaledMaxX - scaledMinX;
+      final height = scaledMaxY - scaledMinY;
+      
+      // Add padding around the detection area
+      const padding = 40.0;
+      final paddedWidth = width + (padding * 2);
+      final paddedHeight = height + (padding * 2);
+      
+      // Calculate zoom level to fit the detection area in the widget
+      final zoomX = widgetSize.width / paddedWidth;
+      final zoomY = containerHeight / paddedHeight;
+      final zoom = math.min(zoomX, zoomY).clamp(1.0, 2.5);
+      
+      // Calculate the center of the detection area
+      final centerX = (scaledMinX + scaledMaxX) / 2;
+      final centerY = (scaledMinY + scaledMaxY) / 2;
+      
+      final translateX = (widgetSize.width / 2) - (centerX * zoom);
+      final translateY = (containerHeight / 2) - (centerY * zoom);
       
       // Create and apply the transformation matrix
       final matrix = Matrix4.identity()
@@ -1317,6 +1533,8 @@ Widget _buildImageWidget() {
           instructionIcon = Icons.visibility;
         } else if (instructionText.contains('inside the oval')) {
           instructionIcon = Icons.center_focus_weak;
+        } else {
+          instructionIcon = Icons.warning_outlined; // Default for other alignment issues
         }
       } else if (result.isAligned) {
         instructionText = 'Perfect! Hold still...';
@@ -1334,7 +1552,7 @@ Widget _buildImageWidget() {
             duration: const Duration(milliseconds: 300),
             child: Icon(
               instructionIcon,
-              key: ValueKey(instructionIcon),
+              key: ValueKey('$instructionIcon-$instructionText'),
               color: textColor,
               size: 20,
             ),
@@ -1363,31 +1581,6 @@ Widget _buildImageWidget() {
   }
 
   Widget _buildBottomSection() {
-    // Show error state
-    if (_apiError != null) {
-      return Column(
-        children: [
-          const Icon(Icons.error, color: Colors.red, size: 48),
-          const SizedBox(height: 16),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Text(
-              _apiError!,
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-              textAlign: TextAlign.center,
-            ),
-          ),
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: _capturedImage != null
-                ? () => _sendImageToAPI(_capturedImage!)
-                : null,
-            child: const Text('Retry Analysis'),
-          ),
-        ],
-      );
-    }
-
     // Show result button if analysis is available
     if (_scanAnalysisResponse != null) {
       return Container(
@@ -1412,9 +1605,7 @@ Widget _buildImageWidget() {
               } else {
                 // Fallback: show error if no report ID
                 debugPrint('❌ Report ID is null - cannot navigate to details');
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Report ID not available')),
-                );
+                _showErrorBottomSheet('Report ID not available. Please try scanning again.');
               }
             },
           ),
@@ -1422,6 +1613,142 @@ Widget _buildImageWidget() {
     }
 
     return const SizedBox.shrink();
+  }
+
+  /// Check if face scan info popup should be shown and display it
+  Future<void> _showFaceScanInfoPopupIfNeeded() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final hasShown = prefs.getBool(_faceScanInfoShownKey) ?? false;
+      
+      if (!hasShown && mounted) {
+        // Mark as shown first
+        await prefs.setBool(_faceScanInfoShownKey, true);
+        
+        // Show the popup
+        _showFaceScanInfoPopup();
+      }
+    } catch (e) {
+      debugPrint('❌ Error checking face scan info popup state: $e');
+    }
+  }
+
+  /// Show the face scan info popup
+  void _showFaceScanInfoPopup() {
+    if (!mounted) return;
+    
+    showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (BuildContext context) {
+        final theme = Theme.of(context);
+        
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Container(
+            margin: const EdgeInsets.symmetric(horizontal: 20),
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: theme.scaffoldBackgroundColor,
+              borderRadius: BorderRadius.circular(16),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.2),
+                  blurRadius: 16,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Info icon
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.info_outline,
+                    color: theme.colorScheme.primary,
+                    size: 32,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                
+                // Title
+                Text(
+                  'About Face Scan',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                
+                // Description
+                Text(
+                  'Learn how our AI analyzes your skin condition, scoring system, and privacy practices.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                
+                // Buttons
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                        },
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: Text(
+                          'Maybe Later',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.outline,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          // Navigate to face scan info screen
+                          Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.faceScanInfo);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: theme.colorScheme.primary,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          'Learn More',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
 }

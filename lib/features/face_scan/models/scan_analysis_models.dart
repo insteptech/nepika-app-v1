@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'detection_models.dart';
 
 /// Main model for the complete face scan API response
 class ScanAnalysisResponse {
@@ -86,10 +87,17 @@ class ConditionAnalysis {
   });
 
   factory ConditionAnalysis.fromJson(Map<String, dynamic> json) {
-    final predictionsData = json['sorted_predictions'] as List<dynamic>? ?? [];
-    final predictions = predictionsData
-        .map((item) => ConditionPrediction.fromJson(item as List<dynamic>))
-        .toList();
+    final allPredictionsData = json['all_predictions'] as Map<String, dynamic>? ?? {};
+    final predictions = <ConditionPrediction>[];
+    
+    // Convert map of predictions to sorted list
+    allPredictionsData.forEach((key, value) {
+      final confidence = (value as num?)?.toDouble() ?? 0.0;
+      predictions.add(ConditionPrediction(name: key, confidence: confidence));
+    });
+    
+    // Sort by confidence descending
+    predictions.sort((a, b) => b.confidence.compareTo(a.confidence));
 
     return ConditionAnalysis(
       prediction: json['prediction'] as String? ?? '',
@@ -113,14 +121,11 @@ class ConditionPrediction {
     required this.confidence,
   });
 
-  factory ConditionPrediction.fromJson(List<dynamic> json) {
-    if (json.length >= 2) {
-      return ConditionPrediction(
-        name: json[0] as String? ?? '',
-        confidence: (json[1] as num?)?.toDouble() ?? 0.0,
-      );
-    }
-    return const ConditionPrediction(name: '', confidence: 0.0);
+  factory ConditionPrediction.fromJson(Map<String, dynamic> json) {
+    return ConditionPrediction(
+      name: json['name'] as String? ?? '',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+    );
   }
 
   /// Get confidence as percentage string
@@ -161,19 +166,45 @@ class ConditionPrediction {
 
 /// Model for skin type analysis
 class SkinTypeAnalysis {
-  final String? error;
+  final String prediction;
+  final double confidence;
+  final Map<String, double> allPredictions;
+  final bool adequateLighting;
   final bool success;
 
   const SkinTypeAnalysis({
-    this.error,
+    required this.prediction,
+    required this.confidence,
+    required this.allPredictions,
+    required this.adequateLighting,
     required this.success,
   });
 
   factory SkinTypeAnalysis.fromJson(Map<String, dynamic> json) {
+    final allPredictionsData = json['all_predictions'] as Map<String, dynamic>? ?? {};
+    final allPredictions = <String, double>{};
+    
+    allPredictionsData.forEach((key, value) {
+      allPredictions[key] = (value as num?)?.toDouble() ?? 0.0;
+    });
+
     return SkinTypeAnalysis(
-      error: json['error'] as String?,
+      prediction: json['prediction'] as String? ?? '',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
+      allPredictions: allPredictions,
+      adequateLighting: json['adequate_lighting'] as bool? ?? true,
       success: json['success'] as bool? ?? false,
     );
+  }
+
+  /// Get skin type predictions sorted by confidence
+  List<ConditionPrediction> get sortedPredictions {
+    final predictions = <ConditionPrediction>[];
+    allPredictions.forEach((key, value) {
+      predictions.add(ConditionPrediction(name: key, confidence: value));
+    });
+    predictions.sort((a, b) => b.confidence.compareTo(a.confidence));
+    return predictions;
   }
 }
 
@@ -232,11 +263,15 @@ class AreaDetectionAnalysis {
 /// Model for recommendation groups
 class RecommendationGroup {
   final String skinIssue;
+  final String? conditionSlug; // NEW FIELD
   final List<ProductRecommendation> recommendations;
+  final ProgressSummary? progressSummary;
 
   const RecommendationGroup({
     required this.skinIssue,
+    this.conditionSlug,
     required this.recommendations,
+    this.progressSummary,
   });
 
   factory RecommendationGroup.fromJson(Map<String, dynamic> json) {
@@ -244,10 +279,19 @@ class RecommendationGroup {
     final recommendations = recommendationsData
         .map((item) => ProductRecommendation.fromJson(item as Map<String, dynamic>))
         .toList();
+    
+
+    // Support both camelCase and snake_case
+    final progressSummaryJson =
+        json['progressSummary'] ??
+        json['progress_summary'] ??
+        {};
 
     return RecommendationGroup(
       skinIssue: json['skin_issue'] as String? ?? '',
+      conditionSlug: json['conditionSlug'] as String? ?? '', // NEW
       recommendations: recommendations,
+      progressSummary: ProgressSummary.fromJson(progressSummaryJson),
     );
   }
 
@@ -278,13 +322,69 @@ class RecommendationGroup {
       case 'whiteheads':
         return 'Whiteheads';
       default:
-        // Fallback to capitalizing the skin issue name
-        return skinIssue.split(' ')
-            .map((word) => word.isNotEmpty 
-                ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
-                : word)
+        return skinIssue
+            .split(' ')
+            .map((word) =>
+                word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1)}' : word)
             .join(' ');
     }
+  }
+}
+
+/// Progress summary model
+class ProgressSummary {
+  final String unit;
+  final List<ProgressData> data;
+
+  const ProgressSummary({
+    required this.unit,
+    required this.data,
+  });
+
+  factory ProgressSummary.fromJson(Map<String, dynamic> json) {
+    final dataList = json['data'] as List<dynamic>? ?? [];
+
+    return ProgressSummary(
+      unit: json['unit'] as String? ?? '',
+      data: dataList
+          .map((item) => ProgressData.fromJson(item))
+          .toList(),
+    );
+  }
+}
+
+/// Individual progress entries
+
+class ProgressData {
+  final String month;
+  final double value;
+  final String scanId;
+  final String datetime;
+
+  const ProgressData({
+    required this.month,
+    required this.value,
+    required this.scanId,
+    required this.datetime,
+  });
+
+  factory ProgressData.fromJson(Map<String, dynamic> json) {
+    return ProgressData(
+      month: json['month'] as String? ?? '',
+      value: (json['value'] as num?)?.toDouble() ?? 0.0,
+      scanId: json['scanId'] as String? ?? '',
+      datetime: json['datetime'] as String? ?? '',
+    );
+  }
+
+  /// <- Add this
+  Map<String, dynamic> toJson() {
+    return {
+      'month': month,
+      'value': value,
+      'scanId': scanId,
+      'datetime': datetime,
+    };
   }
 }
 
@@ -333,63 +433,3 @@ class ProductRecommendation {
   bool get isClinicallyProven => effectivenessLevel == 'Clinically Proven';
 }
 
-// Import the existing Detection model from detection_models.dart
-class Detection {
-  final String className;
-  final double confidence;
-  final BoundingBox bbox;
-
-  const Detection({
-    required this.className,
-    required this.confidence,
-    required this.bbox,
-  });
-
-  factory Detection.fromJson(Map<String, dynamic> json) {
-    return Detection(
-      className: json['class'] as String? ?? 'unknown',
-      confidence: (json['confidence'] as num?)?.toDouble() ?? 0.0,
-      bbox: BoundingBox.fromJson(json['bbox'] as Map<String, dynamic>? ?? {}),
-    );
-  }
-
-  String get displayName {
-    switch (className.toLowerCase()) {
-      case 'skin-redness':
-        return 'Skin Redness';
-      case 'wrinkles':
-        return 'Wrinkles';
-      default:
-        return className.replaceAll('-', ' ').split(' ')
-            .map((word) => word.isNotEmpty 
-                ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
-                : word)
-            .join(' ');
-    }
-  }
-
-  String get confidencePercentage => '${(confidence * 100).toStringAsFixed(1)}%';
-}
-
-class BoundingBox {
-  final double x1;
-  final double y1;
-  final double x2;
-  final double y2;
-
-  const BoundingBox({
-    required this.x1,
-    required this.y1,
-    required this.x2,
-    required this.y2,
-  });
-
-  factory BoundingBox.fromJson(Map<String, dynamic> json) {
-    return BoundingBox(
-      x1: (json['x1'] as num?)?.toDouble() ?? 0.0,
-      y1: (json['y1'] as num?)?.toDouble() ?? 0.0,
-      x2: (json['x2'] as num?)?.toDouble() ?? 0.0,
-      y2: (json['y2'] as num?)?.toDouble() ?? 0.0,
-    );
-  }
-}

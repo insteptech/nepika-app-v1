@@ -193,19 +193,35 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
                   style: Theme.of(context).textTheme.bodySmall,
                   children: [
                     const TextSpan(text: 'By continuing, you agree to our '),
-                    TextSpan(
-                      text: 'Terms of Service',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushNamed(AppRoutes.termsOfUse);
+                        },
+                        child: Text(
+                          'Terms of Service',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                     const TextSpan(text: ' and '),
-                    TextSpan(
-                      text: 'Privacy Policy',
-                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: Theme.of(context).colorScheme.primary,
-                        fontWeight: FontWeight.w600,
+                    WidgetSpan(
+                      child: GestureDetector(
+                        onTap: () {
+                          Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
+                        },
+                        child: Text(
+                          'Privacy Policy',
+                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontWeight: FontWeight.w600,
+                            decoration: TextDecoration.underline,
+                          ),
+                        ),
                       ),
                     ),
                   ],

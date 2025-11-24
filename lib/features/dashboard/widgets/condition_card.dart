@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/config/constants/theme.dart';
+// import 'package:nepika/core/config/constants/theme.dart';
 
 class ConditionCard extends StatelessWidget {
   final String conditionName;
@@ -51,7 +51,7 @@ class ConditionCard extends StatelessWidget {
         width: MediaQuery.of(context).size.width * 0.39,
         height: 180,
         decoration: BoxDecoration(
-          color: Theme.of(context).cardColor,
+          color: Theme.of(context).colorScheme.primary,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: Theme.of(context).colorScheme.primary.withOpacity(0.8),
@@ -74,7 +74,9 @@ class ConditionCard extends StatelessWidget {
               // Condition name
               Text(
                 formattedName,
-                style: Theme.of(context).textTheme.bodyLarge,
+                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.onTertiary
+                ),
                 textAlign: TextAlign.start,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
@@ -113,6 +115,7 @@ class ConditionCard extends StatelessWidget {
                 '${percentage.toStringAsFixed(0)}%',
                 style: Theme.of(context).textTheme.headlineLarge?.copyWith(
                   fontWeight: FontWeight.w600,
+                  color: Theme.of(context).colorScheme.onTertiary
                 ),
               ),
 
@@ -123,11 +126,12 @@ class ConditionCard extends StatelessWidget {
                 onTap: onTap,
                 child: Text(
                   'Details',
-                  style: Theme.of(context).textTheme.bodyLarge?.hint(context).copyWith(
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.onTertiary,
                     decoration: TextDecoration.combine([
                       TextDecoration.underline,
                     ]),
-                    decorationColor: Theme.of(context).colorScheme.primary,
+                    decorationColor: Theme.of(context).colorScheme.onTertiary,
                   ),
                 ),
               ),

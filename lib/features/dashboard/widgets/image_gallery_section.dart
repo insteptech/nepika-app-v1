@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/core/config/env.dart';
-import 'package:nepika/core/widgets/authenticated_network_image.dart';
 
 class ImageGallerySection extends StatelessWidget {
   final List<Map<String, dynamic>> imageGallery;
@@ -20,7 +18,10 @@ class ImageGallerySection extends StatelessWidget {
       return _buildSkeletonLoader();
     }
 
-    if (imageGallery.isEmpty) {
+    // Filter out items with null URLs first
+    final filteredGallery = imageGallery.where((img) => img['url'] != null).toList();
+    
+    if (filteredGallery.isEmpty) {
       return _buildEmptyState(context);
     }
 
@@ -64,10 +65,13 @@ class ImageGallerySection extends StatelessWidget {
   }
 
   Widget _buildImageGallery(BuildContext context) {
-    final showAllTile = imageGallery.length >= 6;
+    // Filter out items with null URLs
+    final filteredGallery = imageGallery.where((img) => img['url'] != null).toList();
+    
+    final showAllTile = filteredGallery.length >= 6;
     final displayList = showAllTile
-        ? imageGallery.take(5).toList()
-        : imageGallery;
+        ? filteredGallery.take(5).toList()
+        : filteredGallery;
 
     return SizedBox(
       height: 135,
@@ -82,11 +86,10 @@ class ImageGallerySection extends StatelessWidget {
           }
 
           final img = displayList[index];
-          final imageUrl = '${Env.baseUrl}/reports/${img['id']}/image';
           return ClipRRect(
             borderRadius: BorderRadius.circular(20),
             child: Image.network(
-              img['url'] ?? imageUrl,
+              img['url'],
               width: 125,
               height: 130,
               fit: BoxFit.cover,

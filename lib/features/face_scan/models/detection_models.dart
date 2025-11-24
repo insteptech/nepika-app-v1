@@ -15,11 +15,22 @@ class BoundingBox {
     required this.y2,
   });
 
-  factory BoundingBox.fromJson(Map<String, dynamic> json) {
-    final x1 = (json['x1'] as num?)?.toDouble() ?? 0.0;
-    final y1 = (json['y1'] as num?)?.toDouble() ?? 0.0;
-    final x2 = (json['x2'] as num?)?.toDouble() ?? 0.0;
-    final y2 = (json['y2'] as num?)?.toDouble() ?? 0.0;
+  factory BoundingBox.fromJson(dynamic json) {
+    double x1 = 0.0, y1 = 0.0, x2 = 0.0, y2 = 0.0;
+    
+    if (json is List && json.length >= 4) {
+      // Handle array format: [x1, y1, x2, y2]
+      x1 = (json[0] as num?)?.toDouble() ?? 0.0;
+      y1 = (json[1] as num?)?.toDouble() ?? 0.0;
+      x2 = (json[2] as num?)?.toDouble() ?? 0.0;
+      y2 = (json[3] as num?)?.toDouble() ?? 0.0;
+    } else if (json is Map<String, dynamic>) {
+      // Handle object format: {x1: ..., y1: ..., x2: ..., y2: ...}
+      x1 = (json['x1'] as num?)?.toDouble() ?? 0.0;
+      y1 = (json['y1'] as num?)?.toDouble() ?? 0.0;
+      x2 = (json['x2'] as num?)?.toDouble() ?? 0.0;
+      y2 = (json['y2'] as num?)?.toDouble() ?? 0.0;
+    }
     
     debugPrint('📦 Parsing bbox: x1=$x1, y1=$y1, x2=$x2, y2=$y2');
     
@@ -69,7 +80,7 @@ class Detection {
   factory Detection.fromJson(Map<String, dynamic> json) {
     final className = json['class'] as String? ?? 'unknown';
     final confidence = (json['confidence'] as num?)?.toDouble() ?? 0.0;
-    final bboxData = json['bbox'] as Map<String, dynamic>? ?? {};
+    final bboxData = json['bbox'];
     
     debugPrint('🎯 Parsing detection: class=$className, confidence=$confidence, bbox=$bboxData');
     

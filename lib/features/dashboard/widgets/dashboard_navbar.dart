@@ -67,7 +67,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     //   Navigator.of(context, rootNavigator: true).pushNamed(_navRoutes[index]);
     //   return;
     // }
-
+    debugPrint('🔍 NAVBAR: Tapped index $index, route: ${_navRoutes[index]}');
     widget.onNavBarTap(index, _navRoutes[index]);
   }
 

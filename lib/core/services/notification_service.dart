@@ -32,7 +32,7 @@ class NotificationService {
   bool _isConnected = false;
   
   // Getters for streams
-  Stream<NotificationEntity> get notificationStream => _notificationController.stream;
+  // Stream<NotificationEntity> get notificationStream => _notificationController.stream;
   Stream<DeletedNotificationEntity> get deletedNotificationStream => _deletedNotificationController.stream;
   Stream<int> get unreadCountStream => _unreadCountController.stream;
   Stream<bool> get connectionStatusStream => _connectionStatusController.stream;
@@ -43,57 +43,57 @@ class NotificationService {
   bool get isConnected => _isConnected;
 
   /// Connect to SSE stream
-  Future<void> connect() async {
-    return;
-    if (_isConnected || _httpClient != null) {
-      debugPrint('🔔 NotificationService: Already connected or connecting');
-      return;
-    }
+  // Future<void> connect() async {
+  //   return;
+  //   if (_isConnected || _httpClient != null) {
+  //     debugPrint('🔔 NotificationService: Already connected or connecting');
+  //     return;
+  //   }
 
-    try {
-      final accessToken = await _getAccessToken();
-      if (accessToken == null) {
-        debugPrint('❌ NotificationService: No access token available');
-        return;
-      }
+  //   try {
+  //     final accessToken = await _getAccessToken();
+  //     if (accessToken == null) {
+  //       debugPrint('❌ NotificationService: No access token available');
+  //       return;
+  //     }
 
-      final url = '${Env.baseUrl}${ApiEndpoints.notificationStream}';
-      debugPrint('🔔 NotificationService: Connecting to SSE at $url');
+  //     final url = '${Env.baseUrl}${ApiEndpoints.notificationStream}';
+  //     debugPrint('🔔 NotificationService: Connecting to SSE at $url');
 
-      _httpClient = http.Client();
-      final request = http.Request('GET', Uri.parse(url));
-      request.headers.addAll({
-        'Authorization': 'Bearer $accessToken',
-        'Accept': 'text/event-stream',
-        'Cache-Control': 'no-cache',
-        'Connection': 'keep-alive',
-      });
+  //     _httpClient = http.Client();
+  //     final request = http.Request('GET', Uri.parse(url));
+  //     request.headers.addAll({
+  //       'Authorization': 'Bearer $accessToken',
+  //       'Accept': 'text/event-stream',
+  //       'Cache-Control': 'no-cache',
+  //       'Connection': 'keep-alive',
+  //     });
 
-      final response = await _httpClient!.send(request);
+  //     final response = await _httpClient!.send(request);
       
-      if (response.statusCode == 200) {
-        _sseStream = response.stream
-            .transform(const Utf8Decoder())
-            .transform(const LineSplitter())
-            .where((line) => line.isNotEmpty);
+  //     if (response.statusCode == 200) {
+  //       _sseStream = response.stream
+  //           .transform(const Utf8Decoder())
+  //           .transform(const LineSplitter())
+  //           .where((line) => line.isNotEmpty);
 
-        _sseStream!.listen(
-          _handleSSELine,
-          onError: _handleSSEError,
-          onDone: _handleSSEDone,
-        );
+  //       _sseStream!.listen(
+  //         _handleSSELine,
+  //         onError: _handleSSEError,
+  //         onDone: _handleSSEDone,
+  //       );
 
-        debugPrint('✅ NotificationService: SSE connection established');
-        _handleConnectionEvent();
-      } else {
-        throw HttpException('Failed to connect: ${response.statusCode}');
-      }
+  //       debugPrint('✅ NotificationService: SSE connection established');
+  //       _handleConnectionEvent();
+  //     } else {
+  //       throw HttpException('Failed to connect: ${response.statusCode}');
+  //     }
       
-    } catch (e) {
-      debugPrint('❌ NotificationService: Failed to connect to SSE: $e');
-      _handleConnectionFailure();
-    }
-  }
+  //   } catch (e) {
+  //     debugPrint('❌ NotificationService: Failed to connect to SSE: $e');
+  //     _handleConnectionFailure();
+  //   }
+  // }
 
   /// Disconnect from SSE stream
   Future<void> disconnect() async {
@@ -157,7 +157,7 @@ class NotificationService {
     Timer(const Duration(seconds: 5), () {
       if (!_isConnected) {
         debugPrint('🔄 NotificationService: Attempting to reconnect...');
-        connect();
+        // connect();
       }
     });
   }

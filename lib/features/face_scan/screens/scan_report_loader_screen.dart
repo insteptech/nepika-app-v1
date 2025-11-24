@@ -3,6 +3,7 @@ import 'package:nepika/core/api_base.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
 import '../models/scan_analysis_models.dart';
+import '../models/detection_models.dart';
 import 'scan_result_details_screen.dart';
 
 /// Loader screen that fetches scan report by ID and displays results
@@ -112,8 +113,8 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
       totalDetections: areaDetectionSummary?['total_detections'] ?? 0,
       detections: (areaDetectionSummary?['detections'] as List<dynamic>?)
               ?.map((d) => Detection.fromJson(d as Map<String, dynamic>))
-              .toList() ??
-          [],
+              .toList().cast<Detection>() ??
+          <Detection>[],
       classesFound: (areaDetectionSummary?['classes_found'] as List<dynamic>?)
               ?.map((c) => c as String)
               .toList() ??
@@ -143,7 +144,13 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
       timestamp: report['scan_datetime'] ?? DateTime.now().toIso8601String(),
       processingTimeSeconds: 0.0,
       conditionAnalysis: conditionAnalysis,
-      skinTypeAnalysis: const SkinTypeAnalysis(success: true),
+      skinTypeAnalysis: const SkinTypeAnalysis(
+        prediction: 'Normal',
+        confidence: 0.0,
+        allPredictions: {},
+        adequateLighting: true,
+        success: true,
+      ),
       areaDetectionAnalysis: areaDetectionAnalysis,
       recommendations: recommendations,
       imageUploaded: true,

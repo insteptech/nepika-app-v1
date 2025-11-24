@@ -10,13 +10,15 @@ class CameraManager {
   List<CameraDescription>? _cameras;
   bool _isInitialized = false;
   bool _isInitializing = false;
+  bool _isDisposed = false;
   String? _errorMessage;
   
   // Getters
-  CameraController? get controller => _controller;
+  CameraController? get controller => _isDisposed ? null : _controller;
   List<CameraDescription>? get cameras => _cameras;
-  bool get isInitialized => _isInitialized;
+  bool get isInitialized => _isInitialized && !_isDisposed;
   bool get isInitializing => _isInitializing;
+  bool get isDisposed => _isDisposed;
   String? get errorMessage => _errorMessage;
 
   /// Initialize camera with retry logic and proper error handling
@@ -134,6 +136,8 @@ class CameraManager {
   /// Dispose camera controller
   Future<void> dispose() async {
     debugPrint('Disposing camera manager...');
+    _isDisposed = true;
+    _isInitialized = false;
     await _disposeController();
   }
 

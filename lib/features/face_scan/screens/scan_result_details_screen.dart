@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:nepika/features/dashboard/widgets/dashboard_navbar.dart';
 import 'dart:math' as math;
+import 'package:nepika/features/dashboard/widgets/progress_summary_chart.dart';
 import '../models/scan_analysis_models.dart';
 import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 
-/// Data class for severity information
 class SeverityData {
   final String label;
   final double percentage;
@@ -13,27 +13,31 @@ class SeverityData {
   const SeverityData(this.label, this.percentage, this.color);
 }
 
-/// Detailed scan results screen matching the Figma design exactly
 class ScanResultDetailsScreen extends StatefulWidget {
   final String reportId;
+  final String? condition; // requested initial condition (may be null)
 
   const ScanResultDetailsScreen({
     super.key,
     required this.reportId,
+    this.condition,
   });
 
   @override
-  State<ScanResultDetailsScreen> createState() => _ScanResultDetailsScreenState();
+  State<ScanResultDetailsScreen> createState() =>
+      _ScanResultDetailsScreenState();
 }
 
 class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
   String? selectedCondition;
   late ScrollController _scrollController;
   late ScrollController _horizontalScrollController;
+
+  // Stable maps for sections & chips (created once after data load)
   final Map<String, GlobalKey> _sectionKeys = {};
   final Map<String, GlobalKey> _chipKeys = {};
 
-  // Data fetching state
+  bool _showMarkings = false;
   bool _isLoading = true;
   String? _error;
   List<RecommendationGroup> _recommendations = [];
@@ -43,15 +47,12 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
     super.initState();
     _scrollController = ScrollController();
     _horizontalScrollController = ScrollController();
-
-    // Listen to scroll changes to update header
+    selectedCondition = widget.condition;
     _scrollController.addListener(_onScroll);
 
-    // Fetch report data
     _fetchReportData();
   }
 
-  /// Fetch report data from API
   Future<void> _fetchReportData() async {
     try {
       setState(() {
@@ -61,7 +62,6 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
 
       debugPrint('🔍 Fetching report details for reportId: ${widget.reportId}');
 
-      // Make API request
       final response = await ApiBase().request(
         path: '/training/report/${widget.reportId}',
         method: 'GET',
@@ -71,43 +71,76 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
 
       if (response.statusCode == 200) {
         debugPrint('✅ Raw API response: ${response.data}');
-        
-        // Handle both array and object responses
-        List<dynamic> data;
+
+        List<dynamic> rawData;
         if (response.data is List<dynamic>) {
-          data = response.data as List<dynamic>;
+          rawData = response.data as List<dynamic>;
         } else if (response.data is Map<String, dynamic>) {
           final responseMap = response.data as Map<String, dynamic>;
-          // Check if the object has a recommendations array
           if (responseMap.containsKey('recommendations')) {
-            data = responseMap['recommendations'] as List<dynamic>;
+            rawData = responseMap['recommendations'] as List<dynamic>;
           } else if (responseMap.containsKey('data')) {
-            data = responseMap['data'] as List<dynamic>;
+            rawData = responseMap['data'] as List<dynamic>;
           } else {
-            // If it's an empty object or doesn't contain expected data, use empty array
-            data = [];
+            rawData = [];
           }
         } else {
-          data = [];
+          rawData = [];
         }
-        
-        debugPrint('✅ Received ${data.length} skin issue recommendations');
 
-        // Parse recommendations from API response
-        _recommendations = data
-            .map((item) => RecommendationGroup.fromJson(item as Map<String, dynamic>))
+        // convert / normalize to List<Map<String, dynamic>>
+        final List<Map<String, dynamic>> typedData = rawData.map((item) {
+          if (item is Map<String, dynamic>) {
+            return item;
+          } else if (item is Map) {
+            final Map<String, dynamic> converted = {};
+            item.forEach((key, value) {
+              final String stringKey = key.toString();
+              if (value is List) {
+                converted[stringKey] = value.map((listItem) {
+                  if (listItem is Map && listItem is! Map<String, dynamic>) {
+                    final Map<String, dynamic> convertedItem = {};
+                    listItem.forEach((k, v) {
+                      convertedItem[k.toString()] = v;
+                    });
+                    return convertedItem;
+                  } else if (listItem is Map<String, dynamic>) {
+                    return listItem;
+                  }
+                  return listItem;
+                }).toList();
+              } else {
+                converted[stringKey] = value;
+              }
+            });
+            return converted;
+          }
+          throw Exception('Invalid data format: expected Map but got ${item.runtimeType}');
+        }).toList();
+
+        _recommendations = typedData
+            .map((item) => RecommendationGroup.fromJson(item))
             .toList();
 
-        // Set the primary condition as selected by default
+        debugPrint('✅ Successfully parsed ${_recommendations.length} recommendation groups');
+
         if (_recommendations.isNotEmpty) {
-          selectedCondition = _recommendations.first.skinIssue;
-          debugPrint('📌 Primary condition: $selectedCondition');
-          
-          // Create keys for each section and chip
+          // Create stable keys once here
           for (final group in _recommendations) {
-            _sectionKeys[group.skinIssue] = GlobalKey();
-            _chipKeys[group.skinIssue] = GlobalKey();
+            // If key already exists (unlikely on first load) keep it, otherwise create new
+            _sectionKeys.putIfAbsent(group.skinIssue, () => GlobalKey());
+            _chipKeys.putIfAbsent(group.skinIssue, () => GlobalKey());
           }
+
+          // Decide which condition to select initially
+          final resolved = _resolveInitialCondition(widget.condition, _recommendations);
+          selectedCondition = resolved;
+          debugPrint('📌 Selected initial condition: $selectedCondition');
+
+          // Wait for widgets to build, then auto-scroll to the chosen section & chip
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _scrollToInitialCondition(resolved);
+          });
         } else {
           debugPrint('⚠️ No recommendations found in response');
         }
@@ -116,16 +149,82 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
           _isLoading = false;
         });
       } else if (response.statusCode == 404) {
-        throw Exception('Report not found or does not belong to you');
+        throw Exception('Report not found or does not belong to you (404).');
       } else {
         throw Exception('Failed to load report: ${response.statusCode}');
       }
-    } catch (e) {
+    } catch (e, st) {
       debugPrint('❌ Error fetching report data: $e');
+      debugPrint('$st');
       setState(() {
         _isLoading = false;
         _error = e.toString();
       });
+    }
+  }
+
+  /// Normalize and find the best match for initial condition. If not found, returns first group's skinIssue.
+  String _resolveInitialCondition(String? requested, List<RecommendationGroup> groups) {
+    if (groups.isEmpty) return requested ?? '';
+
+    if (requested == null || requested.trim().isEmpty) {
+      return groups.first.skinIssue;
+    }
+
+    final normalizedRequested = _normalizeKey(requested);
+
+    // Try exact match first, then contains match, else fallback to first
+    for (final g in groups) {
+      if (_normalizeKey(g.skinIssue) == normalizedRequested) {
+        return g.skinIssue;
+      }
+    }
+    for (final g in groups) {
+      if (_normalizeKey(g.skinIssue).contains(normalizedRequested) ||
+          normalizedRequested.contains(_normalizeKey(g.skinIssue))) {
+        return g.skinIssue;
+      }
+    }
+
+    return groups.first.skinIssue;
+  }
+
+  String _normalizeKey(String input) {
+    return input.replaceAll('-', ' ').toLowerCase().trim();
+  }
+
+  /// Auto-scroll to the chosen section and also ensure the chip is visible.
+  void _scrollToInitialCondition(String skinIssue) {
+    if (!mounted) return;
+
+    // Scroll section into view
+    final sectionKey = _sectionKeys[skinIssue];
+    if (sectionKey?.currentContext != null) {
+      try {
+        Scrollable.ensureVisible(
+          sectionKey!.currentContext!,
+          duration: const Duration(milliseconds: 550),
+          curve: Curves.easeInOut,
+          alignment: 0, // try to place section a little below the sticky header
+        );
+      } catch (e) {
+        debugPrint('Error ensuring visible for section: $e');
+      }
+    }
+
+    // Also ensure the chip is visible in the horizontal list
+    final chipKey = _chipKeys[skinIssue];
+    if (chipKey?.currentContext != null) {
+      try {
+        Scrollable.ensureVisible(
+          chipKey!.currentContext!,
+          duration: const Duration(milliseconds: 450),
+          curve: Curves.easeInOut,
+          alignment: 0.5,
+        );
+      } catch (e) {
+        debugPrint('Error ensuring visible for chip: $e');
+      }
     }
   }
 
@@ -138,108 +237,61 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
   }
 
   void _onScroll() {
-    if (!mounted) return;
+    if (!mounted || _recommendations.isEmpty) return;
 
-    // Find which section is currently most visible
     String? newSelectedCondition;
-    double maxVisibleArea = 0;
+    double maxVisibleRatio = 0.0;
+
+    final viewportHeight = MediaQuery.of(context).size.height;
+    final headerOffset = 200.0; // approximate header + chips
 
     for (final group in _recommendations) {
       final key = _sectionKeys[group.skinIssue];
-      if (key?.currentContext != null) {
-        final RenderBox? renderBox = key!.currentContext!.findRenderObject() as RenderBox?;
-        if (renderBox != null) {
-          final position = renderBox.localToGlobal(Offset.zero);
-          final size = renderBox.size;
+      final ctx = key?.currentContext;
+      if (ctx == null) continue;
 
-          // Calculate visible area of this section
-          final viewportHeight = MediaQuery.of(context).size.height;
-          final sectionTop = position.dy;
-          final sectionBottom = position.dy + size.height;
+      final renderBox = ctx.findRenderObject() as RenderBox?;
+      if (renderBox == null) continue;
 
-          // Calculate intersection with viewport (considering header height)
-          final headerHeight = 150.0; // Approximate header height
-          final visibleTop = math.max(sectionTop, headerHeight);
-          final visibleBottom = math.min(sectionBottom, viewportHeight);
+      final position = renderBox.localToGlobal(Offset.zero);
+      final size = renderBox.size;
 
-          if (visibleBottom > visibleTop) {
-            final visibleArea = visibleBottom - visibleTop;
-            if (visibleArea > maxVisibleArea) {
-              maxVisibleArea = visibleArea;
-              newSelectedCondition = group.skinIssue;
-            }
-          }
+      final sectionTop = position.dy;
+      final sectionBottom = position.dy + size.height;
+
+      final visibleTop = math.max(sectionTop, headerOffset);
+      final visibleBottom = math.min(sectionBottom, viewportHeight);
+
+      if (visibleBottom > visibleTop) {
+        final visibleHeight = visibleBottom - visibleTop;
+        final visibleRatio = visibleHeight / size.height;
+
+        if (visibleRatio > maxVisibleRatio ||
+            (visibleRatio == maxVisibleRatio && newSelectedCondition == null)) {
+          maxVisibleRatio = visibleRatio;
+          newSelectedCondition = group.skinIssue;
         }
       }
     }
 
-    // Update selected condition if it changed
     if (newSelectedCondition != null && newSelectedCondition != selectedCondition) {
       setState(() {
         selectedCondition = newSelectedCondition;
       });
 
-      // Auto-scroll horizontally to make the selected chip visible
-      _autoScrollToChip(newSelectedCondition);
-    }
-  }
-
-
-  /// Auto-scroll horizontally to make the selected chip visible
-  void _autoScrollToChip(String skinIssue) {
-    // Use a slight delay to ensure the widget tree is built
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final chipKey = _chipKeys[skinIssue];
-      if (chipKey?.currentContext != null && _horizontalScrollController.hasClients) {
+      // Ensure chip visible when user scrolls content
+      final chipKey = _chipKeys[newSelectedCondition];
+      if (chipKey?.currentContext != null) {
         try {
-          final RenderBox? chipRenderBox = chipKey!.currentContext!.findRenderObject() as RenderBox?;
-          if (chipRenderBox != null) {
-            // Get the horizontal ListView's RenderBox
-            final RenderBox? scrollViewRenderBox = _horizontalScrollController.position.context.storageContext.findRenderObject() as RenderBox?;
-            
-            if (scrollViewRenderBox != null) {
-              // Calculate chip position relative to the scroll view
-              final chipPosition = chipRenderBox.localToGlobal(Offset.zero);
-              final scrollViewPosition = scrollViewRenderBox.localToGlobal(Offset.zero);
-              
-              final chipSize = chipRenderBox.size;
-              final screenWidth = MediaQuery.of(context).size.width;
-              
-              // Calculate relative position within the scroll view
-              final chipRelativeLeft = chipPosition.dx - scrollViewPosition.dx;
-              final chipRelativeRight = chipRelativeLeft + chipSize.width;
-              
-              // Calculate visible area of the scroll view (considering padding)
-              final visibleLeft = 0.0;
-              final visibleRight = screenWidth - 40.0; // 40 is total horizontal padding
-              
-              // Check if chip is outside the visible area
-              double? targetScrollOffset;
-              
-              if (chipRelativeLeft < visibleLeft) {
-                // Chip is hidden on the left side
-                targetScrollOffset = _horizontalScrollController.offset + chipRelativeLeft - 20;
-              } else if (chipRelativeRight > visibleRight) {
-                // Chip is hidden on the right side
-                targetScrollOffset = _horizontalScrollController.offset + chipRelativeRight - visibleRight + 20;
-              }
-              
-              // Animate to target position if needed
-              if (targetScrollOffset != null) {
-                _horizontalScrollController.animateTo(
-                  math.max(0, targetScrollOffset), // Ensure not negative
-                  duration: const Duration(milliseconds: 300),
-                  curve: Curves.easeInOut,
-                );
-              }
-            }
-          }
-        } catch (e) {
-          // Ignore errors during auto-scroll (widget might not be ready)
-          debugPrint('Auto-scroll error: $e');
-        }
+          Scrollable.ensureVisible(
+            chipKey!.currentContext!,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: 0.5,
+          );
+        } catch (_) {}
       }
-    });
+    }
   }
 
   @override
@@ -247,10 +299,9 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
 
-    // Show loading state
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: isDark ? Colors.black : const Color(0xFFF0F9FF),
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: SafeArea(
           child: Column(
             children: [
@@ -273,10 +324,9 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
       );
     }
 
-    // Show error state
     if (_error != null) {
       return Scaffold(
-        backgroundColor: isDark ? Colors.black : const Color(0xFFF0F9FF),
+        backgroundColor: theme.scaffoldBackgroundColor,
         body: SafeArea(
           child: Column(
             children: [
@@ -301,7 +351,7 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
                         ),
                         const SizedBox(height: 8),
                         Text(
-                          _error!,
+                          _error ?? 'Unknown error',
                           textAlign: TextAlign.center,
                           style: TextStyle(
                             fontFamily: 'HelveticaNowDisplay',
@@ -330,30 +380,21 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
       );
     }
 
-    // Show content
     return Scaffold(
-      backgroundColor: isDark ? Colors.black : const Color(0xFFF0F9FF), // Light blue background
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
         child: Column(
           children: [
-            // Status bar + Back navigation
             _buildHeader(context, isDark),
-
-            // Sticky condition filter chips
             _buildConditionFilters(isDark),
-
-            // Scrollable content
             Expanded(
               child: SingleChildScrollView(
                 controller: _scrollController,
                 child: Column(
                   children: [
                     const SizedBox(height: 30),
-
-                    // All recommendations content
                     _buildAllRecommendationsContent(isDark),
-
-                    const SizedBox(height: 100), // Space for dashboard navigation
+                    const SizedBox(height: 100),
                   ],
                 ),
               ),
@@ -361,15 +402,6 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
           ],
         ),
       ),
-      // bottomNavigationBar: DashboardNavBar(
-      //   selectedIndex: 0, // Home tab
-      //   onNavBarTap: (index, route) {
-      //     // Pop back to face scan result, then navigate to dashboard route
-      //     Navigator.of(context).pop();
-      //     // Use root navigator to navigate to dashboard
-      //     Navigator.of(context, rootNavigator: true).pushReplacementNamed(route);
-      //   },
-      // ),
     );
   }
 
@@ -378,17 +410,14 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
       height: 47,
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           GestureDetector(
             onTap: () => Navigator.of(context).pop(),
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Icon(
-                  Icons.arrow_back_ios,
-                  size: 20,
-                  color: isDark ? Colors.white : const Color(0xFF07223B),
-                ),
+                Icon(Icons.arrow_back_ios, size: 20, color: isDark ? Colors.white : const Color(0xFF07223B)),
                 const SizedBox(width: 10),
                 Text(
                   'Back',
@@ -400,6 +429,19 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
                   ),
                 ),
               ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.faceScanInfo);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: (isDark ? Colors.white : const Color(0xFF07223B)).withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.info_outline, size: 20, color: isDark ? Colors.white : const Color(0xFF07223B)),
             ),
           ),
         ],
@@ -418,8 +460,6 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
           physics: const BouncingScrollPhysics(),
           children: _recommendations.map((group) {
             final isSelected = selectedCondition == group.skinIssue;
-
-            // Map skin issues to display names exactly as shown in Figma
             final displayName = _getDisplayNameForSkinIssue(group.skinIssue);
 
             return Padding(
@@ -427,21 +467,29 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
               child: GestureDetector(
                 key: _chipKeys[group.skinIssue],
                 onTap: () {
+                  setState(() {
+                    selectedCondition = group.skinIssue;
+                  });
+                  // scroll the main content to that section
                   _scrollToSection(group.skinIssue);
+                  // ensure this chip is visible horizontally
+                  if (_chipKeys[group.skinIssue]?.currentContext != null) {
+                    try {
+                      Scrollable.ensureVisible(
+                        _chipKeys[group.skinIssue]!.currentContext!,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        alignment: 0.5,
+                      );
+                    } catch (_) {}
+                  }
                 },
                 child: Container(
-                  constraints: const BoxConstraints(
-                    maxHeight: 40,
-                  ),
+                  constraints: const BoxConstraints(maxHeight: 40),
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: BoxDecoration(
-                    color: isSelected
-                        ? const Color(0xFF3898ED)
-                        : Colors.transparent,
-                    border: Border.all(
-                      color: const Color(0xFF3898ED),
-                      width: 1,
-                    ),
+                    color: isSelected ? const Color(0xFF3898ED) : Colors.transparent,
+                    border: Border.all(color: const Color(0xFF3898ED), width: 1),
                     borderRadius: BorderRadius.circular(5),
                   ),
                   child: Center(
@@ -451,11 +499,8 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
                         fontFamily: 'HelveticaNowDisplay',
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
-                        color: isSelected
-                            ? Colors.white
-                            : const Color(0xFF3898ED),
+                        color: isSelected ? Colors.white : const Color(0xFF3898ED),
                       ),
-                      textAlign: TextAlign.center,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
@@ -469,9 +514,10 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
     );
   }
 
-  /// Map skin issues from API to display names matching Figma design
   String _getDisplayNameForSkinIssue(String skinIssue) {
-    switch (skinIssue.toLowerCase()) {
+    final normalized = skinIssue.replaceAll('-', ' ').toLowerCase().trim();
+
+    switch (normalized) {
       case 'wrinkles':
         return 'Anti-aging + Fine Lines';
       case 'skin redness':
@@ -490,36 +536,41 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
       case 'oily skin':
         return 'Oily Skin';
       case 'enlarged pores':
+      case 'englarged pores':
         return 'Enlarged Pores';
       case 'blackheads':
         return 'Blackheads';
       case 'whiteheads':
         return 'Whiteheads';
+      case 'eyebags':
+      case 'eye bags':
+        return 'Eye Bags';
       default:
-        // Fallback to capitalizing the skin issue name
-        return skinIssue.split(' ')
-            .map((word) => word.isNotEmpty 
-                ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}'
-                : word)
+        return skinIssue
+            .replaceAll('-', ' ')
+            .split(' ')
+            .map((word) => word.isNotEmpty ? '${word[0].toUpperCase()}${word.substring(1).toLowerCase()}' : word)
             .join(' ');
     }
   }
 
-  /// Scroll to a specific section
   void _scrollToSection(String skinIssue) {
     final key = _sectionKeys[skinIssue];
     if (key?.currentContext != null) {
-      Scrollable.ensureVisible(
-        key!.currentContext!,
-        duration: const Duration(milliseconds: 800),
-        curve: Curves.easeInOut,
-      );
+      try {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 600),
+          curve: Curves.easeInOut,
+          alignment: 0,
+        );
+      } catch (e) {
+        debugPrint('Error scrolling to section: $e');
+      }
     }
   }
 
-  /// Build all recommendations content in a single scrollable view
   Widget _buildAllRecommendationsContent(bool isDark) {
-    // Show empty state if no recommendations
     if (_recommendations.isEmpty) {
       return Container(
         margin: const EdgeInsets.symmetric(horizontal: 20),
@@ -529,11 +580,7 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  Icons.analytics_outlined,
-                  size: 64,
-                  color: isDark ? Colors.white54 : Colors.grey[400],
-                ),
+                Icon(Icons.analytics_outlined, size: 64, color: isDark ? Colors.white54 : Colors.grey[400]),
                 const SizedBox(height: 16),
                 Text(
                   'No Analysis Available',
@@ -560,7 +607,7 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
         ),
       );
     }
-    
+
     return Container(
       margin: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
@@ -571,7 +618,6 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Section title and description
                 Text(
                   _getDisplayNameForSkinIssue(group.skinIssue),
                   style: TextStyle(
@@ -584,9 +630,7 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
                 ),
-                
                 const SizedBox(height: 5),
-                
                 Text(
                   _getDescriptionForCondition(group.skinIssue),
                   style: TextStyle(
@@ -599,14 +643,7 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
                   overflow: TextOverflow.ellipsis,
                   softWrap: true,
                 ),
-                
-                
-                // Progress Summary Chart
-                // _buildProgressSummaryChart(group, isDark),
-                
                 const SizedBox(height: 30),
-                
-                // Suggested Solutions section
                 Text(
                   'Suggested Solutions',
                   style: TextStyle(
@@ -615,15 +652,51 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
                     fontWeight: FontWeight.w400,
                     color: isDark ? Colors.white : const Color(0xFF07223B),
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: true,
                 ),
-                
                 const SizedBox(height: 10),
-                
-                // Product recommendation cards
                 _buildProductRecommendations(group.recommendations, isDark),
+                const SizedBox(height: 20),
+                if (group.progressSummary != null)
+                  Row(
+                    key: ValueKey('${group.skinIssue}_progress_summary_header'),
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text("Progress Summary", style: Theme.of(context).textTheme.headlineMedium),
+                      TextButton(
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                          minimumSize: const Size(50, 30),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          alignment: Alignment.center,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _showMarkings = !_showMarkings;
+                          });
+                        },
+                        child: Row(
+                          children: [
+                            Text("Proints", style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.primary)),
+                            const SizedBox(width: 4),
+                            Icon(_showMarkings ? Icons.visibility : Icons.visibility_off, size: 15, color: Theme.of(context).colorScheme.primary),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                const SizedBox(height: 10),
+                if (group.progressSummary != null)
+                  GestureDetector(
+                    onTap: () {
+                      _handleProgrssSummaryChartTap(group.conditionSlug ?? group.skinIssue);
+                    },
+                    child: ProgressSummaryChart(
+                      key: ValueKey('${group.skinIssue}_progress_summary_${_showMarkings ? "with_points" : "no_points"}'),
+                      progressSummary: group.progressSummary!,
+                      showPointsAndLabels: _showMarkings,
+                    ),
+                  ),
+                const SizedBox(height: 50),
               ],
             ),
           );
@@ -632,389 +705,89 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
     );
   }
 
-
   Widget _buildProductRecommendations(List<ProductRecommendation> recommendations, bool isDark) {
-    // Group recommendations in pairs for the 2-column layout
     final List<Widget> rows = [];
-    
+
     for (int i = 0; i < recommendations.length; i += 2) {
       final List<Widget> rowChildren = [];
-      
-      // First card
-      rowChildren.add(
-        Expanded(
-          child: _buildProductCard(recommendations[i], isDark),
-        ),
-      );
-      
-      // Second card (if exists)
+
+      rowChildren.add(Expanded(child: _buildProductCard(recommendations[i], isDark)));
+
       if (i + 1 < recommendations.length) {
         rowChildren.add(const SizedBox(width: 15));
-        rowChildren.add(
-          Expanded(
-            child: _buildProductCard(recommendations[i + 1], isDark),
-          ),
-        );
+        rowChildren.add(Expanded(child: _buildProductCard(recommendations[i + 1], isDark)));
       }
-      
-      rows.add(
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: rowChildren,
-        ),
-      );
-      
-      if (i + 2 < recommendations.length) {
-        rows.add(const SizedBox(height: 15));
-      }
+
+      rows.add(Row(crossAxisAlignment: CrossAxisAlignment.start, children: rowChildren));
+
+      if (i + 2 < recommendations.length) rows.add(const SizedBox(height: 15));
     }
-    
+
     return Column(children: rows);
   }
 
   Widget _buildProductCard(ProductRecommendation recommendation, bool isDark) {
     final isClinicallProven = recommendation.isClinicallyProven;
-    
+
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
-        color: isDark 
-            ? Colors.white.withValues(alpha: 0.1) 
-            : Colors.white.withValues(alpha: 0.6),
-        border: Border.all(
-          color: const Color(0xFF3898ED),
-          width: 1,
-        ),
+        color: Theme.of(context).colorScheme.primary,
+        border: Border.all(color: Theme.of(context).colorScheme.primary, width: 1),
         borderRadius: BorderRadius.circular(10),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Header with info icon and product name
-          Row(
-            children: [
-              Container(
-                width: 13,
-                height: 13,
-                decoration: const BoxDecoration(
-                  color: Color(0xFF3898ED),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(
-                  Icons.info,
-                  size: 8,
-                  color: Colors.white,
-                ),
-              ),
-              const SizedBox(width: 5),
-              Expanded(
-                child: Text(
-                  recommendation.product,
-                  style: TextStyle(
-                    fontFamily: 'HelveticaNowDisplay',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: isDark ? Colors.white : const Color(0xFF07223B),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 5),
-          
-          // Effectiveness percentage
-          Text(
-            '${recommendation.effectivenessPercentage}%',
-            style: TextStyle(
-              fontFamily: 'HelveticaNowDisplay',
-              fontSize: 18,
-              fontWeight: FontWeight.w700,
-              color: isDark ? Colors.white : const Color(0xFF07223B),
-            ),
-          ),
-          
-          const SizedBox(height: 5),
-          
-          // Effectiveness badge
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-            decoration: BoxDecoration(
-              color: Colors.transparent,
-              borderRadius: BorderRadius.circular(3),
-            ),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (!isClinicallProven) ...[
-                  Container(
-                    width: 15,
-                    height: 15,
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFDFAE3E),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.info,
-                      size: 8,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 5),
-                ],
-                Flexible(
-                  child: Text(
-                    recommendation.effectivenessLevel,
-                    style: TextStyle(
-                      fontFamily: 'HelveticaNowDisplay',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: isClinicallProven 
-                          ? const Color(0xFF009C44) 
-                          : const Color(0xFFDFAE3E),
-                    ),
-                    overflow: TextOverflow.ellipsis,
-                    maxLines: 2,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          
-          const SizedBox(height: 5),
-          
-          // Description
-          Text(
-            recommendation.description,
-            style: TextStyle(
-              fontFamily: 'HelveticaNowDisplay',
-              fontSize: 14,
-              fontWeight: FontWeight.w400,
-              color: isDark ? Colors.white : const Color(0xFF07223B),
-            ),
-            maxLines: 3,
-            overflow: TextOverflow.ellipsis,
-            softWrap: true,
-          ),
-        ],
-      ),
-    );
-  }
-
-
-  /// Build progress summary chart for each recommendation
-  Widget _buildProgressSummaryChart(RecommendationGroup group, bool isDark) {
-    // Get severity and confidence data from the API
-    final severity = _getSeverityForCondition(group.skinIssue);
-    final improvementPotential = _getImprovementPotential(group.recommendations);
-    final timelineWeeks = _getTimelineForCondition(group.skinIssue);
-    
-    return Container(
-      padding: const EdgeInsets.all(15),
-      decoration: BoxDecoration(
-        color: isDark 
-            ? Colors.white.withValues(alpha: 0.05)
-            : Colors.white.withValues(alpha: 0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isDark 
-              ? Colors.white.withValues(alpha: 0.1)
-              : Colors.grey.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Chart title
-          Text(
-            'Progress Summary',
-            style: TextStyle(
-              fontFamily: 'HelveticaNowDisplay',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: isDark ? Colors.white : const Color(0xFF07223B),
-            ),
-            maxLines: 1,
-            overflow: TextOverflow.ellipsis,
-            softWrap: true,
-          ),
-          
-          const SizedBox(height: 15),
-          
-          // Progress metrics
-          Row(
-            children: [
-              // Severity indicator
-              Expanded(
-                child: _buildProgressMetric(
-                  'Current Severity',
-                  severity.label,
-                  severity.percentage,
-                  severity.color,
-                  isDark,
-                ),
-              ),
-              
-              const SizedBox(width: 15),
-              
-              // Improvement potential
-              Expanded(
-                child: _buildProgressMetric(
-                  'Improvement Potential',
-                  '$improvementPotential%',
-                  improvementPotential / 100,
-                  const Color(0xFF4CAF50),
-                  isDark,
-                ),
-              ),
-            ],
-          ),
-          
-          const SizedBox(height: 15),
-          
-          // Timeline
-          Row(
-            children: [
-              Icon(
-                Icons.schedule,
-                size: 16,
-                color: isDark ? Colors.white70 : const Color(0xFF7F7F7F),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Expected improvement timeline: $timelineWeeks weeks',
-                  style: TextStyle(
-                    fontFamily: 'HelveticaNowDisplay',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: isDark ? Colors.white70 : const Color(0xFF7F7F7F),
-                  ),
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  softWrap: true,
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  /// Build individual progress metric widget
-  Widget _buildProgressMetric(String label, String value, double percentage, Color color, bool isDark) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: TextStyle(
-            fontFamily: 'HelveticaNowDisplay',
-            fontSize: 12,
-            fontWeight: FontWeight.w400,
-            color: isDark ? Colors.white70 : const Color(0xFF7F7F7F),
-          ),
-          maxLines: 2,
-          overflow: TextOverflow.ellipsis,
-          softWrap: true,
-        ),
-        
-        const SizedBox(height: 8),
-        
-        // Progress bar
+      child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        Row(children: [
+          Container(width: 13, height: 13, decoration: const BoxDecoration(color: Color.fromARGB(255, 1, 53, 98), shape: BoxShape.circle), child: const Icon(Icons.info, size: 10, color: Colors.white)),
+          const SizedBox(width: 5),
+          Expanded(child: Text(recommendation.product, style: const TextStyle(fontFamily: 'HelveticaNowDisplay', fontSize: 14, fontWeight: FontWeight.w400, color: Colors.white))),
+        ]),
+        const SizedBox(height: 5),
+        Text('${recommendation.effectivenessPercentage}%', style: const TextStyle(fontFamily: 'HelveticaNowDisplay', fontSize: 18, fontWeight: FontWeight.w700, color: Colors.white)),
+        const SizedBox(height: 5),
         Container(
-          height: 6,
-          decoration: BoxDecoration(
-            color: isDark 
-                ? Colors.white.withValues(alpha: 0.1)
-                : Colors.grey.withValues(alpha: 0.2),
-            borderRadius: BorderRadius.circular(3),
-          ),
-          child: FractionallySizedBox(
-            alignment: Alignment.centerLeft,
-            widthFactor: percentage,
-            child: Container(
-              decoration: BoxDecoration(
-                color: color,
-                borderRadius: BorderRadius.circular(3),
+          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+          decoration: BoxDecoration(color: Colors.transparent, borderRadius: BorderRadius.circular(3)),
+          child: Row(mainAxisSize: MainAxisSize.min, children: [
+            if (!isClinicallProven) ...[
+              Container(width: 15, height: 15, decoration: const BoxDecoration(color: Color.fromARGB(255, 255, 210, 106), shape: BoxShape.circle), child: const Icon(Icons.info, size: 8, color: Colors.white)),
+              const SizedBox(width: 5),
+            ],
+            Flexible(
+              child: Text(
+                recommendation.effectivenessLevel,
+                style: TextStyle(
+                  fontFamily: 'HelveticaNowDisplay',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                  color: isClinicallProven ? const Color.fromARGB(255, 99, 255, 167) : const Color.fromARGB(255, 255, 222, 144),
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
               ),
             ),
-          ),
+          ]),
         ),
-        
-        const SizedBox(height: 6),
-        
+        const SizedBox(height: 5),
         Text(
-          value,
-          style: TextStyle(
-            fontFamily: 'HelveticaNowDisplay',
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-          maxLines: 1,
+          recommendation.description,
+          style: const TextStyle(fontFamily: 'HelveticaNowDisplay', fontSize: 13, fontWeight: FontWeight.w400, color: Colors.white),
+          maxLines: 3,
           overflow: TextOverflow.ellipsis,
           softWrap: true,
         ),
-      ],
+      ]),
     );
   }
 
-  /// Get severity data for a specific condition
-  SeverityData _getSeverityForCondition(String condition) {
-    // This would typically come from the API, but we'll use mock data for now
-    switch (condition.toLowerCase()) {
-      case 'wrinkles':
-        return SeverityData('Moderate', 0.65, const Color(0xFFFF9800));
-      case 'skin redness':
-        return SeverityData('Mild', 0.35, const Color(0xFF4CAF50));
-      case 'acne':
-        return SeverityData('Severe', 0.85, const Color(0xFFF44336));
-      case 'dark spots':
-        return SeverityData('Moderate', 0.55, const Color(0xFFFF9800));
-      case 'dry skin':
-      case 'dryness':
-        return SeverityData('Mild', 0.40, const Color(0xFF4CAF50));
-      default:
-        return SeverityData('Moderate', 0.50, const Color(0xFFFF9800));
-    }
-  }
-
-  /// Get improvement potential based on recommendations
-  int _getImprovementPotential(List<ProductRecommendation> recommendations) {
-    // Calculate based on the effectiveness of recommendations
-    if (recommendations.isEmpty) return 50;
-    
-    final avgEffectiveness = recommendations
-        .map((r) => r.effectivenessPercentage)
-        .reduce((a, b) => a + b) / recommendations.length;
-    
-    return (avgEffectiveness * 0.8).round(); // 80% of product effectiveness as improvement potential
-  }
-
-  /// Get expected timeline for condition improvement
-  int _getTimelineForCondition(String condition) {
-    switch (condition.toLowerCase()) {
-      case 'wrinkles':
-        return 12; // Anti-aging takes longer
-      case 'skin redness':
-        return 4; // Redness can improve quickly
-      case 'acne':
-        return 8; // Moderate timeline for acne
-      case 'dark spots':
-        return 16; // Hyperpigmentation takes time
-      case 'dry skin':
-      case 'dryness':
-        return 2; // Hydration improves quickly
-      default:
-        return 8; // Default moderate timeline
-    }
+  void _handleProgrssSummaryChartTap(String conditionName) {
+    Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.conditionDetailsPage, arguments: {'conditionInfo': conditionName});
   }
 
   String _getDescriptionForCondition(String condition) {
-    switch (condition.toLowerCase()) {
+    final normalized = condition.replaceAll('-', ' ').toLowerCase().trim();
+
+    switch (normalized) {
       case 'wrinkles':
         return 'Fine lines and wrinkles are caused by aging, sun exposure, and repeated facial expressions. Anti-aging ingredients help stimulate collagen production and smooth the skin surface.';
       case 'skin redness':
@@ -1022,10 +795,23 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
       case 'acne':
         return 'Acne occurs when pores become clogged with oil and dead skin cells. Targeted treatments help unclog pores and prevent future breakouts.';
       case 'dark spots':
+      case 'hyperpigmentation':
         return 'Dark spots and hyperpigmentation are caused by sun damage, acne scarring, or hormonal changes. Brightening ingredients help even out skin tone.';
       case 'dryness':
       case 'dry skin':
         return 'Dehydration causes skin to feel dry, tight, or rough. Moisturizing ingredients increase hydration and support the skin barrier.';
+      case 'oily skin':
+        return 'Excess oil production can lead to shine and clogged pores. Balancing treatments help regulate sebum and maintain a healthy complexion.';
+      case 'blackheads':
+        return 'Blackheads form when pores become clogged with oil and dead skin cells that oxidize. Exfoliating treatments help clear pores.';
+      case 'whiteheads':
+        return 'Whiteheads are closed pores filled with oil and dead skin cells. Gentle exfoliation and pore-clearing treatments can help.';
+      case 'enlarged pores':
+      case 'englarged pores':
+        return 'Enlarged pores can be caused by genetics, aging, or excess oil production. Pore-minimizing treatments help refine skin texture.';
+      case 'eyebags':
+      case 'eye bags':
+        return 'Eye bags can be caused by aging, lack of sleep, or fluid retention. Targeted eye treatments help reduce puffiness and dark circles.';
       default:
         return 'This skin condition requires targeted care with appropriate skincare ingredients to improve its appearance and health.';
     }

@@ -31,6 +31,9 @@ import '../../features/reminders/bloc/reminder_bloc.dart';
 // Local Notifications
 import '../services/local_notification_service.dart';
 
+// Purchase Verification
+import '../services/purchase_verification_service.dart';
+
 // Community
 import '../../data/community/datasources/community_local_datasource.dart';
 import '../../data/community/repositories/community_repository_impl.dart';
@@ -68,6 +71,14 @@ import '../../domain/payments/usecases/get_subscription_details.dart';
 import '../../domain/payments/usecases/cancel_subscription.dart';
 import '../../domain/payments/usecases/reactivate_subscription.dart';
 import '../../features/payments/bloc/payment_bloc.dart';
+
+// Delete Account
+import '../../data/auth/datasources/delete_account_remote_data_source.dart';
+import '../../data/auth/repositories/delete_account_repository_impl.dart';
+import '../../domain/auth/repositories/delete_account_repository.dart';
+import '../../domain/auth/usecases/get_delete_reasons_usecase.dart';
+import '../../domain/auth/usecases/delete_account_usecase.dart';
+import '../../features/settings/bloc/delete_account_bloc.dart';
 
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
@@ -166,6 +177,11 @@ class ServiceLocator {
     // Local Notifications Service (Singleton)
     _registerLazySingleton<LocalNotificationService>(
       LocalNotificationService.instance,
+    );
+
+    // Purchase Verification Service (Singleton)
+    _registerLazySingleton<PurchaseVerificationService>(
+      PurchaseVerificationService(),
     );
 
     // Reminders - Data sources
@@ -327,6 +343,32 @@ class ServiceLocator {
         getSubscriptionDetails: get<GetSubscriptionDetails>(),
         cancelSubscription: get<CancelSubscription>(),
         reactivateSubscription: get<ReactivateSubscription>(),
+      ),
+    );
+
+    // Delete Account - Data sources
+    _registerLazySingleton<DeleteAccountRemoteDataSource>(
+      DeleteAccountRemoteDataSourceImpl(get<ApiBase>()),
+    );
+
+    // Delete Account - Repository
+    _registerLazySingleton<DeleteAccountRepository>(
+      DeleteAccountRepositoryImpl(get<DeleteAccountRemoteDataSource>()),
+    );
+
+    // Delete Account - Use cases
+    _registerLazySingleton<GetDeleteReasonsUseCase>(
+      GetDeleteReasonsUseCase(get<DeleteAccountRepository>()),
+    );
+    _registerLazySingleton<DeleteAccountUseCase>(
+      DeleteAccountUseCase(get<DeleteAccountRepository>()),
+    );
+
+    // Delete Account - Bloc (Factory)
+    _registerFactory<DeleteAccountBloc>(
+      () => DeleteAccountBloc(
+        getDeleteReasonsUseCase: get<GetDeleteReasonsUseCase>(),
+        deleteAccountUseCase: get<DeleteAccountUseCase>(),
       ),
     );
     

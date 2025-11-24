@@ -63,10 +63,7 @@ class _SplashLogoAnimationState extends State<SplashLogoAnimation>
               child: Image.asset(
                 AppAssets.appLogoStroke,
                 fit: BoxFit.contain, // keeps aspect ratio
-                width: 150,
                 height: 150,
-                cacheWidth: 150,
-                cacheHeight: 150,
                 color: ThemeHelper.isDarkMode(context)
                     ? Theme.of(context).colorScheme.primary
                     : Colors.white,

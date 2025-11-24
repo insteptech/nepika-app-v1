@@ -8,7 +8,7 @@ import 'package:nepika/core/network/secure_api_client.dart';
 /// Handles API communication for face scan analysis
 class FaceScanApiHandler {
   // API endpoints
-  static const String _apiEndpoint = '/training/face-analyze-optimized';
+  static const String _apiEndpoint = '/face-scan/analyze';
 
   /// Initialize API client (no longer needed as we use SecureApiClient)
   void initialize() {

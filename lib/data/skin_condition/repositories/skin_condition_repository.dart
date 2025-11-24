@@ -22,6 +22,7 @@ class SkinConditionRepositoryImpl implements SkinConditionRepository {
         conditionSlug: response.data.conditionSlug,
         formattedConditionName: response.data.formattedConditionName,
         currentPercentage: response.data.currentPercentage,
+        skinScore: response.data.skinScore,
         lastUpdated: response.data.lastUpdated,
         progressSummary: response.data.progressSummary.toJson(),
       );

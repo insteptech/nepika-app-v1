@@ -19,13 +19,34 @@ class BoundingBoxPainter extends CustomPainter {
 
   @override
   void paint(Canvas canvas, Size size) {
-    // Calculate scale factors to map image coordinates to widget coordinates
-    final scaleX = size.width / imageSize.width;
-    final scaleY = size.height / imageSize.height;
+    // Calculate the actual image bounds within the widget when using BoxFit.contain
+    final imageAspectRatio = imageSize.width / imageSize.height;
+    final widgetAspectRatio = size.width / size.height;
     
-    debugPrint('🎯 BoundingBoxPainter: Canvas size: ${size.width} x ${size.height}');
-    debugPrint('🎯 BoundingBoxPainter: Image size: ${imageSize.width} x ${imageSize.height}');
-    debugPrint('🎯 BoundingBoxPainter: Scale factors: scaleX=$scaleX, scaleY=$scaleY');
+    double actualImageWidth, actualImageHeight;
+    double offsetX = 0, offsetY = 0;
+    
+    if (imageAspectRatio > widgetAspectRatio) {
+      // Image is wider, fit by width
+      actualImageWidth = size.width;
+      actualImageHeight = size.width / imageAspectRatio;
+      offsetY = (size.height - actualImageHeight) / 2;
+    } else {
+      // Image is taller, fit by height
+      actualImageHeight = size.height;
+      actualImageWidth = size.height * imageAspectRatio;
+      offsetX = (size.width - actualImageWidth) / 2;
+    }
+    
+    // Calculate scale factors based on actual displayed image size
+    final scaleX = actualImageWidth / imageSize.width;
+    final scaleY = actualImageHeight / imageSize.height;
+    
+    // debugPrint('🎯 BoundingBoxPainter: Canvas size: ${size.width} x ${size.height}');
+    // debugPrint('🎯 BoundingBoxPainter: Image size: ${imageSize.width} x ${imageSize.height}');
+    // debugPrint('🎯 BoundingBoxPainter: Actual image size: $actualImageWidth x $actualImageHeight');
+    // debugPrint('🎯 BoundingBoxPainter: Offset: ($offsetX, $offsetY)');
+    // debugPrint('🎯 BoundingBoxPainter: Scale factors: scaleX=$scaleX, scaleY=$scaleY');
 
     // Filter detections based on selected class
     final visibleDetections = selectedClass == null || selectedClass == 'all'
@@ -33,25 +54,30 @@ class BoundingBoxPainter extends CustomPainter {
         : detections.where((d) => d.className == selectedClass).toList();
 
     for (final detection in visibleDetections) {
-      debugPrint('🎯 Drawing detection: ${detection.className} at (${detection.bbox.x1}, ${detection.bbox.y1}) - (${detection.bbox.x2}, ${detection.bbox.y2})');
-      _drawBoundingBox(canvas, detection, scaleX, scaleY);
+      // debugPrint('🎯 Drawing detection: ${detection.className} at (${detection.bbox.x1}, ${detection.bbox.y1}) - (${detection.bbox.x2}, ${detection.bbox.y2})');
+      _drawBoundingBox(canvas, detection, scaleX, scaleY, offsetX, offsetY);
       
       if (showConfidence) {
-        _drawConfidenceLabel(canvas, detection, scaleX, scaleY);
+        _drawConfidenceLabel(canvas, detection, scaleX, scaleY, offsetX, offsetY);
       }
     }
   }
 
-  void _drawBoundingBox(Canvas canvas, Detection detection, double scaleX, double scaleY) {
+  void _drawBoundingBox(Canvas canvas, Detection detection, double scaleX, double scaleY, double offsetX, double offsetY) {
     final color = DetectionColors.getColorForClass(detection.className);
     final paint = Paint()
       ..color = color
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
-    // Scale the bounding box coordinates
+    // Scale the bounding box coordinates and apply offset
     final scaledBbox = detection.bbox.scale(scaleX, scaleY);
-    final rect = scaledBbox.toRect();
+    final rect = Rect.fromLTRB(
+      scaledBbox.x1 + offsetX,
+      scaledBbox.y1 + offsetY,
+      scaledBbox.x2 + offsetX,
+      scaledBbox.y2 + offsetY,
+    );
 
     // Draw the main bounding box
     canvas.drawRect(rect, paint);
@@ -117,7 +143,7 @@ class BoundingBoxPainter extends CustomPainter {
     );
   }
 
-  void _drawConfidenceLabel(Canvas canvas, Detection detection, double scaleX, double scaleY) {
+  void _drawConfidenceLabel(Canvas canvas, Detection detection, double scaleX, double scaleY, double offsetX, double offsetY) {
     final color = DetectionColors.getColorForClass(detection.className);
     final scaledBbox = detection.bbox.scale(scaleX, scaleY);
     
@@ -146,9 +172,9 @@ class BoundingBoxPainter extends CustomPainter {
     );
     textPainter.layout();
 
-    // Position label above the bounding box
-    final labelX = scaledBbox.x1;
-    final labelY = scaledBbox.y1 - textPainter.height - 4;
+    // Position label above the bounding box with offset
+    final labelX = scaledBbox.x1 + offsetX;
+    final labelY = scaledBbox.y1 + offsetY - textPainter.height - 4;
 
     // Draw background for better readability
     final backgroundRect = Rect.fromLTWH(

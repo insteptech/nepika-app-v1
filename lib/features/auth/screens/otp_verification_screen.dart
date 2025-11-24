@@ -339,32 +339,59 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
   Widget _buildTermsAndPrivacy() {
     return Center(
-      child: RichText(
-        textAlign: TextAlign.center,
-        text: TextSpan(
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            fontSize: 10,
-            color: Theme.of(context).colorScheme.outline,
+      child: Wrap(
+        alignment: WrapAlignment.center,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        children: [
+          Text(
+            'By continuing, you agree to our ',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 10,
+              color: Theme.of(context).colorScheme.outline,
+            ),
           ),
-          children: [
-            const TextSpan(text: 'By continuing, you agree to our '),
-            TextSpan(
-              text: 'Terms of Service',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
+          InkWell(
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.termsOfUse);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Text(
+                'Terms of Service',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
-            const TextSpan(text: ' and '),
-            TextSpan(
-              text: 'Privacy Policy',
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
+          ),
+          Text(
+            ' and ',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              fontSize: 10,
+              color: Theme.of(context).colorScheme.outline,
+            ),
+          ),
+          InkWell(
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
+              child: Text(
+                'Privacy Policy',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  fontSize: 10,
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.w600,
+                  decoration: TextDecoration.underline,
+                ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

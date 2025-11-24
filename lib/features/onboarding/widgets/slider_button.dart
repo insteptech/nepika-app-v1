@@ -19,13 +19,13 @@ class SliderButton extends StatefulWidget {
     this.text,
     this.onSlideComplete,
     this.onSlideReset,
-    this.width = 353,
-    this.height = 50,
+    this.width = 280,
+    this.height = 40,
     this.backgroundColor = const Color(0xFF3898ED),
     this.sliderColor = Colors.white,
     this.textColor = Colors.white,
     this.icon,
-    this.borderRadius = 88,
+    this.borderRadius = 20,
     this.enabled = true,
     this.isCompleted = false,
   });
@@ -43,9 +43,9 @@ class _SliderButtonState extends State<SliderButton>
   bool _isSliding = false;
   bool _isCompleted = false;
 
-  // Slider dimensions based on Figma design
-  static const double _sliderSize = 40.0;
-  static const double _padding = 5.0;
+  // Slider dimensions for small standard button
+  static const double _sliderSize = 32.0;
+  static const double _padding = 4.0;
 
   @override
   void initState() {
@@ -190,8 +190,8 @@ class _SliderButtonState extends State<SliderButton>
                   widget.text!,
                   style: TextStyle(
                     color: widget.textColor,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
@@ -199,7 +199,7 @@ class _SliderButtonState extends State<SliderButton>
           
           // Slider circle
           AnimatedPositioned(
-            duration: _isSliding ? Duration.zero : const Duration(milliseconds: 200),
+            duration: _isSliding ? Duration.zero : const Duration(milliseconds: 10),
             left: sliderLeft,
             top: _padding,
             child: GestureDetector(
@@ -227,12 +227,12 @@ class _SliderButtonState extends State<SliderButton>
                       ? Icon(
                           widget.icon,
                           color: widget.backgroundColor,
-                          size: 18,
+                          size: 16,
                         )
                       : Icon(
                           _isCompleted ? Icons.arrow_back_ios : Icons.arrow_forward_ios,
                           color: const Color(0xFF3898ED),
-                          size: 18,
+                          size: 16,
                         ),
                 ),
               ),

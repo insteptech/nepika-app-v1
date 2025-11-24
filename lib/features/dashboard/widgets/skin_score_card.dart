@@ -21,13 +21,10 @@ String _monthName(int month) {
 
 class SkinScoreCard extends StatelessWidget {
   final Map<String, dynamic>? skinScore;
+  final bool showSheildImage;
   final bool isLoading;
 
-  const SkinScoreCard({
-    super.key,
-    this.skinScore,
-    this.isLoading = false,
-  });
+  const SkinScoreCard({super.key, this.skinScore, this.isLoading = false, this.showSheildImage = true});
 
   @override
   Widget build(BuildContext context) {
@@ -64,74 +61,89 @@ class SkinScoreCard extends StatelessWidget {
     }
 
     final bool isNegative = change < 0;
-    final Color changeColor = isNegative ? colorScheme.error : colorScheme.secondary;
+    final Color changeColor = isNegative
+        ? colorScheme.error
+        : colorScheme.secondary;
     final IconData changeIcon = isNegative
         ? Icons.arrow_drop_down
         : Icons.arrow_drop_up;
 
     return Container(
+      width: double.infinity,
+      height: 154,
       decoration: BoxDecoration(
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-        // boxShadow: [
-        //   BoxShadow(
-        //     color: colorScheme.shadow.withValues(alpha: 0.08),
-        //     blurRadius: 20,
-        //     offset: const Offset(0, 10),
-        //   ),
-        // ],
       ),
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      padding: const EdgeInsets.all(22),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Your skin score',
-            style: textTheme.bodyLarge!.secondary(context).copyWith(
-              fontSize: 13
-            ),
-          ),
-          const SizedBox(height: 3),
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                '$score',
-                style: textTheme.headlineMedium?.copyWith(
-                  fontSize: 30,
-                  fontWeight: FontWeight.w700,
-                  color: colorScheme.primary,
+                'Your skin score',
+                style: textTheme.bodyLarge!
+                    .secondary(context)
+                    .copyWith(fontSize: 14),
+              ),
+              const SizedBox(height: 5),
+
+              SizedBox(
+                height: 44,
+                child: Row(
+                  children: [
+                    Text(
+                      '$score',
+                      style: textTheme.headlineMedium?.copyWith(
+                        fontSize: 35,
+                        fontWeight: FontWeight.w700,
+                        color: colorScheme.secondary,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Text(
+                      '${change > 0 ? '+' : ''}$change',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: changeColor,
+                      ),
+                    ),
+                    Icon(changeIcon, color: changeColor, size: 20),
+                  ],
                 ),
               ),
-              const SizedBox(width: 10),
+              // const Spacer(),
               Text(
-                '${change > 0 ? '+' : ''}$change',
-                style: textTheme.bodyMedium?.copyWith(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: changeColor,
-                ),
+                'Last updated:',
+                style: textTheme.bodyMedium!.secondary(context),
               ),
-              Icon(changeIcon, color: changeColor, size: 20),
+
+              Text(
+                formattedDate,
+                overflow: TextOverflow.ellipsis,
+                softWrap: true,
+                style: textTheme.bodyMedium!.secondary(context),
+              ),
+              // Expanded(
+              //   child: Text(
+              //     formattedDate,
+              //     overflow: TextOverflow.ellipsis,
+              //     softWrap: true,
+              //     style: textTheme.bodyMedium!.secondary(context),
+              //   ),
+              // ),
             ],
           ),
-          const Spacer(),
-          Text(
-            'Last updated:', style: textTheme.bodyMedium!.secondary(context),),
-
-          Text(
-              formattedDate,
-              overflow: TextOverflow.ellipsis,
-              softWrap: true,
-              style: textTheme.bodyMedium!.secondary(context),
-            ),
-          // Expanded(
-          //   child: Text(
-          //     formattedDate,
-          //     overflow: TextOverflow.ellipsis,
-          //     softWrap: true,
-          //     style: textTheme.bodyMedium!.secondary(context),
-          //   ),
-          // ),
+          if (showSheildImage)
+            SizedBox(
+              width: 100,
+              child: Image.asset('assets/images/sheild_image.png')
+              ),
         ],
       ),
     );
@@ -145,48 +157,63 @@ class SkinScoreCard extends StatelessWidget {
     final baseColor = isDark ? Colors.grey[800]! : Colors.grey[300]!;
 
     return Container(
+      width: double.infinity,
       decoration: BoxDecoration(
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Text(
-            'Your skin score',
-            style: textTheme.bodyLarge!.secondary(context).copyWith(fontSize: 13),
-          ),
-          const SizedBox(height: 8),
-          // Skeleton for score
-          Container(
-            width: 60,
-            height: 24,
-            decoration: BoxDecoration(
-              color: baseColor,
-              borderRadius: BorderRadius.circular(4),
-            ),
-          ),
-          const Spacer(),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Last updated:',
-                style: textTheme.bodyMedium!.secondary(context),
+                'Your skin score',
+                style: textTheme.bodyLarge!
+                    .secondary(context)
+                    .copyWith(fontSize: 13),
               ),
-              const SizedBox(height: 4),
-              // Skeleton for date
+              const SizedBox(height: 8),
+              // Skeleton for score
               Container(
-                width: 120,
-                height: 10,
+                width: 60,
+                height: 24,
                 decoration: BoxDecoration(
                   color: baseColor,
                   borderRadius: BorderRadius.circular(4),
                 ),
               ),
+              const Spacer(),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Last updated:',
+                    style: textTheme.bodyMedium!.secondary(context),
+                  ),
+                  const SizedBox(height: 4),
+                  // Skeleton for date
+                  Container(
+                    width: 120,
+                    height: 10,
+                    decoration: BoxDecoration(
+                      color: baseColor,
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
+
+          if (showSheildImage)
+            SizedBox(
+              width: 100,
+              child: Image.asset('assets/images/sheild_image.png'),
+            ),
         ],
       ),
     );

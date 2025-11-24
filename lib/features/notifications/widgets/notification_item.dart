@@ -132,10 +132,17 @@ class NotificationItem extends StatelessWidget {
                         color: theme.textTheme.bodyMedium?.color,
                       ),
                       children: [
-                        TextSpan(text: _getNotificationMessage()),
+                        TextSpan(
+                          text: _getNotificationMessage(),
+                          style: TextStyle(
+                            fontWeight: FontWeight.normal,
+                            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
+                          ),
+
+                        ),
                         if (notification.post != null && notification.post!.content.isNotEmpty)
                           TextSpan(
-                            text: ' "${notification.post!.content}"',
+                            text: ' "${notification.post!.content.characters.take(30).toString()}${notification.post!.content.length > 30 ? '...' : ''}"',
                             style: TextStyle(
                               fontStyle: FontStyle.italic,
                               color: theme.textTheme.bodySmall?.color,

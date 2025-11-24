@@ -90,6 +90,7 @@ class AppRoutes {
   static const String blockedUsers = '/blocked-users';
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';
+  static const String faceScanInfo = '/face-scan-info';
   static const String about = '/about';
 
 

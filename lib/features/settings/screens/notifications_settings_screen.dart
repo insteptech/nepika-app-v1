@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/features/dashboard/widgets/delete_account_dialog.dart';
+import 'package:nepika/features/settings/bloc/delete_account_bloc.dart';
+import 'package:nepika/features/settings/components/delete_account_dialog.dart';
 import 'package:provider/provider.dart';
 
+import 'package:nepika/core/di/injection_container.dart' as di;
 import '../components/settings_options_list.dart';
 import '../models/settings_option_data.dart';
 import '../widgets/settings_header.dart';
@@ -74,7 +77,34 @@ class _NotificationsSettingsScreenState
     ];
   }
 
-  void _showDeleteAccountDialog(BuildContext context) {
+
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    try {
+      // Ensure services are initialized
+      await di.ServiceLocator.init();
+      
+      // Test if the service is available
+      di.ServiceLocator.get<DeleteAccountBloc>();
+      
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => const DeleteAccountConfirmationDialog(),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete account service not available: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  void _showDeleteAccountDialog3(BuildContext context) {
     showDialog(
       context: context,
       builder: (_) => DeleteAccountDialog(

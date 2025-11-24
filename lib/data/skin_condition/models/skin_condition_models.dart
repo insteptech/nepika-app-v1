@@ -51,12 +51,14 @@ class SkinConditionProgressSummary {
 class SkinConditionDetailsData {
   final String conditionSlug;
   final double currentPercentage;
+  final Map<String,dynamic> skinScore;
   final String lastUpdated;
   final SkinConditionProgressSummary progressSummary;
 
   SkinConditionDetailsData({
     required this.conditionSlug,
     required this.currentPercentage,
+    required this.skinScore,
     required this.lastUpdated,
     required this.progressSummary,
   });
@@ -65,6 +67,7 @@ class SkinConditionDetailsData {
     return SkinConditionDetailsData(
       conditionSlug: json['conditionSlug'] ?? '',
       currentPercentage: (json['currentPercentage'] ?? 0).toDouble(),
+      skinScore: json['skinScore'] ?? {},
       lastUpdated: json['lastUpdated'] ?? '',
       progressSummary: SkinConditionProgressSummary.fromJson(
         json['progressSummary'] ?? {},
@@ -76,6 +79,7 @@ class SkinConditionDetailsData {
     return {
       'conditionSlug': conditionSlug,
       'currentPercentage': currentPercentage,
+      'skinScore': skinScore,
       'lastUpdated': lastUpdated,
       'progressSummary': progressSummary.toJson(),
     };

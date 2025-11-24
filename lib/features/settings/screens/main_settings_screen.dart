@@ -10,14 +10,14 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 import '../components/logout_dialog.dart';
+// import '../components/delete_account_dialog.dart';
 import '../components/settings_options_list.dart';
 import '../models/settings_option_data.dart';
 import '../widgets/settings_header.dart';
+// import '../bloc/delete_account_bloc.dart';
 import 'community_settings_screen.dart';
 import 'help_support_screen.dart';
 import 'notifications_settings_screen.dart';
-import 'terms_of_use_screen.dart';
-import 'privacy_policy_screen.dart';
 
 class MainSettingsScreen extends StatelessWidget {
   const MainSettingsScreen({super.key});
@@ -64,6 +64,7 @@ class MainSettingsScreen extends StatelessWidget {
       ),
     );
   }
+
 
   List<SettingsOptionData> _buildSettingsOptions(BuildContext context) {
     return [
@@ -116,6 +117,15 @@ class MainSettingsScreen extends StatelessWidget {
         },
       ),
       SettingsOptionData.option(
+        'Face Scan Info',
+        onTap: () {
+          Navigator.of(
+            context,
+            rootNavigator: true,
+          ).pushNamed(AppRoutes.faceScanInfo);
+        },
+      ),
+      SettingsOptionData.option(
         'Help and Support',
         onTap: () {
           Navigator.of(context).push(
@@ -129,7 +139,7 @@ class MainSettingsScreen extends StatelessWidget {
           Navigator.of(
             context,
             rootNavigator: true,
-          ).push(MaterialPageRoute(builder: (_) => const TermsOfUseScreen()));
+          ).pushNamed(AppRoutes.termsOfUse);
         },
       ),
       SettingsOptionData.option(
@@ -138,7 +148,7 @@ class MainSettingsScreen extends StatelessWidget {
           Navigator.of(
             context,
             rootNavigator: true,
-          ).push(MaterialPageRoute(builder: (_) => const PrivacyPolicyScreen()));
+          ).pushNamed(AppRoutes.privacyPolicy);
         },
       ),
       SettingsOptionData.option(
@@ -150,6 +160,11 @@ class MainSettingsScreen extends StatelessWidget {
           ).pushNamed(AppRoutes.subscription);
         },
       ),
+      // SettingsOptionData.option(
+      //   'Delete Account',
+      //   onTap: () => _showDeleteAccountDialog(context),
+      //   textColor: Colors.red,
+      // ),
     ];
   }
 

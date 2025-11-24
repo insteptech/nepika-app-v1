@@ -315,7 +315,14 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       }
     } else if (state is OnboardingCompleted) {
       debugPrint('🏁 Onboarding completed via BLoC');
-      _navigateToCompletion();
+      if (widget.isFromSettingNavigation == true) {
+        debugPrint('🔧 Settings navigation - popping screen');
+        if (mounted) {
+          Navigator.of(context).pop();
+        }
+      } else {
+        _navigateToCompletion();
+      }
     } else if (state is OnboardingError) {
       debugPrint('========================================');
       debugPrint('ERROR DETECTED IN ONBOARDING');

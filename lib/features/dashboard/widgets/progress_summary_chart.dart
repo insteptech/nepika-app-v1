@@ -2,13 +2,15 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/features/face_scan/models/scan_analysis_models.dart';
 
 
 class ProgressSummaryChart extends StatelessWidget {
-  final Map<String, dynamic> progressSummary;
+  final Object? progressSummary;
   final double height;
   final EdgeInsets padding;
   final bool showPointsAndLabels;
+  final Widget? toggleWidget;
 
   const ProgressSummaryChart({
     super.key,
@@ -16,13 +18,79 @@ class ProgressSummaryChart extends StatelessWidget {
     this.height = 300,
     this.padding = const EdgeInsets.all(20),
     this.showPointsAndLabels = true,
+    this.toggleWidget,
   });
+
+Map<String, dynamic>? _normalizeSummary(Object? raw) {
+  if (raw == null) return null;
+
+  if (raw is ProgressSummary) {
+    return {
+      'unit': raw.unit,
+      'data': raw.data.map((e) => {
+            'month': e.month,
+            'value': e.value,
+            'scanId': e.scanId,
+            'datetime': e.datetime,
+          }).toList(),
+    };
+  }
+
+  if (raw is Map<String, dynamic>) {
+    // Ensure 'data' is List<Map<String,dynamic>>
+    final rawData = raw['data'];
+    if (rawData is List) {
+      final normalizedList = rawData.map<Map<String, dynamic>>((item) {
+        if (item is Map<String, dynamic>) return item;
+        if (item is ProgressData) {
+          return {
+            'month': item.month,
+            'value': item.value,
+            'scanId': item.scanId,
+            'datetime': item.datetime,
+          };
+        }
+        return <String, dynamic>{};
+      }).toList();
+      return {
+        'unit': raw['unit'],
+        'data': normalizedList,
+      };
+    }
+
+    // fallback
+    return {'unit': raw['unit'], 'data': <Map<String, dynamic>>[]};
+  }
+
+  // raw is maybe a List<dynamic> already
+  if (raw is List) {
+    final normalizedList = raw.map<Map<String, dynamic>>((item) {
+      if (item is Map<String, dynamic>) return item;
+      if (item is ProgressData) {
+        return {
+          'month': item.month,
+          'value': item.value,
+          'scanId': item.scanId,
+          'datetime': item.datetime,
+        };
+      }
+      return <String, dynamic>{};
+    }).toList();
+
+    return {'unit': 'Points', 'data': normalizedList};
+  }
+
+  return null;
+}
+
 
   @override
   Widget build(BuildContext context) {
-    final List<Map<String, dynamic>> data = 
-        List<Map<String, dynamic>>.from(progressSummary['data'] ?? []);
-    final String unit = progressSummary['unit'] ?? 'Points';
+final summary = _normalizeSummary(progressSummary);
+final List<Map<String, dynamic>> data =
+    List<Map<String, dynamic>>.from(summary?['data'] ?? []);
+
+    final String unit = summary?['unit'] ?? 'Points';
 
     if (data.isEmpty) {
       return Container(
@@ -35,9 +103,7 @@ class ProgressSummaryChart extends StatelessWidget {
           child: Text(
             'No progress data available',
             style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Theme.of(
-                context,
-              ).colorScheme.onSurface.withValues(alpha: 0.8),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.8),
             ),
           ),
         ),
@@ -47,25 +113,29 @@ class ProgressSummaryChart extends StatelessWidget {
     return Container(
       height: height,
       decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.onTertiary,
+        color: Theme.of(context).colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
-      
       ),
-      child: Padding(
-        padding: padding,
-        child: CustomPaint(
-          size: Size(double.infinity, height - padding.vertical),
-          painter: ProgressChartPainter(
-            data: data,
-            unit: unit,
-            context: context,
-            showPointsAndLabels: showPointsAndLabels,
+      child: Stack(
+        children: [
+          Padding(
+            padding: padding,
+            child: CustomPaint(
+              size: Size(double.infinity, height - padding.vertical),
+              painter: ProgressChartPainter(
+                data: data,
+                unit: unit,
+                context: context,
+                showPointsAndLabels: showPointsAndLabels,
+              ),
+            ),
           ),
-        ),
+        ],
       ),
     );
   }
 }
+
 
 class ProgressChartPainter extends CustomPainter {
   final List<Map<String, dynamic>> data;
@@ -85,7 +155,7 @@ class ProgressChartPainter extends CustomPainter {
     if (data.isEmpty) return;
 
     final paint = Paint()
-      ..color = Theme.of(context).colorScheme.primary.withValues(alpha: .5)
+      ..color = Theme.of(context).colorScheme.secondary.withValues(alpha: .5)
       ..strokeWidth = 3.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
@@ -191,8 +261,8 @@ class ProgressChartPainter extends CustomPainter {
         begin: Alignment.bottomCenter,
         end: Alignment.topCenter,
         colors: [
-          Theme.of(context).colorScheme.primary.withValues(alpha: 0.0), // Transparent at bottom
-          Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), // Existing color at top
+          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.0), // Transparent at bottom
+          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3), // Existing color at top
         ],
         stops: const [0.0, 1.0],
       );

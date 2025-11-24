@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:nepika/core/widgets/custom_text_field.dart';
 import 'package:nepika/core/widgets/selection_button.dart';
 import 'package:nepika/domain/onboarding/entities/onboarding_entites.dart';
-import 'package:nepika/features/onboarding/widgets/slider_button.dart';
 
 class OptionItem {
   final String label;
@@ -255,64 +254,34 @@ class _QuestionInputState extends State<QuestionInput> {
           ],
         );
       case "slider":
-        return Column(
+        return Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            AnimatedOpacity(
-              opacity: _sliderCompleted ? 1.0 : 0.6,
-              duration: const Duration(milliseconds: 300),
-              child: SliderButton(
-                // text: "Slide to confirm",
-                enabled: true,
-                isCompleted: _sliderCompleted,
-                onSlideComplete: () {
-                  setState(() {
-                    _sliderCompleted = true;
-                  });
-                  // Find the first option value to use as the completed state
-                  final sliderValue = widget.question.options.isNotEmpty 
-                      ? widget.question.options.first.value 
-                      : "completed";
-                  
-                  widget.onValueChanged(widget.question.slug, sliderValue);
-                },
-                onSlideReset: () {
-                  setState(() {
-                    _sliderCompleted = false;
-                  });
-                  // Reset the value
-                  widget.onValueChanged(widget.question.slug, null);
-                },
+            Expanded(
+              child: Text(
+                'Are you exposed to high pollution levels?',
+                style: Theme.of(context).textTheme.bodyLarge,
               ),
             ),
-            // const SizedBox(height: 16),
-            // if (_sliderCompleted)
-            //   Container(
-            //     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
-            //     decoration: BoxDecoration(
-            //       color: Colors.green.withValues(alpha: 0.1),
-            //       borderRadius: BorderRadius.circular(20),
-            //       border: Border.all(color: Colors.green.withValues(alpha: 0.3)),
-            //     ),
-            //     child: Row(
-            //       mainAxisSize: MainAxisSize.min,
-            //       children: [
-            //         Icon(
-            //           Icons.check_circle,
-            //           color: Colors.green,
-            //           size: 16,
-            //         ),
-            //         const SizedBox(width: 8),
-            //         Text(
-            //           'Completed',
-            //           style: TextStyle(
-            //             color: Colors.green,
-            //             fontSize: 14,
-            //             fontWeight: FontWeight.w500,
-            //           ),
-            //         ),
-            //       ],
-            //     ),
-            //   ),
+            Switch(
+              value: _sliderCompleted,
+              onChanged: (bool value) {
+                setState(() {
+                  _sliderCompleted = value;
+                });
+                
+                if (value) {
+                  // Yes - exposed to high pollution
+                  final toggleValue = widget.question.options.isNotEmpty 
+                      ? widget.question.options.first.value 
+                      : "yes";
+                  widget.onValueChanged(widget.question.slug, toggleValue);
+                } else {
+                  // No - not exposed to high pollution
+                  widget.onValueChanged(widget.question.slug, "no");
+                }
+              },
+            ),
           ],
         );
 
@@ -863,7 +832,6 @@ class OptionButtons extends StatelessWidget {
     
     for (int i = 0; i < options.length; i += perRow) {
       List<Widget> rowChildren = [];
-      int itemsInThisRow = (i + perRow <= options.length) ? perRow : options.length - i;
       
       for (int j = 0; j < perRow && (i + j) < options.length; j++) {
         final option = options[i + j];

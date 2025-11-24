@@ -4,6 +4,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import '../../../domain/community/entities/community_entities.dart';
+import '../../../core/utils/image_utils.dart';
 import '../bloc/blocs/profile_bloc.dart';
 import '../bloc/events/profile_event.dart';
 import '../bloc/states/profile_state.dart';
@@ -77,7 +78,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         );
         
         if (image != null && mounted) {
-          _uploadSelectedImage(image.path);
+          // Process the gallery image to ensure proper orientation
+          final String processedImagePath = await ImageUtils.compressImage(
+            image.path,
+            maxWidth: 1024,
+            maxHeight: 1024,
+            quality: 85,
+          );
+          _uploadSelectedImage(processedImagePath);
         }
       }
     } catch (e) {

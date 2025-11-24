@@ -734,34 +734,34 @@ bool get _isFormValid {
                              const SizedBox(height: 10),
                              
                              // Debug: Test Notification Buttons
-                             Row(
-                               children: [
-                                 Expanded(
-                                   child: CustomButton(
-                                     isDisabled: false,
-                                     text: 'Immediate Test',
-                                     onPressed: () => _testImmediateNotification(),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 4),
-                                 Expanded(
-                                   child: CustomButton(
-                                     isDisabled: false,
-                                     text: 'Scheduled Test',
-                                     onPressed: () => _testNotifications(),
-                                   ),
-                                 ),
-                                 const SizedBox(width: 4),
-                                 Expanded(
-                                   child: CustomButton(
-                                     isDisabled: false,
-                                     text: 'Diagnostics',
-                                     onPressed: () => _runDiagnostics(),
-                                   ),
-                                 ),
-                               ],
-                             ),
-                             const SizedBox(height: 10),
+                            //  Row(
+                            //    children: [
+                            //      Expanded(
+                            //        child: CustomButton(
+                            //          isDisabled: false,
+                            //          text: 'Immediate Test',
+                            //          onPressed: () => _testImmediateNotification(),
+                            //        ),
+                            //      ),
+                            //      const SizedBox(width: 4),
+                            //      Expanded(
+                            //        child: CustomButton(
+                            //          isDisabled: false,
+                            //          text: 'Scheduled Test',
+                            //          onPressed: () => _testNotifications(),
+                            //        ),
+                            //      ),
+                            //      const SizedBox(width: 4),
+                            //      Expanded(
+                            //        child: CustomButton(
+                            //          isDisabled: false,
+                            //          text: 'Diagnostics',
+                            //          onPressed: () => _runDiagnostics(),
+                            //        ),
+                            //      ),
+                            //    ],
+                            //  ),
+                            //  const SizedBox(height: 10),
                              
                              CustomButton(
                                isDisabled: !_isFormValid || isLoading,

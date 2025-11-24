@@ -11,9 +11,10 @@ import 'package:nepika/presentation/bloc/skin_condition/skin_condition_bloc.dart
 import 'package:nepika/presentation/bloc/skin_condition/skin_condition_event.dart';
 import 'package:nepika/presentation/bloc/skin_condition/skin_condition_state.dart';
 import '../widgets/progress_summary_chart.dart';
-import '../widgets/section_header.dart';
+// import '../widgets/section_header.dart';
 import '../widgets/skin_score_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../routine/widgets/sticky_header_delegate.dart';
 
 class SkinConditionDetailsPage extends StatefulWidget {
   const SkinConditionDetailsPage({super.key});
@@ -24,10 +25,11 @@ class SkinConditionDetailsPage extends StatefulWidget {
 
 class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
   String? token;
-  Map<String, dynamic>? skinScore;
+  Map<String, dynamic>? _skinScore;
   String? conditionInfo;
   String? conditionSlug;
   bool _argumentsExtracted = false;
+  bool _showMarkings = false;
 
   @override
   void initState() {
@@ -51,14 +53,14 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
       debugPrint('🔍 Raw navigation arguments: $arguments');
       
       if (arguments != null) {
-        skinScore = arguments['skinScore'] as Map<String, dynamic>?;
+        // skinScore = arguments['skinScore'] as Map<String, dynamic>?;
         conditionInfo = arguments['conditionInfo'] as String?;
         
         // Extract condition slug from the conditionInfo
         conditionSlug = _getConditionSlug(conditionInfo);
         
         debugPrint('🔍 Received arguments: $arguments');
-        debugPrint('🔍 skinScore: $skinScore');
+        // debugPrint('🔍 skinScore: $skinScore');
         debugPrint('🔍 conditionInfo: $conditionInfo');
         debugPrint('🔍 conditionSlug: $conditionSlug');
         debugPrint('🔍 token: $token');
@@ -102,12 +104,12 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
   }
 
   double _getConditionPercentage() {
-    if (skinScore == null || conditionInfo == null) {
+    if (_skinScore == null || conditionInfo == null) {
       return 0.0;
     }
     
     // Try to get the percentage for the specific condition from latestConditionResult
-    final latestConditionResult = skinScore?['latestConditionResult'] as Map<String, dynamic>?;
+    final latestConditionResult = _skinScore?['latestConditionResult'] as Map<String, dynamic>?;
     if (latestConditionResult != null) {
       // Try the exact conditionInfo first
       if (latestConditionResult.containsKey(conditionInfo)) {
@@ -217,26 +219,51 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
           return Scaffold(
             backgroundColor: theme.scaffoldBackgroundColor,
             body: SafeArea(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const CustomBackButton(),
-                    const SizedBox(height: 28),
-                    
-                    // Condition Name Title
-                    Text(
-                      'Skin Condition',
-                      style: theme.textTheme.displaySmall
+              child: CustomScrollView(
+                slivers: [
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 16),
+                          const CustomBackButton(),
+                          const SizedBox(height: 15),
+                        ],
+                      ),
                     ),
-                    const SizedBox(height: 5),
-                    Text(
-                      'Stay consistent. Mark each step as you complete it.',
-                      style: theme.textTheme.headlineMedium?.secondary(context)
+                  ),
+                  SliverPersistentHeader(
+                    pinned: true,
+                    delegate: StickyHeaderDelegate(
+                      minHeight: 40,
+                      maxHeight: 40,
+                      isFirstHeader: true,
+                      title: "Skin Condition",
+                      child: Container(
+                        color: theme.scaffoldBackgroundColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          "Skin Condition",
+                          style: theme.textTheme.displaySmall,
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 25),
+                  ),
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 25),
+                          Text(
+                            'Stay consistent. Mark each step as you complete it.',
+                            style: theme.textTheme.headlineMedium?.secondary(context)
+                          ),
+                          const SizedBox(height: 25),
                     
                     // // Cards Row
                     Row(
@@ -317,27 +344,79 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
                         Expanded(
                           child: SizedBox(
                             height: 170,
-                            child: SkinScoreCard(skinScore: skinScore ?? {}),
+                            child: SkinScoreCard(
+                              skinScore: state is SkinConditionLoaded ? state.skinConditionDetails.skinScore : {},
+                              showSheildImage: false,
+                            ),
                           ),
                         ),
                       ],
                     ),
                     
-                    // const SizedBox(height: 30),
+                    const SizedBox(height: 30),
                     
-                    // Progress Summary Section
-                    SectionHeader(
-                      heading: 'Progress Summary',
-                      showButton: false,
+                          // Progress Summary Section
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Text(
+                                "Progress Summary",
+                                style: Theme.of(
+                                  context,
+                                ).textTheme.headlineMedium,
+                              ),
+                              TextButton(
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 2),
+                                  minimumSize: const Size(50, 30),
+                                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                  alignment: Alignment.center,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    _showMarkings = !_showMarkings;
+                                  });
+                                },
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      "Proints",
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodySmall
+                                          ?.copyWith(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .primary,
+                                          ),
+                                    ),
+                                    const SizedBox(width: 4),
+                                    Icon(
+                                      _showMarkings
+                                          ? Icons.visibility
+                                          : Icons.visibility_off,
+                                      size: 15,
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    ),
+                                  ],
+                                )
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 5),
+
+                          // const SizedBox(height: 16),
+                          _buildProgressChart(state),
+                          const SizedBox(
+                            height: 100,
+                          ), // Add some bottom spacing
+                        ],
+                      ),
                     ),
-                    // const SizedBox(height: 16),
-                    
-                    _buildProgressChart(state)
-                    // Expanded(
-                    //   child: _buildProgressChart(state),
-                    // ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           );
@@ -347,13 +426,57 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
   }
 
   Widget _buildProgressChart(SkinConditionState state) {
+    Widget toggleButton = Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          width: 1,
+        ),
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(20),
+          onTap: () {
+            setState(() {
+              _showMarkings = !_showMarkings;
+            });
+          },
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  _showMarkings ? Icons.visibility : Icons.visibility_off,
+                  size: 16,
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  _showMarkings ? 'Hide' : 'Show',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
     if (state is SkinConditionLoading) {
       return const Center(child: CircularProgressIndicator());
     } else if (state is SkinConditionLoaded) {
       return ProgressSummaryChart(
         progressSummary: state.skinConditionDetails.progressSummary,
         height: 280,
-        showPointsAndLabels: true,
+        showPointsAndLabels: _showMarkings,
+        toggleWidget: toggleButton,
       );
     } else if (state is SkinConditionError) {
       return Center(
@@ -398,7 +521,8 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
       return ProgressSummaryChart(
         progressSummary: {},
         height: 280,
-        showPointsAndLabels: true,
+        showPointsAndLabels: _showMarkings,
+        toggleWidget: toggleButton,
       );
     }
   }

@@ -102,7 +102,7 @@ class NotificationPermissionDialog extends StatelessWidget {
                     onPressed: () => _handleAllow(context),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.primary,
-                      foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                      // foregroundColor: Theme.of(context).colorScheme.onPrimary,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
@@ -112,6 +112,7 @@ class NotificationPermissionDialog extends StatelessWidget {
                       'Allow',
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
+                        color: Colors.white,
                       ),
                     ),
                   ),

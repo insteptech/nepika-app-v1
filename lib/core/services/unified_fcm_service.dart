@@ -45,7 +45,7 @@ class UnifiedFcmService {
   
   // Message deduplication
   final Set<String> _processedMessageIds = <String>{};
-  static const int _maxProcessedMessages = 100; // Keep last 100 message IDs
+  // static const int _maxProcessedMessages = 100; // Keep last 100 message IDs
   
   // Stream subscriptions for proper disposal
   StreamSubscription<RemoteMessage>? _onMessageSubscription;

@@ -24,7 +24,7 @@ class SkinConditionRemoteDataSourceImpl implements SkinConditionRemoteDataSource
       Logger.network('Fetching skin condition details for: $conditionSlug');
       
       final response = await apiBase.request(
-        path: '${ApiEndpoints.fetchSkinConditionDetails}/$conditionSlug',
+        path: '${ApiEndpoints.fetchSkinConditionDetails}/$conditionSlug?show_all_data=true',
         method: 'GET',
         headers: {
           'Authorization': 'Bearer $token',

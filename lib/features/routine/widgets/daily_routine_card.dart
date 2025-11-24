@@ -255,7 +255,7 @@ if (!completed && !_showTickAnimation)
     if (completed) {
       return Colors.green;
     } else {
-      return theme.colorScheme.primary;
+      return theme.colorScheme.secondary;
     }
   }
 

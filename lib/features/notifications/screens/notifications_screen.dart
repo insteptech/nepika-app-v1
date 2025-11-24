@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/features/dashboard/widgets/dashboard_navbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_state.dart';
 import '../bloc/notification_event.dart';
@@ -19,59 +22,196 @@ class NotificationsScreen extends StatefulWidget {
   State<NotificationsScreen> createState() => _NotificationsScreenState();
 }
 
-class _NotificationsScreenState extends State<NotificationsScreen> {
+class _NotificationsScreenState extends State<NotificationsScreen>
+    with SingleTickerProviderStateMixin {
+  // ------------------------------------------------------------
+  // USER DATA
+  // ------------------------------------------------------------
+
   String? _token;
   String? _userId;
+
+  // ------------------------------------------------------------
+  // NAVBAR ANIMATION
+  // ------------------------------------------------------------
+
+  late AnimationController _navBarAnimationController;
+  late Animation<double> _navBarAnimation;
+
+  bool _isNavBarVisible = true;
+  final double _scrollThreshold = 10.0;
+
+  // ------------------------------------------------------------
+  // SCROLL CONTROLLER
+  // ------------------------------------------------------------
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
+  final ScrollController _scrollController = ScrollController();
+  double _lastOffset = 0.0;
+
+  // ------------------------------------------------------------
+  // INIT
+  // ------------------------------------------------------------
 
   @override
   void initState() {
     super.initState();
+
     _loadUserData();
-    // Only mark notifications as seen if there are unread notifications
+    _initializeNavBarAnimation();
+
+    _scrollController.addListener(_onScroll);
+
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final bloc = context.read<NotificationBloc>();
-      final state = bloc.state;
+      if (!mounted) return;
       
-      // Check if there are unread notifications before making API call
-      int unreadCount = 0;
-      if (state is NotificationLoaded) {
-        unreadCount = state.unreadCount;
-      } else if (state is NotificationDisconnected) {
-        unreadCount = state.unreadCount;
-      }
-      
-      // Only call mark as seen if there are actually unread notifications
-      if (unreadCount > 0) {
-        bloc.add(const MarkAllNotificationsAsSeen());
+      try {
+        final bloc = context.read<NotificationBloc>();
+        final state = bloc.state;
+
+
+
+        int unread = 0;
+
+        if (state is NotificationLoaded) unread = state.unreadCount;
+        if (state is NotificationDisconnected) unread = state.unreadCount;
+
+        if (unread > 0) {
+          bloc.add(const MarkAllNotificationsAsSeen());
+        }
+      } catch (e) {
+        debugPrint('Error marking notifications as seen: $e');
       }
     });
   }
 
   @override
+  void dispose() {
+    _navBarAnimationController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  // ------------------------------------------------------------
+  // NAVBAR ANIMATION SETUP
+  // ------------------------------------------------------------
+
+  void _initializeNavBarAnimation() {
+    _navBarAnimationController = AnimationController(
+      duration: const Duration(milliseconds: 220),
+      vsync: this,
+    );
+
+    _navBarAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
+      CurvedAnimation(
+        parent: _navBarAnimationController,
+        curve: Curves.easeInOut,
+      ),
+    );
+
+    // CRITICAL FIX: Initialize animation to forward (visible) state
+    _navBarAnimationController.value = 1.0;
+  }
+
+  // ------------------------------------------------------------
+  // SCROLL LOGIC
+  // ------------------------------------------------------------
+
+  void _onScroll() {
+    if (!mounted) return;
+
+    double offset = _scrollController.offset;
+    double delta = offset - _lastOffset;
+
+    // Only trigger animation if scroll delta exceeds threshold
+    if (delta.abs() > _scrollThreshold) {
+      if (delta > 0) {
+        // scrolling DOWN → hide
+        if (_isNavBarVisible) {
+          setState(() => _isNavBarVisible = false);
+          _navBarAnimationController.reverse();
+        }
+      } else {
+        // scrolling UP → show
+        if (!_isNavBarVisible) {
+          setState(() => _isNavBarVisible = true);
+          _navBarAnimationController.forward();
+        }
+      }
+      _lastOffset = offset;
+    }
+  }
+
+  // ------------------------------------------------------------
+  // NAVBAR UI
+  // ------------------------------------------------------------
+
+  Widget _buildAnimatedNavBar() {
+    return SizeTransition(
+      sizeFactor: _navBarAnimation,
+      axisAlignment: -1.0, // Anchor animation to bottom
+      child: Container(
+        height: 80,
+        color: Theme.of(context).scaffoldBackgroundColor,
+        child: DashboardNavBar(
+          selectedIndex: 2,
+          onNavBarTap: _onNavBarTap,
+        ),
+      ),
+    );
+  }
+
+  // ------------------------------------------------------------
+  // NAVIGATION
+  // ------------------------------------------------------------
+
+
+  String _currentRoute = AppRoutes.communityHome;
+  void _onNavBarTap(int index, String route) {
+    if (route == AppRoutes.cameraScanGuidence) {
+      Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
+      return;
+    }
+
+    _resetNavBarVisibility();
+    setState(() {
+      _currentRoute = route;
+    });
+    
+    // Navigator.pushNamed(context, route);
+
+    _navigatorKey.currentState?.pushNamed(route);
+  }
+
+
+  void _resetNavBarVisibility() {
+    if (!_isNavBarVisible) {
+      setState(() {
+        _isNavBarVisible = true;
+      });
+      _navBarAnimationController.forward();
+    }
+  }
+
+  // ------------------------------------------------------------
+  // BUILD
+  // ------------------------------------------------------------
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
+      bottomNavigationBar: _buildAnimatedNavBar(),
       body: SafeArea(
         child: CustomScrollView(
+          controller: _scrollController,
           slivers: [
-            // Top section with back button (non-sticky)
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 16),
-                    // const CustomBackButton(),
-                    // const SizedBox(height: 15),
-                  ],
-                ),
-              ),
-            ),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Sticky header with Activity title and back button
+            // Sticky Activity Header
             SliverPersistentHeader(
               pinned: true,
               delegate: _ActivityHeaderDelegate(
@@ -81,7 +221,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
 
-            // Sticky Filter Tabs
+            // Filter Tabs
             SliverPersistentHeader(
               pinned: true,
               delegate: _FilterTabsDelegate(
@@ -89,172 +229,125 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 theme: theme,
               ),
             ),
-            
-            // Notifications List
+
+            // NOTIFICATIONS LIST
             BlocBuilder<NotificationBloc, NotificationState>(
               builder: (context, state) {
-                if (state is NotificationLoading || state is NotificationConnecting) {
+                if (state is NotificationLoading ||
+                    state is NotificationConnecting) {
                   return const SliverFillRemaining(
-                    child: Center(
-                      child: CircularProgressIndicator(),
-                    ),
+                    hasScrollBody: false,
+                    child: Center(child: CircularProgressIndicator()),
                   );
                 }
 
                 if (state is NotificationError) {
-                  return SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.error_outline,
-                            size: 64,
-                            color: theme.colorScheme.error,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'Failed to load notifications',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            state.message,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                          const SizedBox(height: 16),
-                          ElevatedButton(
-                            onPressed: () {
-                              context.read<NotificationBloc>().add(
-                                const ConnectToNotificationStream(),
-                              );
-                            },
-                            child: const Text('Retry'),
-                          ),
-                        ],
-                      ),
-                    ),
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text("Error loading notifications")),
                   );
                 }
 
-                List<NotificationEntity> notifications = [];
+                List<NotificationEntity> list = [];
                 if (state is NotificationLoaded) {
-                  notifications = state.filteredNotifications;
-                } else if (state is NotificationDisconnected) {
-                  notifications = state.notifications;
+                  list = state.filteredNotifications;
+                }
+                if (state is NotificationDisconnected) {
+                  list = state.notifications;
                 }
 
-                if (notifications.isEmpty) {
-                  return SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(
-                            Icons.notifications_none,
-                            size: 64,
-                            color: theme.textTheme.bodySmall?.color,
-                          ),
-                          const SizedBox(height: 16),
-                          Text(
-                            'No notifications yet',
-                            style: theme.textTheme.titleMedium,
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'When you get notifications, they\'ll show up here',
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.textTheme.bodySmall?.color,
-                            ),
-                            textAlign: TextAlign.center,
-                          ),
-                        ],
-                      ),
-                    ),
+                if (list.isEmpty) {
+                  return const SliverFillRemaining(
+                    hasScrollBody: false,
+                    child: Center(child: Text("No notifications yet")),
                   );
                 }
 
-                return SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final notification = notifications[index];
-                      return NotificationItem(
-                        notification: notification,
-                        onTap: () => _handleNotificationTap(notification),
-                      );
-                    },
-                    childCount: notifications.length,
-                  ),
+                return SliverList.builder(
+                  itemCount: list.length,
+                  itemBuilder: (context, i) {
+                    return NotificationItem(
+                      notification: list[i],
+                      onTap: () => _handleNotificationTap(list[i]),
+                    );
+                  },
                 );
               },
             ),
-            
-            // Add some bottom padding
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
         ),
       ),
     );
   }
 
+  // ------------------------------------------------------------
+  // LOAD USER DATA
+  // ------------------------------------------------------------
+
   Future<void> _loadUserData() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(AppConstants.accessTokenKey);
       final userData = prefs.getString(AppConstants.userDataKey);
-      
-      if (token != null && userData != null && mounted) {
-        final userDataJson = jsonDecode(userData);
-        setState(() {
-          _token = token;
-          _userId = userDataJson['id']?.toString();
-        });
+
+      if (token != null && userData != null) {
+        final user = jsonDecode(userData);
+        if (mounted) {
+          setState(() {
+            _token = token;
+            _userId = user["id"]?.toString();
+          });
+        }
       }
     } catch (e) {
       debugPrint('Error loading user data: $e');
     }
   }
 
-  void _handleNotificationTap(NotificationEntity notification) {
-    // Handle notification tap based on type
-    switch (notification.type) {
-      case NotificationType.like:
-      case NotificationType.reply:
-      case NotificationType.mention:
-        // Navigate to post detail if postId is available
-        if (notification.postId != null && _token != null && _userId != null) {
-          CommunityNavigation.navigateToPostDetail(
-            context,
-            postId: notification.postId!,
-            token: _token,
-            userId: _userId,
-          );
-        }
-        break;
-      case NotificationType.follow:
-      case NotificationType.followRequest:
-      case NotificationType.followRequestAccepted:
-        // Navigate to user profile
-        if (_token != null && _userId != null) {
+  // ------------------------------------------------------------
+  // NOTIFICATION TAP HANDLER
+  // ------------------------------------------------------------
+
+  void _handleNotificationTap(NotificationEntity n) {
+    try {
+      switch (n.type) {
+        case NotificationType.like:
+        case NotificationType.reply:
+        case NotificationType.mention:
+          if (n.postId != null) {
+            CommunityNavigation.navigateToPostDetail(
+              context,
+              postId: n.postId!,
+              token: _token,
+              userId: _userId,
+            );
+          }
+          break;
+
+        case NotificationType.follow:
+        case NotificationType.followRequest:
+        case NotificationType.followRequestAccepted:
           CommunityNavigation.navigateToUserProfile(
             context,
-            userId: notification.actor.id,
+            userId: n.actor.id,
           );
-        }
-        break;
-      case NotificationType.notificationDeleted:
-        // This shouldn't be tappable
-        break;
+          break;
+
+        default:
+          break;
+      }
+    } catch (e) {
+      debugPrint('Error handling notification tap: $e');
     }
   }
 }
 
-// Custom header delegate for Activity title with size animation and back button
+// ------------------------------------------------------------
+// HEADER DELEGATE - FIXED GEOMETRY
+// ------------------------------------------------------------
+
 class _ActivityHeaderDelegate extends SliverPersistentHeaderDelegate {
   final double minHeight;
   final double maxHeight;
@@ -268,7 +361,7 @@ class _ActivityHeaderDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   double get minExtent => minHeight;
-
+  
   @override
   double get maxExtent => maxHeight;
 
@@ -330,13 +423,16 @@ class _ActivityHeaderDelegate extends SliverPersistentHeaderDelegate {
   }
 
   @override
-  bool shouldRebuild(_ActivityHeaderDelegate oldDelegate) {
-    return maxHeight != oldDelegate.maxHeight ||
-        minHeight != oldDelegate.minHeight;
+  bool shouldRebuild(covariant _ActivityHeaderDelegate oldDelegate) {
+    return minHeight != oldDelegate.minHeight ||
+        maxHeight != oldDelegate.maxHeight;
   }
 }
 
-// Custom delegate for sticky filter tabs
+// ------------------------------------------------------------
+// FILTER TABS DELEGATE - FIXED GEOMETRY
+// ------------------------------------------------------------
+
 class _FilterTabsDelegate extends SliverPersistentHeaderDelegate {
   final double height;
   final ThemeData theme;
@@ -353,16 +449,21 @@ class _FilterTabsDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => height;
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       color: theme.scaffoldBackgroundColor,
+      alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
       child: const NotificationFilterTabs(),
     );
   }
 
   @override
-  bool shouldRebuild(_FilterTabsDelegate oldDelegate) {
+  bool shouldRebuild(covariant _FilterTabsDelegate oldDelegate) {
     return height != oldDelegate.height;
   }
 }

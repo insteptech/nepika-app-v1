@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../../../core/utils/image_utils.dart';
 
 /// Face Alignment Camera Screen
 /// Provides a simple camera interface with face alignment guide
@@ -142,9 +143,21 @@ class _FaceAlignmentCameraScreenState extends State<FaceAlignmentCameraScreen> {
     try {
       final XFile image = await _cameraController!.takePicture();
       
+      // Check if using front camera
+      final bool isFromFrontCamera = _cameras[_currentCameraIndex].lensDirection == CameraLensDirection.front;
+      
+      // Fix image orientation and compress
+      final String correctedImagePath = await ImageUtils.compressImage(
+        image.path,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        quality: 85,
+        isFromFrontCamera: isFromFrontCamera,
+      );
+      
       if (mounted) {
-        // Return the image path
-        Navigator.of(context).pop(image.path);
+        // Return the corrected image path
+        Navigator.of(context).pop(correctedImagePath);
       }
     } catch (e) {
       debugPrint('Error capturing image: $e');

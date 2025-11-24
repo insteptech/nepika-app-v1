@@ -18,6 +18,7 @@ import 'core/di/injection_container.dart' as di;
 import 'core/services/fcm_background_handler.dart';
 import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
 import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
+import 'package:nepika/features/settings/screens/face_scan_info_screen.dart';
 import 'package:nepika/features/dashboard/main.dart';
 import 'package:nepika/features/products/main.dart';
 import 'package:nepika/features/error_pricing/screens/pricing_screen.dart';
@@ -321,6 +322,8 @@ class MyApp extends StatelessWidget {
               );
             case AppRoutes.termsOfUse:
               return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
+            case AppRoutes.faceScanInfo:
+              return MaterialPageRoute(builder: (_) => const FaceScanInfoScreen());
             case AppRoutes.editProfile:
               return MaterialPageRoute(
                 builder: (_) {

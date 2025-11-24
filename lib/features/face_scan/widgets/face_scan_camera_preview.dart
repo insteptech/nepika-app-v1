@@ -104,18 +104,29 @@ class FaceScanCameraPreview extends StatelessWidget {
   }
 
   Widget _buildCameraPreview() {
-    return ClipRect(
-      child: OverflowBox(
-        alignment: Alignment.center,
-        child: FittedBox(
-          fit: BoxFit.cover,
-          child: SizedBox(
-            width: controller!.value.previewSize!.height,
-            height: controller!.value.previewSize!.width,
-            child: CameraPreview(controller!),
+    // Additional safety checks for disposed controller
+    if (controller == null || !controller!.value.isInitialized || controller!.value.hasError) {
+      return _buildLoadingState();
+    }
+
+    try {
+      return ClipRect(
+        child: OverflowBox(
+          alignment: Alignment.center,
+          child: FittedBox(
+            fit: BoxFit.cover,
+            child: SizedBox(
+              
+              width: controller!.value.previewSize!.height,
+              height: controller!.value.previewSize!.width,
+              child: CameraPreview(controller!),
+            ),
           ),
         ),
-      ),
-    );
+      );
+    } catch (e) {
+      debugPrint('Error building camera preview: $e');
+      return _buildErrorState();
+    }
   }
 }
