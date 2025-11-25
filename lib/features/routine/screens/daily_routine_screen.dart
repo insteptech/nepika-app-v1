@@ -528,7 +528,9 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
                   children: [
                     Text(
                       step['name'] ?? 'Step',
-                      style: Theme.of(context).textTheme.headlineMedium,
+                      style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                        fontSize: 12
+                      ),
                     ),
                     const SizedBox(height: 4),
                     Text(
@@ -614,7 +616,9 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
               style: Theme.of(context)
                   .textTheme
                   .bodyLarge!
-                  .hint(context),
+                  .hint(context).copyWith(
+                    fontSize: 12
+                  ),
             ),
     );
   }

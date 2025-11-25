@@ -4,7 +4,7 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.1") // your existing Android Gradle plugin
+        classpath("com.android.tools.build:gradle:8.7.3") // Match settings.gradle.kts version
         classpath("com.google.gms:google-services:4.4.2") // Firebase plugin
     }
 }

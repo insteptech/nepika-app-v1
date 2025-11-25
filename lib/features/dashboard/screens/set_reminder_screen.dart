@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -9,12 +11,12 @@ import 'package:nepika/core/widgets/selection_button.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/di/injection_container.dart';
 import 'package:nepika/core/services/local_notification_service.dart';
-import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/reminders/bloc/reminder_event.dart';
 import 'package:nepika/features/reminders/bloc/reminder_state.dart';
 import 'package:nepika/features/settings/widgets/settings_option_tile.dart';
 import 'package:nepika/features/routine/widgets/sticky_header_delegate.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 enum ReminderDays { daily, weekdays, weekends }
 enum ReminderType { morning, night }
@@ -27,7 +29,7 @@ class ReminderSettings extends StatefulWidget {
 }
 
 
-class _ReminderSettingsState extends State<ReminderSettings> {
+class _ReminderSettingsState extends State<ReminderSettings> with WidgetsBindingObserver {
   ReminderDays? _selectedDay = ReminderDays.daily;
   ReminderType? _selectedType = ReminderType.morning;
 
@@ -35,6 +37,8 @@ class _ReminderSettingsState extends State<ReminderSettings> {
   final _reminderTimeController = TextEditingController();
 
   bool _reminderEnabled = false;
+  bool _isCheckingPermission = true; // Track if we're still checking permission
+  Timer? _permissionCheckTimer; // Timer for periodic permission checks
 
 
 bool get _isFormValid {
@@ -49,15 +53,252 @@ bool get _isFormValid {
   @override
   void initState() {
     super.initState();
+
     // Set default time (e.g., current time in HH:MM AM/PM format)
     final now = DateTime.now();
     final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
     final minute = now.minute.toString().padLeft(2, '0');
     final period = now.hour >= 12 ? 'PM' : 'AM';
     _reminderTimeController.text = '$hour:$minute $period';
-    
+
     // Add listener for time validation
     _reminderTimeController.addListener(_validateTime);
+
+    // Add app lifecycle observer to detect when user returns from settings
+    WidgetsBinding.instance.addObserver(this);
+
+    // Check notification permission status immediately before first build
+    _checkNotificationPermissionSync();
+
+    // Start periodic permission check (every 1 second) - only runs while this screen is active
+    _permissionCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
+      _checkNotificationPermission();
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Permission checking handled in initState and lifecycle changes
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+
+    // Re-check permission when app resumes (user might have changed it in settings)
+    if (state == AppLifecycleState.resumed) {
+      print('=== APP RESUMED - Rechecking permission ===');
+      _checkNotificationPermissionSync();
+    }
+  }
+
+  /// Synchronous wrapper to immediately check permission without waiting
+  void _checkNotificationPermissionSync() {
+    _checkNotificationPermission();
+  }
+
+  Future<void> _checkNotificationPermission() async {
+    try {
+      print('=== PERMISSION CHECK START ===');
+      print('Platform: ${Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown'}');
+
+      final notificationService = LocalNotificationService.instance;
+
+      // Check 1: Native plugin (flutter_local_notifications)
+      final nativeEnabled = await notificationService.areNotificationsEnabled();
+      print('Check 1 - Native plugin areNotificationsEnabled: $nativeEnabled');
+
+      // Check 2: permission_handler
+      final permissionStatus = await Permission.notification.status;
+      print('Check 2 - Permission handler status: $permissionStatus');
+      print('  - isGranted: ${permissionStatus.isGranted}');
+      print('  - isDenied: ${permissionStatus.isDenied}');
+      print('  - isPermanentlyDenied: ${permissionStatus.isPermanentlyDenied}');
+      print('  - isLimited: ${permissionStatus.isLimited}');
+      print('  - isRestricted: ${permissionStatus.isRestricted}');
+
+      // Determine final state with platform-specific logic
+      bool isGranted = false;
+
+      if (Platform.isAndroid) {
+        // On Android, native plugin is most reliable
+        isGranted = nativeEnabled;
+        print('Android: Using native plugin result: $isGranted');
+      } else if (Platform.isIOS) {
+        // On iOS, there's a known issue where permission_handler doesn't reflect
+        // permissions granted outside the app or on first install
+        // If native plugin says enabled, trust it over permission_handler
+        if (nativeEnabled) {
+          isGranted = true;
+          print('iOS: Native plugin says enabled, trusting it: $isGranted');
+          if (!permissionStatus.isGranted) {
+            print('iOS Note: permission_handler disagrees but native is more accurate');
+          }
+        } else {
+          // If native says disabled, double-check with permission_handler
+          isGranted = permissionStatus.isGranted;
+          print('iOS: Native says disabled, checking permission_handler: $isGranted');
+        }
+      } else {
+        // Fallback for other platforms - trust native plugin first
+        isGranted = nativeEnabled;
+        print('Other platform: Using native plugin result: $isGranted');
+      }
+
+      print('Final toggle state: $isGranted');
+      print('========================');
+
+      if (mounted) {
+        setState(() {
+          _reminderEnabled = isGranted;
+          _isCheckingPermission = false;
+        });
+      }
+    } catch (e, stackTrace) {
+      print('Error checking notification permission: $e');
+      print('Stack trace: $stackTrace');
+      if (mounted) {
+        setState(() {
+          _reminderEnabled = false;
+          _isCheckingPermission = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _requestNotificationPermission() async {
+    try {
+      print('=== PERMISSION REQUEST ===');
+
+      // First check current status
+      final currentStatus = await Permission.notification.status;
+      print('Current permission status: $currentStatus');
+
+      PermissionStatus newStatus;
+
+      // If permanently denied, go directly to settings
+      if (currentStatus.isPermanentlyDenied) {
+        print('Permission permanently denied, need to open settings');
+
+        if (!mounted) return;
+
+        final shouldOpenSettings = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text(
+                'Notification permission is required for reminders.\n\n'
+                'You previously denied this permission. Please enable it in app settings to receive reminders.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (shouldOpenSettings == true) {
+          await openAppSettings();
+          // Don't check immediately, wait for app resume lifecycle
+        }
+        return;
+      }
+
+      // Request permission
+      print('Requesting notification permission...');
+      newStatus = await Permission.notification.request();
+      print('Permission request result: $newStatus');
+
+      if (!mounted) return;
+
+      // Handle the result
+      if (newStatus.isGranted) {
+        // Permission granted - verify with native plugin and enable toggle
+        final nativeEnabled = await LocalNotificationService.instance.areNotificationsEnabled();
+
+        if (mounted) {
+          setState(() {
+            _reminderEnabled = nativeEnabled;
+          });
+
+          if (nativeEnabled) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Notification permission granted!'),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 2),
+              ),
+            );
+            print('Permission granted, toggle enabled');
+          } else {
+            // Edge case: permission_handler says granted but native says not enabled
+            print('Permission mismatch - granted but not enabled natively');
+          }
+        }
+      } else if (newStatus.isDenied || newStatus.isPermanentlyDenied) {
+        // Permission denied - show dialog
+        print('Permission denied, showing settings dialog');
+
+        final shouldOpenSettings = await showDialog<bool>(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              title: const Text('Permission Required'),
+              content: const Text(
+                'Reminders need notification permission to work.\n\n'
+                'Please enable notifications in app settings to receive reminders for your skincare routine.',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(false),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(true),
+                  child: const Text('Open Settings'),
+                ),
+              ],
+            );
+          },
+        );
+
+        if (shouldOpenSettings == true) {
+          await openAppSettings();
+          // Permission will be rechecked when app resumes via lifecycle callback
+        } else {
+          // Keep toggle disabled
+          setState(() {
+            _reminderEnabled = false;
+          });
+        }
+      }
+
+      print('==========================');
+    } catch (e) {
+      print('Error requesting notification permission: $e');
+
+      if (mounted) {
+        setState(() {
+          _reminderEnabled = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _validateTime() {
@@ -153,7 +394,7 @@ bool get _isFormValid {
       case ReminderDays.weekdays:
         return 'Weekdays';
       case ReminderDays.weekends:
-        return 'Weekly'; // Using Weekly as closest match to weekends
+        return 'Weekends';
     }
   }
 
@@ -250,75 +491,11 @@ bool get _isFormValid {
       return;
     }
 
-    // Check for notification permissions (Android only)
-    if (_reminderEnabled) {
-      try {
-        final notificationService = LocalNotificationService.instance;
-        final hasExactAlarmPermission = await notificationService.requestExactAlarmPermission();
-        
-        if (!hasExactAlarmPermission) {
-          if (!mounted) return;
-          
-          // Show permission dialog
-          final bool? shouldContinue = await showDialog<bool>(
-            context: context,
-            builder: (BuildContext context) {
-              return AlertDialog(
-                title: const Text('Notification Permission Required'),
-                content: const Text(
-                  'To schedule reminders, this app needs permission to set exact alarms. '
-                  'Please enable "Alarms & reminders" permission in settings.\n\n'
-                  'You can continue without notifications, but reminders won\'t work.'
-                ),
-                actions: [
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(false),
-                    child: const Text('Continue without notifications'),
-                  ),
-                  TextButton(
-                    onPressed: () => Navigator.of(context).pop(true),
-                    child: const Text('Try again'),
-                  ),
-                ],
-              );
-            },
-          );
-          
-          if (shouldContinue == true) {
-            // User wants to try again, call this method recursively
-            if (mounted) {
-              _onDonePressed(blocContext);
-            }
-            return;
-          } else if (shouldContinue == false) {
-            // User wants to continue without notifications
-            setState(() {
-              _reminderEnabled = false;
-            });
-          } else {
-            // User dismissed dialog
-            return;
-          }
-        }
-      } catch (e) {
-        print('Permission check error: $e');
-        if (!mounted) return;
-        
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Unable to check notification permissions. Saving reminder without notifications.'),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        setState(() {
-          _reminderEnabled = false;
-        });
-      }
-    }
+    // Permission is now handled by the toggle - no need to check here again
 
     try {
       final time24Hour = _convertTo24HourFormat(_reminderTimeController.text);
-      
+
       // Debug logging
       print('=== Reminder Save Debug ===');
       print('Reminder Name: ${_reminderNameController.text.trim()}');
@@ -327,8 +504,30 @@ bool get _isFormValid {
       print('Reminder Days: ${_mapReminderDays(_selectedDay!)}');
       print('Reminder Type: ${_mapReminderType(_selectedType!)}');
       print('Reminder Enabled: $_reminderEnabled');
+
+      // Check notification service status
+      final notifService = LocalNotificationService.instance;
+      final isInitialized = notifService.getStatus()['isInitialized'] ?? false;
+      final canSchedule = await notifService.canScheduleNotifications();
+      print('Notification Service Initialized: $isInitialized');
+      print('Can Schedule Notifications: $canSchedule');
+
+      if (!canSchedule && _reminderEnabled) {
+        print('WARNING: Cannot schedule notifications but reminder is enabled!');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Notification permission is required to enable reminders'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+        return;
+      }
+
       print('========================');
-      
+
       if (mounted) {
         blocContext.read<ReminderBloc>().add(
           AddReminderEvent(
@@ -350,170 +549,6 @@ bool get _isFormValid {
     }
   }
 
-  Future<void> _testImmediateNotification() async {
-    try {
-      print('=== IMMEDIATE NOTIFICATION TEST ===');
-      
-      final localService = LocalNotificationService.instance;
-      print('Testing immediate notification...');
-      
-      final success = await localService.showImmediateNotification(
-        title: 'NEPIKA Immediate Test',
-        body: 'This notification should appear instantly!',
-      );
-      
-      print('Immediate notification result: $success');
-      print('==================================');
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success 
-              ? 'Immediate notification sent! Should appear now.'
-              : 'Failed to send immediate notification. Check console for details.',
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 3),
-        ),
-      );
-    } catch (e) {
-      print('Error in immediate notification test: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
-      }
-    }
-  }
-
-  Future<void> _runDiagnostics() async {
-    try {
-      print('=== COMPREHENSIVE NOTIFICATION DIAGNOSTICS ===');
-      
-      final localService = LocalNotificationService.instance;
-      final diagnostics = await localService.runDiagnostics();
-      
-      print('Diagnostic Results:');
-      diagnostics.forEach((key, value) {
-        print('  $key: $value');
-      });
-      print('==============================================');
-      
-      if (!mounted) return;
-      
-      // Show results in a dialog
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Notification Diagnostics'),
-          content: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: diagnostics.entries.map((entry) => 
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 2),
-                  child: Text('${entry.key}: ${entry.value}', 
-                    style: const TextStyle(fontSize: 12)),
-                )
-              ).toList(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-          ],
-        ),
-      );
-    } catch (e) {
-      print('Error in diagnostics: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Diagnostics error: ${e.toString()}')),
-        );
-      }
-    }
-  }
-
-  Future<void> _testNotifications() async {
-    try {
-      print('=== NOTIFICATION DIAGNOSTIC TEST ===');
-      
-      // 1. Test Local Notification Service
-      final localService = LocalNotificationService.instance;
-      print('Local Notification Service Status: ${localService.getStatus()}');
-      
-      // 2. Test exact alarm permission
-      final hasExactAlarmPermission = await localService.requestExactAlarmPermission();
-      print('Exact Alarm Permission: $hasExactAlarmPermission');
-      
-      // 3. Test notifications enabled
-      final notificationsEnabled = await localService.areNotificationsEnabled();
-      print('Notifications Enabled: $notificationsEnabled');
-      
-      // 4. Test FCM Service
-      final fcmService = UnifiedFcmService.instance;
-      print('FCM Service Status: ${fcmService.getStatus()}');
-      
-      // 5. Schedule a test notification for 10 seconds from now using immediate scheduling
-      print('Scheduling immediate test notification for 10 seconds from now...');
-      
-      final success = await localService.testNotification(
-        title: 'NEPIKA Test Notification',
-        body: 'This is a test notification scheduled 10 seconds ago',
-        delaySeconds: 10,
-      );
-      
-      // 6. Also test a 30-second delayed reminder using the reminder scheduling system
-      print('Also testing 30-second scheduled reminder...');
-      final now = DateTime.now().add(const Duration(seconds: 30));
-      final timeString30s = '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}:${now.second.toString().padLeft(2, '0')}';
-      
-      final success30s = await localService.scheduleReminder(
-        reminderId: 'test_30s_${DateTime.now().millisecondsSinceEpoch}',
-        reminderName: 'Test 30s Scheduled',
-        time24Hour: timeString30s,
-        reminderDays: 'Daily',
-        reminderType: 'Test',
-        isEnabled: true,
-      );
-      
-      print('30-second scheduled reminder result: $success30s');
-      
-      print('Test notification scheduled: $success');
-      print('====================================');
-      
-      if (!mounted) return;
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            success 
-              ? 'Test notification scheduled for 10 seconds from now. Check console for diagnostic info.'
-              : 'Failed to schedule test notification. Check console for details.',
-          ),
-          backgroundColor: success ? Colors.green : Colors.red,
-          duration: const Duration(seconds: 5),
-        ),
-      );
-      
-    } catch (e) {
-      print('Error in notification test: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Test failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return BlocProvider(
@@ -524,9 +559,20 @@ bool get _isFormValid {
             listener: (context, state) {
               print('=== BLoC State Change ===');
               print('State: ${state.runtimeType}');
-              
+
               if (state is ReminderAdded) {
                 print('Reminder added successfully: ${state.reminder.id}');
+
+                // Verify notification was scheduled
+                LocalNotificationService.instance.getPendingNotifications().then((pending) {
+                  print('=== Pending Notifications After Save ===');
+                  print('Total pending: ${pending.length}');
+                  for (var notif in pending) {
+                    print('  - ID: ${notif.id}, Title: ${notif.title}');
+                  }
+                  print('======================================');
+                });
+
                 ScaffoldMessenger.of(context).clearSnackBars();
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Reminder saved successfully!')),
@@ -716,53 +762,44 @@ bool get _isFormValid {
                               ],
                             ),
                             const SizedBox(height: 20),
-                            SettingsOptionTile(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 0,
-                                vertical: 8,
-                              ),
-                              text: 'Enable Reminders',
-                              showToggle: true,
-                              showDivider: false,
-                              toggleValue: _reminderEnabled,
-                              onToggleChanged: (value) {
-                                setState(() {
-                                  _reminderEnabled = value;
-                                });
-                              },
-                            ),
-                             const SizedBox(height: 10),
-                             
-                             // Debug: Test Notification Buttons
-                            //  Row(
-                            //    children: [
-                            //      Expanded(
-                            //        child: CustomButton(
-                            //          isDisabled: false,
-                            //          text: 'Immediate Test',
-                            //          onPressed: () => _testImmediateNotification(),
-                            //        ),
-                            //      ),
-                            //      const SizedBox(width: 4),
-                            //      Expanded(
-                            //        child: CustomButton(
-                            //          isDisabled: false,
-                            //          text: 'Scheduled Test',
-                            //          onPressed: () => _testNotifications(),
-                            //        ),
-                            //      ),
-                            //      const SizedBox(width: 4),
-                            //      Expanded(
-                            //        child: CustomButton(
-                            //          isDisabled: false,
-                            //          text: 'Diagnostics',
-                            //          onPressed: () => _runDiagnostics(),
-                            //        ),
-                            //      ),
-                            //    ],
-                            //  ),
-                            //  const SizedBox(height: 10),
-                             
+                            _isCheckingPermission
+                              ? const Padding(
+                                  padding: EdgeInsets.symmetric(vertical: 8.0),
+                                  child: Row(
+                                    children: [
+                                      Text('Enable Reminders'),
+                                      Spacer(),
+                                      SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(strokeWidth: 2),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              : SettingsOptionTile(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 0,
+                                    vertical: 8,
+                                  ),
+                                  text: 'Enable Reminders',
+                                  showToggle: true,
+                                  showDivider: false,
+                                  toggleValue: _reminderEnabled,
+                                  onToggleChanged: (value) async {
+                                    if (value) {
+                                      // User wants to enable reminders - check permission first
+                                      await _requestNotificationPermission();
+                                    } else {
+                                      // User wants to disable reminders - allow it
+                                      setState(() {
+                                        _reminderEnabled = false;
+                                      });
+                                    }
+                                  },
+                                ),
+                             const SizedBox(height: 20),
+
                              CustomButton(
                                isDisabled: !_isFormValid || isLoading,
                                text: isLoading ? 'Saving...' : 'Done',
@@ -789,6 +826,12 @@ bool get _isFormValid {
 
   @override
   void dispose() {
+    // Cancel the periodic permission check timer
+    _permissionCheckTimer?.cancel();
+
+    // Remove app lifecycle observer
+    WidgetsBinding.instance.removeObserver(this);
+
     _reminderNameController.dispose();
     _reminderTimeController.dispose();
     super.dispose();

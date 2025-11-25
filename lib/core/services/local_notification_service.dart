@@ -356,17 +356,17 @@ class LocalNotificationService {
     try {
       AppLogger.info('Scheduling reminder: $reminderName at $time24Hour', tag: 'Notifications');
 
-      // Check for exact alarm permission on Android
+      // Check for notification permission on Android
       if (Platform.isAndroid) {
         final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
             _localNotifications.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
-        
+
         if (androidPlugin != null) {
-          final bool canSchedule = await androidPlugin.canScheduleExactNotifications() ?? false;
-          if (!canSchedule) {
-            AppLogger.error('Cannot schedule exact notifications - permission not granted', tag: 'Notifications');
-            throw Exception('exact_alarms_not_permitted');
+          final bool canNotify = await androidPlugin.areNotificationsEnabled() ?? false;
+          if (!canNotify) {
+            AppLogger.error('Cannot schedule notifications - permission not granted', tag: 'Notifications');
+            throw Exception('notifications_not_permitted');
           }
         }
       }
@@ -424,7 +424,7 @@ class LocalNotificationService {
       'Time for your $reminderType!',
       scheduledDate,
       _notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time, // Repeat daily
       payload: 'reminder:$reminderId',
     );
@@ -451,7 +451,7 @@ class LocalNotificationService {
         'Time for your $reminderType!',
         scheduledDate,
         _notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, // Repeat weekly on this day
         payload: 'reminder:$reminderId',
       );
@@ -479,7 +479,7 @@ class LocalNotificationService {
         'Time for your $reminderType!',
         scheduledDate,
         _notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
           matchDateTimeComponents: DateTimeComponents.dayOfWeekAndTime, // Repeat weekly on this day
         payload: 'reminder:$reminderId',
       );
@@ -619,6 +619,32 @@ class LocalNotificationService {
     return false;
   }
 
+  /// Check if notifications are permitted (without requesting)
+  /// This checks only basic notification permission, not exact alarms
+  Future<bool> canScheduleNotifications() async {
+    try {
+      if (Platform.isAndroid) {
+        final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
+            _localNotifications.resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+
+        if (androidPlugin != null) {
+          final bool notificationsEnabled = await androidPlugin.areNotificationsEnabled() ?? false;
+          AppLogger.info('Notification permission: $notificationsEnabled', tag: 'Notifications');
+          return notificationsEnabled;
+        }
+        return false;
+      } else if (Platform.isIOS) {
+        // For iOS, we'll assume notifications are enabled if we can initialize
+        return true;
+      }
+      return false;
+    } catch (e) {
+      AppLogger.error('Error checking notification permission: $e', tag: 'Notifications');
+      return false;
+    }
+  }
+
   /// Get service status for debugging
   Map<String, dynamic> getStatus() {
     return {
@@ -682,7 +708,7 @@ class LocalNotificationService {
         body,
         scheduledDate,
         _notificationDetails,
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
         payload: 'test_notification',
       );
 
