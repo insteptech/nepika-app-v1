@@ -68,12 +68,12 @@ class _NotificationsSettingsScreenState
           // TODO: Implement app walkthrough functionality
         },
       ),
-      SettingsOptionData.option(
-        'Delete Account',
-        onTap: () {
-          _showDeleteAccountDialog(context);
-        },
-      ),
+      // SettingsOptionData.option(
+      //   'Delete Account',
+      //   onTap: () {
+      //     _showDeleteAccountDialog(context);
+      //   },
+      // ),
     ];
   }
 

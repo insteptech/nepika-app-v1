@@ -564,7 +564,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
           currentValue: _getCurrentValue(question, state),
           allAnswers: state.answers,
           onValueChanged: _handleValueChanged,
-          optionsPerRow: _currentStep == 7 ? 2 : null,
+          optionsPerRow:  null,
         );
       }).toList(),
     );

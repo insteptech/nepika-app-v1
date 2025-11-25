@@ -36,18 +36,20 @@ class DeleteAccountRequestEntity extends Equatable {
 class DeleteAccountResponseEntity extends Equatable {
   final String reasonId;
   final int deleteReasonId;
-  final String userId;
-  final String fullName;
-  final String reasonText;
-  final DateTime createdAt;
+  final String? userId;
+  final String? fullName;
+  final String? reasonText;
+  final DateTime? createdAt;
+  final String? additionalComments;
 
   const DeleteAccountResponseEntity({
     required this.reasonId,
     required this.deleteReasonId,
-    required this.userId,
-    required this.fullName,
-    required this.reasonText,
-    required this.createdAt,
+    this.userId,
+    this.fullName,
+    this.reasonText,
+    this.createdAt,
+    this.additionalComments,
   });
 
   @override
@@ -58,5 +60,6 @@ class DeleteAccountResponseEntity extends Equatable {
     fullName,
     reasonText,
     createdAt,
+    additionalComments,
   ];
 }

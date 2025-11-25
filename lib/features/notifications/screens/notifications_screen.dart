@@ -373,15 +373,24 @@ class _ActivityHeaderDelegate extends SliverPersistentHeaderDelegate {
     // Check if header is stuck to top
     final isStuckToTop = shrinkOffset > 0;
 
-    // Interpolate font size from 32 (expanded) to 24 (collapsed)
-    final fontSize = 32.0 - (progress * 8.0);
+    // Responsive font sizes based on screen width
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
+    // Interpolate font size - responsive to screen size
+    final maxFontSize = isSmallScreen ? 26.0 : 32.0;
+    final minFontSize = isSmallScreen ? 20.0 : 24.0;
+    final fontSize = maxFontSize - (progress * (maxFontSize - minFontSize));
 
     // Interpolate vertical padding
     final verticalPadding = 10.0 - (progress * 5.0);
 
     return Container(
       color: theme.scaffoldBackgroundColor,
-      padding: EdgeInsets.symmetric(horizontal: 20, vertical: verticalPadding),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: verticalPadding,
+      ),
       child: Row(
         children: [
           // Animated back button (appears when stuck)
@@ -397,7 +406,7 @@ class _ActivityHeaderDelegate extends SliverPersistentHeaderDelegate {
                 maxWidth: 40,
                 child: CustomBackButton(
                   label: '',
-                  iconSize: 24,
+                  iconSize: isSmallScreen ? 20 : 24,
                   iconColor: theme.colorScheme.primary,
                 ),
               ),
@@ -414,6 +423,8 @@ class _ActivityHeaderDelegate extends SliverPersistentHeaderDelegate {
                   fontSize: fontSize,
                   fontWeight: FontWeight.w400,
                 ),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
               ),
             ),
           ),
@@ -454,10 +465,16 @@ class _FilterTabsDelegate extends SliverPersistentHeaderDelegate {
     double shrinkOffset,
     bool overlapsContent,
   ) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Container(
       color: theme.scaffoldBackgroundColor,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      alignment: Alignment.centerLeft,
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 16 : 20,
+        vertical: isSmallScreen ? 8 : 10,
+      ),
       child: const NotificationFilterTabs(),
     );
   }

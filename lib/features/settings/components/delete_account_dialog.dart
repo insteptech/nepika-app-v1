@@ -3,6 +3,7 @@ import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../core/config/constants/app_constants.dart';
 import '../../../core/config/constants/routes.dart';
 import '../../../core/di/injection_container.dart' as di;
+import '../../../core/services/navigation_service.dart';
 import '../../../domain/auth/entities/delete_account_entities.dart';
 import '../bloc/delete_account_bloc.dart';
 import '../bloc/delete_account_event.dart';
@@ -42,17 +43,7 @@ class _DeleteAccountDialogContentState extends State<_DeleteAccountDialogContent
   }
 
   Future<void> _submitDeletion() async {
-    if (_selectedReasonId == null) {
-      ScaffoldMessenger.of(Navigator.of(context).context).showSnackBar(
-        const SnackBar(
-          content: Text('Please select a reason for deletion'),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: 80, left: 20, right: 20),
-        ),
-      );
-      return;
-    }
-
+    // No need to check _selectedReasonId here since button is disabled when null
     try {
       final prefs = await SharedPreferences.getInstance();
       final token = prefs.getString(AppConstants.accessTokenKey);
@@ -101,32 +92,85 @@ class _DeleteAccountDialogContentState extends State<_DeleteAccountDialogContent
     return BlocListener<DeleteAccountBloc, DeleteAccountState>(
       listener: (context, state) {
         if (state is DeleteAccountLoading) {
-          setState(() {
-            _isLoading = true;
-          });
+          if (mounted) {
+            setState(() {
+              _isLoading = true;
+            });
+          }
         } else if (state is DeleteAccountSuccess) {
-          setState(() {
-            _isLoading = false;
+          // Close dialog first
+          Navigator.of(context, rootNavigator: true).pop();
+          // Then clear data and navigate - use a post-frame callback to ensure dialog is closed
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _clearDataAndNavigateToSplash();
           });
-          Navigator.of(context).pop();
-          _clearDataAndNavigateToSplash(context);
         } else if (state is DeleteAccountError) {
-          setState(() {
-            _isLoading = false;
-          });
-          // Use the root scaffold messenger to show snackbar above dialog
-          ScaffoldMessenger.of(Navigator.of(context).context).showSnackBar(
-            SnackBar(
-              content: Text(state.message),
-              behavior: SnackBarBehavior.floating,
-              backgroundColor: Theme.of(context).colorScheme.error,
-              margin: const EdgeInsets.only(
-                bottom: 80,
-                left: 20,
-                right: 20,
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+
+          // Show error using overlay entry to display above dialog
+          final overlay = Overlay.of(context, rootOverlay: true);
+          final navigator = Navigator.of(context, rootNavigator: true);
+          late OverlayEntry overlayEntry;
+
+          overlayEntry = OverlayEntry(
+            builder: (overlayContext) => Positioned(
+              top: MediaQuery.of(overlayContext).padding.top + 20,
+              left: 20,
+              right: 20,
+              child: Material(
+                color: Colors.transparent,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(overlayContext).colorScheme.error,
+                    borderRadius: BorderRadius.circular(8),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x33000000), // Black with 20% opacity
+                        blurRadius: 8,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.error_outline,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          state.message,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ),
           );
+
+          overlay.insert(overlayEntry);
+
+          // Close dialog and remove overlay after delay
+          Future.delayed(const Duration(milliseconds: 100), () {
+            navigator.pop();
+          });
+
+          Future.delayed(const Duration(seconds: 4), () {
+            overlayEntry.remove();
+          });
         }
       },
       child: Dialog(
@@ -258,10 +302,14 @@ class _DeleteAccountDialogContentState extends State<_DeleteAccountDialogContent
                   ),
                   const SizedBox(width: 12),
                   ElevatedButton(
-                    onPressed: _isLoading ? null : _submitDeletion,
+                    onPressed: (_isLoading || _selectedReasonId == null)
+                        ? null
+                        : _submitDeletion,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Theme.of(context).colorScheme.error,
                       foregroundColor: Colors.white,
+                      disabledBackgroundColor: Theme.of(context).colorScheme.error.withValues(alpha: 0.5),
+                      disabledForegroundColor: Colors.white.withValues(alpha: 0.5),
                     ),
                     child: _isLoading
                         ? const SizedBox(
@@ -284,33 +332,53 @@ class _DeleteAccountDialogContentState extends State<_DeleteAccountDialogContent
   }
 
 
-  Future<void> _clearDataAndNavigateToSplash(BuildContext context) async {
+  Future<void> _clearDataAndNavigateToSplash() async {
     try {
+      debugPrint('🗑️ Starting account deletion cleanup...');
       final sharedPrefs = await SharedPreferences.getInstance();
-      
+
       // Clear all user data from local storage
       await sharedPrefs.remove(AppConstants.accessTokenKey);
       await sharedPrefs.remove(AppConstants.refreshTokenKey);
       await sharedPrefs.remove(AppConstants.userTokenKey);
       await sharedPrefs.remove(AppConstants.userDataKey);
       await sharedPrefs.remove(AppConstants.onboardingKey);
-      // Clear any other app-specific keys as needed
-      
-      if (context.mounted) {
-        // Navigate to splash screen and clear all navigation stack
-        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
+
+      // Clear FCM token
+      await sharedPrefs.remove('fcm_token');
+
+      // Clear any theme preferences
+      await sharedPrefs.remove('is_dark_mode');
+
+      // Clear notification preferences
+      await sharedPrefs.remove(AppConstants.notificationPermissionPromptedKey);
+      await sharedPrefs.remove(AppConstants.notificationPermissionGrantedKey);
+
+      debugPrint('✅ All local data cleared successfully');
+
+      // Navigate to splash screen and clear all navigation stack using NavigationService
+      if (NavigationService.navigatorKey.currentState != null) {
+        NavigationService.navigatorKey.currentState!.pushNamedAndRemoveUntil(
           AppRoutes.splash,
           (route) => false,
         );
+        debugPrint('✅ Navigated to splash screen');
+      } else {
+        debugPrint('❌ Navigator state is null, cannot navigate');
       }
     } catch (e) {
-      debugPrint('Error clearing data: $e');
-      if (context.mounted) {
-        // Fallback: still navigate to splash screen even if clearing fails
-        Navigator.of(context, rootNavigator: true).pushNamedAndRemoveUntil(
-          AppRoutes.splash,
-          (route) => false,
-        );
+      debugPrint('❌ Error clearing data: $e');
+      // Fallback: still try to navigate to splash screen even if clearing fails
+      try {
+        if (NavigationService.navigatorKey.currentState != null) {
+          NavigationService.navigatorKey.currentState!.pushNamedAndRemoveUntil(
+            AppRoutes.splash,
+            (route) => false,
+          );
+          debugPrint('✅ Navigated to splash screen (fallback)');
+        }
+      } catch (navError) {
+        debugPrint('❌ Navigation fallback also failed: $navError');
       }
     }
   }

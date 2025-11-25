@@ -4,6 +4,8 @@ import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
+import 'package:nepika/features/settings/bloc/delete_account_bloc.dart';
+import 'package:nepika/features/settings/components/delete_account_dialog.dart';
 import 'package:nepika/features/settings/screens/onboarding_data_screen.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -160,12 +162,39 @@ class MainSettingsScreen extends StatelessWidget {
           ).pushNamed(AppRoutes.subscription);
         },
       ),
-      // SettingsOptionData.option(
-      //   'Delete Account',
-      //   onTap: () => _showDeleteAccountDialog(context),
-      //   textColor: Colors.red,
-      // ),
+      SettingsOptionData.option(
+        'Delete Account',
+        onTap: () => _showDeleteAccountDialog(context),
+        textColor: Colors.red,
+      ),
     ];
+  }
+
+
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    try {
+      // Ensure services are initialized
+      await di.ServiceLocator.init();
+      
+      // Test if the service is available
+      di.ServiceLocator.get<DeleteAccountBloc>();
+      
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => const DeleteAccountConfirmationDialog(),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Delete account service not available: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override

@@ -43,7 +43,7 @@ class _ConditionsSectionState extends State<ConditionsSection> {
     // Calculate grid dimensions
     const itemsPerRow = 3;
     final totalRows = (limitedConditions.length / itemsPerRow).ceil();
-    final cardHeight = 170.0;
+    final cardHeight = 130.0; // Reduced from 170.0 to match actual card content
     final rowSpacing = 12.0;
     final containerHeight = _isExpanded
         ? (totalRows * cardHeight) + ((totalRows - 1) * rowSpacing) + 48 // Reduced button space when expanded

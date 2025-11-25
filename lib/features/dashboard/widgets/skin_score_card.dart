@@ -52,12 +52,16 @@ class SkinScoreCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'About Your Skin Score',
-                  style: textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
+                SizedBox(
+                  width: MediaQuery.of(context).size.width * 0.6,
+                      child: Text(
+                        'About Your Skin Score',
+                        style: textTheme.titleLarge?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                        maxLines: 2,
+                      ),
+                    ),
                 IconButton(
                   icon: const Icon(Icons.close),
                   onPressed: () => Navigator.pop(context),
@@ -106,14 +110,15 @@ class SkinScoreCard extends StatelessWidget {
               'Shows if your skin improved (↑) or declined (↓) since last scan',
             ),
             const SizedBox(height: 24),
-            Center(
+            SizedBox(
+              width: double.infinity,
               child: TextButton(
                 onPressed: () {
                   Navigator.pop(context);
                   Navigator.of(context,rootNavigator: true).pushNamed(AppRoutes.faceScanInfo);
                 },
                 style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
@@ -217,7 +222,7 @@ class SkinScoreCard extends StatelessWidget {
 
         formattedDate = showSheildImage ? '$day $month $year, $hour12:$minute $amPm' : '$day $month, $hour12:$minute $amPm';
       } catch (e) {
-        formattedDate = 'Invalid date';
+        formattedDate = 'No scans yet';
       }
     }
 
@@ -231,95 +236,102 @@ class SkinScoreCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
-      height: 154,
+      constraints: const BoxConstraints(
+        minHeight: 154,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
       ),
       padding: const EdgeInsets.all(22),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
+      child: IntrinsicHeight(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(
-                    showSheildImage?'Your skin score':'Skin Score',
-                  maxLines: 2,
-                    style: textTheme.bodyLarge!
-                        .secondary(context)
-                        .copyWith(fontSize: 14),
+                  Row(
+                    children: [
+                      Flexible(
+                        child: Text(
+                          showSheildImage ? 'Your skin score' : 'Skin Score',
+                          maxLines: 2,
+                          style: textTheme.bodyLarge!
+                              .secondary(context)
+                              .copyWith(fontSize: 14),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      GestureDetector(
+                        onTap: () => _showSkinScoreInfoBottomSheet(context),
+                        child: Icon(
+                          Icons.info_outline,
+                          size: 16,
+                          color: textTheme.bodyLarge!.secondary(context).color,
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  GestureDetector(
-                    onTap: () => _showSkinScoreInfoBottomSheet(context),
-                    child: Icon(
-                      Icons.info_outline,
-                      size: 16,
-                      color: textTheme.bodyLarge!.secondary(context).color,
-                    ),
+                  const SizedBox(height: 8),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      Text(
+                        '$score',
+                        style: textTheme.headlineMedium?.copyWith(
+                          fontSize: 35,
+                          fontWeight: FontWeight.w700,
+                          color: colorScheme.secondary,
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Text(
+                        '${change > 0 ? '+' : ''}$change',
+                        style: textTheme.bodyMedium?.copyWith(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: changeColor,
+                        ),
+                      ),
+                      Icon(changeIcon, color: changeColor, size: 20),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Last updated:',
+                        style: textTheme.bodyMedium!.secondary(context),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        formattedDate,
+                        overflow: TextOverflow.ellipsis,
+                        maxLines: 2,
+                        style: textTheme.bodyMedium!.secondary(context),
+                      ),
+                    ],
                   ),
                 ],
               ),
-              const SizedBox(height: 5),
-
+            ),
+            if (showSheildImage) ...[
+              const SizedBox(width: 12),
               SizedBox(
-                height: 44,
-                child: Row(
-                  children: [
-                    Text(
-                      '$score',
-                      style: textTheme.headlineMedium?.copyWith(
-                        fontSize: 35,
-                        fontWeight: FontWeight.w700,
-                        color: colorScheme.secondary,
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    Text(
-                      '${change > 0 ? '+' : ''}$change',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: changeColor,
-                      ),
-                    ),
-                    Icon(changeIcon, color: changeColor, size: 20),
-                  ],
+                width: 100,
+                child: Image.asset(
+                  'assets/images/sheild_image.png',
+                  fit: BoxFit.contain,
                 ),
               ),
-              // const Spacer(),
-              Text(
-                'Last updated:',
-                style: textTheme.bodyMedium!.secondary(context),
-              ),
-
-              Text(
-                formattedDate,
-                overflow: TextOverflow.ellipsis,
-                softWrap: true,
-                style: textTheme.bodyMedium!.secondary(context),
-              ),
-              // Expanded(
-              //   child: Text(
-              //     formattedDate,
-              //     overflow: TextOverflow.ellipsis,
-              //     softWrap: true,
-              //     style: textTheme.bodyMedium!.secondary(context),
-              //   ),
-              // ),
             ],
-          ),
-          if (showSheildImage)
-            SizedBox(
-              width: 100,
-              child: Image.asset('assets/images/sheild_image.png')
-              ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -333,63 +345,75 @@ class SkinScoreCard extends StatelessWidget {
 
     return Container(
       width: double.infinity,
+      constraints: const BoxConstraints(
+        minHeight: 154,
+      ),
       decoration: BoxDecoration(
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
       ),
-      padding: const EdgeInsets.all(24),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                    showSheildImage?'Your skin score':'Skin Score',
-                style: textTheme.bodyLarge!
-                    .secondary(context)
-                    .copyWith(fontSize: 13),
-              ),
-              const SizedBox(height: 8),
-              // Skeleton for score
-              Container(
-                width: 60,
-                height: 24,
-                decoration: BoxDecoration(
-                  color: baseColor,
-                  borderRadius: BorderRadius.circular(4),
-                ),
-              ),
-              const Spacer(),
-              Column(
+      padding: const EdgeInsets.all(22),
+      child: IntrinsicHeight(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Last updated:',
-                    style: textTheme.bodyMedium!.secondary(context),
+                    showSheildImage ? 'Your skin score' : 'Skin Score',
+                    style: textTheme.bodyLarge!
+                        .secondary(context)
+                        .copyWith(fontSize: 14),
                   ),
-                  const SizedBox(height: 4),
-                  // Skeleton for date
+                  const SizedBox(height: 8),
+                  // Skeleton for score
                   Container(
-                    width: 100,
-                    height: 10,
+                    width: 60,
+                    height: 35,
                     decoration: BoxDecoration(
                       color: baseColor,
                       borderRadius: BorderRadius.circular(4),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Last updated:',
+                        style: textTheme.bodyMedium!.secondary(context),
+                      ),
+                      const SizedBox(height: 4),
+                      // Skeleton for date
+                      Container(
+                        width: 120,
+                        height: 12,
+                        decoration: BoxDecoration(
+                          color: baseColor,
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                      ),
+                    ],
+                  ),
                 ],
               ),
-            ],
-          ),
-
-          if (showSheildImage)
-            SizedBox(
-              width: 100,
-              child: Image.asset('assets/images/sheild_image.png'),
             ),
-        ],
+            if (showSheildImage) ...[
+              const SizedBox(width: 12),
+              SizedBox(
+                width: 100,
+                child: Image.asset(
+                  'assets/images/sheild_image.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }

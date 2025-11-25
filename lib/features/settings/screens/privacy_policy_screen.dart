@@ -136,16 +136,16 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '5. Data Retention',
+                      '5. Face Scan Data',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
-                        fontWeight: FontWeight.w400,
+                        fontWeight: FontWeight.w600,
                         color: colorScheme.onSurface,
                       ),
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'We retain personal data only as long as necessary to respond to your inquiries or as required by law. Technical data and analytics may be stored for a limited time to monitor and improve website performance.',
+                      'The app processes user-uploaded facial images to detect skin type and common concerns. The original image is processed in memory and not stored. An annotated version of the image and analysis results are securely stored on our AWS servers (S3 and RDS).\n\nWhat face data we collect:\n• A single facial image uploaded by the user for skin-analysis scan purposes only.\n• We do not collect or generate biometric identifiers such as face geometry, depth maps, face templates, or facial recognition data.\n\nHow face data is used:\n• To detect skin type, conditions, and concerns.\n• To generate personalized product and routine recommendations.\n• We do not use face data for identity verification, authentication, or tracking.\n\nWhere face data is stored:\n• Raw uploaded image: Processed in memory only and never stored.\n• Annotated image: Securely stored in AWS S3 (encrypted).\n• Scan results: Stored encrypted in AWS RDS (PostgreSQL).\n• All data is encrypted both in transit and at rest.\n\nFace data sharing:\n• We do not share raw images, annotated images, or analysis results with any third parties.\n• All processing takes place on our secured AWS infrastructure.\n\nData retention:\n• Annotated images and scan results are retained for up to 2 years.\n• Exception: If you delete your account, all associated data — including annotated S3 images and analysis results — is permanently deleted immediately.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -154,7 +154,43 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '6. Your Rights',
+                      '6. Data Retention',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w400,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We retain personal data only as long as necessary to respond to your inquiries or as required by law. Technical data and analytics may be stored for a limited time to monitor and improve website performance. For face scan data retention, please see Section 5 above.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '7. Account Deletion',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'You can delete your account at any time through the app:\nSettings → Delete Account → Select Reason → Confirm\n\nWhen you delete your account, the following happens immediately:\n• Your user account is permanently removed.\n• All scan results and analysis data are deleted from our database.\n• All annotated face images are deleted from AWS S3.\n• All linked records in our RDS database are permanently removed.\n\nThis deletion is immediate and irreversible. We do not retain any face scan data or personal information after account deletion.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '8. Your Rights',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -172,7 +208,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '7. Data Security',
+                      '9. Data Security',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -190,7 +226,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '8. Third-Party Services',
+                      '10. Third-Party Services',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -208,7 +244,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '9. Changes to This Privacy Policy',
+                      '11. Changes to This Privacy Policy',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -226,7 +262,7 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '10. Contact Us',
+                      '12. Contact Us',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,

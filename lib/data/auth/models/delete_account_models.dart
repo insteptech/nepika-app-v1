@@ -60,31 +60,39 @@ class DeleteAccountResponseModel extends DeleteAccountResponseEntity {
   const DeleteAccountResponseModel({
     required super.reasonId,
     required super.deleteReasonId,
-    required super.userId,
-    required super.fullName,
-    required super.reasonText,
-    required super.createdAt,
+    super.userId,
+    super.fullName,
+    super.reasonText,
+    super.createdAt,
+    super.additionalComments,
   });
 
   factory DeleteAccountResponseModel.fromJson(Map<String, dynamic> json) {
     return DeleteAccountResponseModel(
       reasonId: json['reason_id'] as String,
       deleteReasonId: json['delete_reason_id'] as int,
-      userId: json['user_id'] as String,
-      fullName: json['full_name'] as String,
-      reasonText: json['reason_text'] as String,
-      createdAt: DateTime.parse(json['created_at'] as String),
+      userId: json['user_id'] as String?,
+      fullName: json['full_name'] as String?,
+      reasonText: json['reason_text'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
+      additionalComments: json['additional_comments'] as String?,
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
+    final map = <String, dynamic>{
       'reason_id': reasonId,
       'delete_reason_id': deleteReasonId,
-      'user_id': userId,
-      'full_name': fullName,
-      'reason_text': reasonText,
-      'created_at': createdAt.toIso8601String(),
     };
+
+    if (userId != null) map['user_id'] = userId;
+    if (fullName != null) map['full_name'] = fullName;
+    if (reasonText != null) map['reason_text'] = reasonText;
+    if (createdAt != null) map['created_at'] = createdAt!.toIso8601String();
+    if (additionalComments != null) map['additional_comments'] = additionalComments;
+
+    return map;
   }
 }

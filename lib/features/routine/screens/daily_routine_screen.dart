@@ -499,9 +499,9 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
             : 'Night Routine';
 
         return Container(
-          height: 85,
+          // height: 85,
           margin: const EdgeInsets.only(bottom: 14),
-          padding: const EdgeInsets.symmetric(horizontal: 20),
+          padding: const EdgeInsets.symmetric(horizontal: 20,vertical: 10),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(20),
             border: Border.all(
@@ -544,6 +544,7 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
                 ),
               ),
               const SizedBox(width: 12),
+              
               _buildStepAction(context, step, isCompleted),
             ],
           ),
@@ -556,7 +557,14 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
     if (isCompleted) {
       return Row(
         children: [
-          Icon(
+         Container(
+          margin: EdgeInsets.only(right: 4),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(50),
+          ),
+          padding: const EdgeInsets.all(7),
+          child:  Icon(
             Icons.check,
             color: Theme.of(context)
                 .textTheme
@@ -565,16 +573,18 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
                 .color,
             size: 24,
           ),
-          const SizedBox(width: 4),
-          Text(
-            'Completed',
-            style: Theme.of(context).textTheme.bodyLarge,
-          ),
+         )
+          // const SizedBox(width: 4),
+          // Text(
+          //   'Completed',
+          //   style: Theme.of(context).textTheme.bodyMedium,
+          // ),
         ],
       );
     }
 
-    return OutlinedButton(
+    return IconButton(
+      padding: EdgeInsets.all(0),
       onPressed: _updatingRoutineId == step['id']
           ? null
           : () {
@@ -591,16 +601,17 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
                 ),
               );
             },
-      style: OutlinedButton.styleFrom(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-        padding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 8,
-        ),
-      ),
-      child: _updatingRoutineId == step['id']
+      // style: OutlinedButton.styleFrom(
+      //   shape: RoundedRectangleBorder(
+      //     borderRadius: BorderRadius.circular(50),
+      //     side: BorderSide(
+      //       color: Theme.of(context).colorScheme.primary,
+      //       width: 1,
+      //     ),
+      //   ),
+      //   padding: const EdgeInsets.all(6),
+      // ),
+      icon: _updatingRoutineId == step['id']
           ? SizedBox(
               width: 16,
               height: 16,
@@ -611,15 +622,22 @@ class _DailyRoutineScreenState extends State<DailyRoutineScreen>
                 ),
               ),
             )
-          : Text(
-              'Mark as Done',
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyLarge!
-                  .hint(context).copyWith(
-                    fontSize: 12
-                  ),
+          : Container(
+          decoration: BoxDecoration(
+            color: Colors.transparent,
+            borderRadius: BorderRadius.circular(50),
+          border: Border.all(
+              color: Theme.of(context).colorScheme.primary,
+              width: 1,
             ),
+          ),
+          padding: const EdgeInsets.all(6),
+          child:  Icon(
+            Icons.check,
+            color: Colors.transparent,
+            size: 23,
+          ),
+         )
     );
   }
 

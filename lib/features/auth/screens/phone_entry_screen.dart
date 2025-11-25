@@ -122,7 +122,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
 
   Widget _buildPhoneInput() {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 30.0),
+      padding: const EdgeInsets.symmetric(horizontal: 0),
       child: PhoneInputWidget(
         onPhoneChanged: (phone) => _fullPhoneNumber = phone,
         onValidationChanged: (isValid) {

@@ -33,8 +33,13 @@ class CustomButton extends StatelessWidget {
 
     return  SizedBox(
         width: width ?? (size == ButtonSize.large ? double.infinity : null),
-        height: _getHeight(),
-        child: _buildButton(context),
+        // height: _getHeight(),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            minHeight: _getHeight()
+          ),
+          child: _buildButton(context),
+        ),
       );
   }
 

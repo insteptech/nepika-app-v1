@@ -1402,6 +1402,7 @@ Join the conversation: $profileUrl''';
               },
               borderRadius: BorderRadius.circular(8),
               child: AnimatedContainer(
+                
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
@@ -1415,6 +1416,10 @@ Join the conversation: $profileUrl''';
                       : null,
                 ),
                 child: AnimatedDefaultTextStyle(
+                  // textHeightBehavior: TextHeightBehavior(
+                  //   applyHeightToFirstAscent: false,
+                  //   applyHeightToLastDescent: false,
+                  // ),
                   duration: const Duration(milliseconds: 200),
                   style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                     fontWeight: _currentActive == ActiveTab.threads
@@ -1428,6 +1433,9 @@ Join the conversation: $profileUrl''';
                   child: Text(
                     'Threads',
                     textAlign: TextAlign.center,
+                    style: TextStyle(
+                      height: 1.2,
+                    ),
                   ),
                 ),
               ),
@@ -1462,6 +1470,10 @@ Join the conversation: $profileUrl''';
                       : null,
                 ),
                 child: AnimatedDefaultTextStyle(
+                  // textHeightBehavior: TextHeightBehavior(
+                  //   applyHeightToFirstAscent: false,
+                  //   applyHeightToLastDescent: false,
+                  // ),
                   duration: const Duration(milliseconds: 200),
                   style: Theme.of(context).textTheme.bodyLarge!.copyWith(
                     fontWeight: _currentActive == ActiveTab.replies
@@ -1475,6 +1487,9 @@ Join the conversation: $profileUrl''';
                   child: const Text(
                     'Replies',
                     textAlign: TextAlign.center,
+                    style: TextStyle(
+                      height: 1,
+                    ),
                   ),
                 ),
               ),

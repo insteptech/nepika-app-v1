@@ -14,14 +14,27 @@ class NotificationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
+    // Responsive sizes
+    final avatarSize = isSmallScreen ? 44.0 : 48.0;
+    final iconSize = isSmallScreen ? 22.0 : 24.0;
+    final iconContentSize = isSmallScreen ? 12.0 : 14.0;
+    final horizontalPadding = isSmallScreen ? 16.0 : 20.0;
+    final verticalPadding = isSmallScreen ? 12.0 : 16.0;
+    final contentSpacing = isSmallScreen ? 12.0 : 16.0;
 
     return InkWell(
       onTap: onTap,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: verticalPadding,
+        ),
         decoration: BoxDecoration(
           // Add blue background for unread notifications
-          color: !notification.isRead 
+          color: !notification.isRead
               ? Colors.blue.withValues(alpha: 0.05)
               : null,
           border: Border(
@@ -32,14 +45,15 @@ class NotificationItem extends StatelessWidget {
           ),
         ),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Profile picture with notification type overlay
             Stack(
               children: [
                 // User avatar
                 Container(
-                  width: 48,
-                  height: 48,
+                  width: avatarSize,
+                  height: avatarSize,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     border: Border.all(
@@ -48,26 +62,27 @@ class NotificationItem extends StatelessWidget {
                     ),
                   ),
                   child: ClipRRect(
-                    borderRadius: BorderRadius.circular(24),
-                    child: notification.actor.profileImageUrl != null && notification.actor.profileImageUrl!.isNotEmpty
+                    borderRadius: BorderRadius.circular(avatarSize / 2),
+                    child: notification.actor.profileImageUrl != null &&
+                            notification.actor.profileImageUrl!.isNotEmpty
                         ? Image.network(
                             notification.actor.profileImageUrl!,
                             fit: BoxFit.cover,
                             errorBuilder: (context, error, stackTrace) {
-                              return _buildDefaultAvatar();
+                              return _buildDefaultAvatar(avatarSize);
                             },
                           )
-                        : _buildDefaultAvatar(),
+                        : _buildDefaultAvatar(avatarSize),
                   ),
                 ),
-                
+
                 // Notification type icon overlay
                 Positioned(
                   right: 0,
                   bottom: 0,
                   child: Container(
-                    width: 24,
-                    height: 24,
+                    width: iconSize,
+                    height: iconSize,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       color: _getNotificationIconBackground(),
@@ -78,96 +93,108 @@ class NotificationItem extends StatelessWidget {
                     ),
                     child: Icon(
                       _getNotificationIcon(),
-                      size: 14,
+                      size: iconContentSize,
                       color: Colors.white,
                     ),
                   ),
                 ),
               ],
             ),
-            
-            const SizedBox(width: 16),
-            
+
+            SizedBox(width: contentSpacing),
+
             // Notification content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   // User name, verification badge, and timestamp
                   Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       // Full name (as per API structure)
-                      Text(
-                        notification.actor.fullName.isNotEmpty 
-                            ? notification.actor.fullName 
-                            : notification.actor.username,
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          color: theme.textTheme.bodyLarge?.color,
+                      Expanded(
+                        child: Text(
+                          notification.actor.fullName.isNotEmpty
+                              ? notification.actor.fullName
+                              : notification.actor.username,
+                          style: TextStyle(
+                            fontSize: isSmallScreen ? 14 : 16,
+                            fontWeight: FontWeight.w600,
+                            color: theme.textTheme.bodyLarge?.color,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      
-                      
-                      const Spacer(),
-                      
+
+                      const SizedBox(width: 8),
+
                       // Timestamp
                       Text(
                         _formatTimestamp(notification.createdAt),
                         style: TextStyle(
-                          fontSize: 12,
-                          color: theme.textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+                          fontSize: isSmallScreen ? 11 : 12,
+                          color: theme.textTheme.bodySmall?.color
+                              ?.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
                   ),
-                  
-                  const SizedBox(height: 2),
-                  
-                  // Notification message with post content if available
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: theme.textTheme.bodyMedium?.color,
-                      ),
-                      children: [
-                        TextSpan(
-                          text: _getNotificationMessage(),
-                          style: TextStyle(
-                            fontWeight: FontWeight.normal,
-                            color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.6),
-                          ),
 
+                  const SizedBox(height: 4),
+
+                  // Notification message with post content if available
+                  Flexible(
+                    child: RichText(
+                      maxLines: 3,
+                      overflow: TextOverflow.ellipsis,
+                      text: TextSpan(
+                        style: TextStyle(
+                          fontSize: isSmallScreen ? 14 : 15,
+                          color: theme.textTheme.bodyMedium?.color,
+                          height: 1.4,
                         ),
-                        if (notification.post != null && notification.post!.content.isNotEmpty)
+                        children: [
                           TextSpan(
-                            text: ' "${notification.post!.content.characters.take(30).toString()}${notification.post!.content.length > 30 ? '...' : ''}"',
+                            text: _getNotificationMessage(),
                             style: TextStyle(
-                              fontStyle: FontStyle.italic,
-                              color: theme.textTheme.bodySmall?.color,
+                              fontWeight: FontWeight.normal,
+                              color: theme.textTheme.bodyMedium?.color
+                                  ?.withValues(alpha: 0.6),
                             ),
                           ),
-                      ],
+                          if (notification.post != null &&
+                              notification.post!.content.isNotEmpty)
+                            TextSpan(
+                              text:
+                                  ' "${notification.post!.content.characters.take(30).toString()}${notification.post!.content.length > 30 ? '...' : ''}"',
+                              style: TextStyle(
+                                fontStyle: FontStyle.italic,
+                                color: theme.textTheme.bodySmall?.color,
+                              ),
+                            ),
+                        ],
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
-            
           ],
         ),
       ),
     );
   }
 
-  Widget _buildDefaultAvatar() {
+  Widget _buildDefaultAvatar(double size) {
     return Builder(
       builder: (context) {
         final theme = Theme.of(context);
         return Container(
-          width: 48,
-          height: 48,
+          width: size,
+          height: size,
           decoration: BoxDecoration(
             color: theme.dividerColor.withValues(alpha: 0.2),
             shape: BoxShape.circle,
@@ -175,7 +202,7 @@ class NotificationItem extends StatelessWidget {
           child: Icon(
             Icons.person,
             color: theme.iconTheme.color?.withValues(alpha: 0.5),
-            size: 24,
+            size: size * 0.5,
           ),
         );
       }

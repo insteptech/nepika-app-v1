@@ -11,11 +11,13 @@ class NotificationFilterTabs extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return BlocBuilder<NotificationBloc, NotificationState>(
       builder: (context, state) {
         NotificationFilter currentFilter = NotificationFilter.all;
-        
+
         if (state is NotificationLoaded) {
           currentFilter = state.currentFilter;
         } else if (state is NotificationError) {
@@ -31,7 +33,7 @@ class NotificationFilterTabs extends StatelessWidget {
           child: Row(
             children: NotificationFilter.values.map((filter) {
               final isSelected = filter == currentFilter;
-              
+
               return Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
@@ -40,11 +42,12 @@ class NotificationFilterTabs extends StatelessWidget {
                       ChangeNotificationFilter(filter),
                     );
                   },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 8,
-                    ),
+                  child:IntrinsicHeight(
+                    child: Container(
+                    // padding: EdgeInsets.symmetric(
+                    //   horizontal: isSmallScreen ? 12 : 16,
+                    //   vertical: isSmallScreen ? 6 : 8,
+                    // ),
                     decoration: BoxDecoration(
                       color: isSelected
                           ? theme.colorScheme.primary
@@ -57,18 +60,25 @@ class NotificationFilterTabs extends StatelessWidget {
                       ),
                       borderRadius: BorderRadius.circular(10),
                     ),
-                    child: Text(
-                      filter.displayName,
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : theme.textTheme.bodyLarge?.color,
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
+                    child: Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 12 : 16,
+                        vertical: isSmallScreen ? 6 : 8,
                       ),
-                    ),
+                      child: Text(
+                        filter.displayName,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          color: isSelected
+                              ? theme.colorScheme.onTertiary
+                              : theme.textTheme.bodyMedium?.color,
+                          fontWeight:
+                              isSelected ? FontWeight.w600 : FontWeight.w400,
+                        ),
+                      ),
+                  ),
                   ),
                 ),
+              ),
               );
             }).toList(),
           ),

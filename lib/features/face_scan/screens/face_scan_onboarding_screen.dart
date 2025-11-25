@@ -24,8 +24,7 @@ class _FaceScanOnboardingScreenState extends State<FaceScanOnboardingScreen> {
         child: Column(
           children: [
             // Main content
-            Expanded(
-              child: Column(
+            Column(
                 children: [
                   // Top section with padding
                   Padding(
@@ -84,11 +83,11 @@ class _FaceScanOnboardingScreenState extends State<FaceScanOnboardingScreen> {
                     ),
                   ),
 
+_buildAssetBasedScanPreview()
                   // Image preview takes full width without padding
-                  Expanded(child: _buildAssetBasedScanPreview()),
+                  // Expanded(child: ),
                 ],
               ),
-            ),
           ],
         ),
       ),
@@ -251,7 +250,7 @@ class _FaceScanOnboardingScreenState extends State<FaceScanOnboardingScreen> {
   Widget _buildAssetBasedScanPreview() {
     final screenHeight = MediaQuery.of(context).size.height;
     return Container(
-      height: screenHeight * 0.6,
+      height: screenHeight * 0.7,
       alignment: Alignment.bottomCenter,
       child: Stack(
         alignment: Alignment.bottomCenter,

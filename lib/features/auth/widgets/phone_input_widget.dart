@@ -154,9 +154,11 @@ class _PhoneInputWidgetState extends State<PhoneInputWidget> {
   Widget build(BuildContext context) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
+      mainAxisAlignment: MainAxisAlignment.center,
+      // mainAxisSize: MainAxisSize.min,
       children: [
-        SizedBox(
-          width: 120,
+        IntrinsicWidth(
+          // width: 120,
           child: InkWell(
             onTap: () => _showCountryPicker(context),
             child: Container(
@@ -187,15 +189,15 @@ class _PhoneInputWidgetState extends State<PhoneInputWidget> {
             ),
           ),
         ),
-        // const SizedBox(width: 0),
-        Expanded(
+        // const SizedBox(width: 8),
+        IntrinsicWidth(
           child: UnderlinedTextField(
             key: ValueKey(_selectedCountry.hint),
             hint: _selectedCountry.hint,
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             textAlign: TextAlign.start,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12,horizontal: 5),
+            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 5),
             inputFormatters: [
               PhoneNumberFormatter(_selectedCountry.format),
               LengthLimitingTextInputFormatter(_selectedCountry.format.length),
@@ -207,7 +209,7 @@ class _PhoneInputWidgetState extends State<PhoneInputWidget> {
             ),
             validator: _validatePhone,
           ),
-        ),
+        )
       ],
     );
   }

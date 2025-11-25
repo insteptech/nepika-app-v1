@@ -190,7 +190,25 @@ class TermsOfUseScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '8. Changes to These Terms',
+                      '8. Subscription Terms',
+                      style: textTheme.titleMedium?.copyWith(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'The App offers optional subscription plans that provide access to premium features.\n\nSubscription details:\n• Subscriptions are billed through your Apple App Store or Google Play Store account.\n• Payment will be charged to your account at confirmation of purchase.\n• Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period.\n• Your account will be charged for renewal within 24 hours prior to the end of the current period.\n• You can manage or cancel your subscription through your App Store or Google Play Store account settings.\n\nCancellation:\n• You may cancel your subscription at any time through your device settings.\n• Cancellation takes effect at the end of the current billing period.\n• No refunds will be provided for partial subscription periods.\n\nFree trials:\n• Free trial periods, if offered, will convert to a paid subscription unless canceled before the trial ends.\n• Any unused portion of a free trial period will be forfeited when you purchase a subscription.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      '9. Changes to These Terms',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -208,7 +226,7 @@ class TermsOfUseScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '9. Governing Law',
+                      '10. Governing Law',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -226,7 +244,7 @@ class TermsOfUseScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '10. Contact Us',
+                      '11. Contact Us',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,
@@ -244,7 +262,7 @@ class TermsOfUseScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 20),
                     Text(
-                      '11. Accessibility',
+                      '12. Accessibility',
                       style: textTheme.titleMedium?.copyWith(
                         fontSize: 16,
                         fontWeight: FontWeight.w400,

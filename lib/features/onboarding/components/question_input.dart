@@ -499,22 +499,18 @@ class CheckboxInput extends StatelessWidget {
   Widget build(BuildContext context) {
     final selectedSet = _getSelectedSet();
     
-    return Wrap(
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
       spacing: 12.0, // Horizontal spacing between items
       runSpacing: 12.0, // Vertical spacing between rows
       children: question.options.map((option) {
         final isSelected = selectedSet.contains(option.id);
         
         return IntrinsicWidth(
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              minWidth: 100, // Minimum width for consistency
-              maxWidth: 150, // Maximum width to prevent too long items
-            ),
-            child: GestureDetector(
+          child: GestureDetector(
               onTap: () => _toggleOption(option.id),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: IntrinsicWidth(
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   mainAxisAlignment: MainAxisAlignment.start,
@@ -542,8 +538,7 @@ class CheckboxInput extends StatelessWidget {
                           : null,
                     ),
                     const SizedBox(width: 8),
-                    Flexible(
-                      child: Text(
+                    Text(
                         option.text,
                         style: Theme.of(context)
                             .textTheme
@@ -552,17 +547,16 @@ class CheckboxInput extends StatelessWidget {
                               fontWeight: FontWeight.w400,
                               fontSize: 14,
                             ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
+                        // maxLines: 1,
+                        // overflow: TextOverflow.ellipsis,
                       ),
-                    ),
                   ],
                 ),
               ),
             ),
-          ),
         );
       }).toList(),
+    ),
     );
   }
 
