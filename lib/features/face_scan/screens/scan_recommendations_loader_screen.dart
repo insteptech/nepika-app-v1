@@ -1,25 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/api_base.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/config/constants/theme.dart';
 import '../models/scan_analysis_models.dart';
 import '../models/detection_models.dart';
 import 'scan_recommendations_screen.dart';
 
-/// Loader screen that fetches scan report by ID and displays results
-class ScanReportLoaderScreen extends StatefulWidget {
+/// Loader screen that fetches scan report by ID and displays the new recommendations UI
+class ScanRecommendationsLoaderScreen extends StatefulWidget {
   final String reportId;
+  final String? condition; // Optional initial condition to scroll to
 
-  const ScanReportLoaderScreen({
+  const ScanRecommendationsLoaderScreen({
     super.key,
     required this.reportId,
+    this.condition,
   });
 
   @override
-  State<ScanReportLoaderScreen> createState() => _ScanReportLoaderScreenState();
+  State<ScanRecommendationsLoaderScreen> createState() => _ScanRecommendationsLoaderScreenState();
 }
 
-class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
+class _ScanRecommendationsLoaderScreenState extends State<ScanRecommendationsLoaderScreen> {
   bool _isLoading = true;
   String? _error;
   ScanAnalysisResponse? _scanResults;
@@ -37,17 +39,9 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
         _error = null;
       });
 
-      // Get auth token
-      final prefs = await SharedPreferences.getInstance();
-      final token = prefs.getString(AppConstants.accessTokenKey);
-
-      if (token == null) {
-        throw Exception('Not authenticated');
-      }
-
       debugPrint('📊 Fetching scan data for reportId: ${widget.reportId}');
 
-      // Step 1: Fetch report from API
+      // Step 1: Fetch report basic data
       final reportResponse = await ApiBase().request(
         path: '/training/reports',
         method: 'GET',
@@ -65,7 +59,7 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
 
       final reportData = reportResponse.data;
       if (reportData['success'] != true || reportData['report'] == null) {
-        throw Exception('Invalid response format');
+        throw Exception('Invalid report response format');
       }
 
       final report = reportData['report'] as Map<String, dynamic>;
@@ -97,7 +91,7 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
         recommendations = _createEmptyRecommendations();
       }
 
-      // Transform to ScanAnalysisResponse
+      // Transform report data to ScanAnalysisResponse
       _scanResults = _transformToScanAnalysisResponse(report, recommendations);
 
       if (mounted) {
@@ -106,7 +100,7 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
         });
       }
     } catch (e) {
-      debugPrint('❌ Error fetching scan report: $e');
+      debugPrint('❌ Error fetching scan data: $e');
       if (mounted) {
         setState(() {
           _isLoading = false;
@@ -198,20 +192,28 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     if (_isLoading) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: const Text('Loading Report'),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        ),
-        body: const Center(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text('Fetching scan results...'),
+              _buildHeader(context, isDark),
+              const Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(height: 16),
+                      Text('Loading scan results...'),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -220,34 +222,53 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
 
     if (_error != null) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: const Text('Error'),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        ),
-        body: Center(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: Colors.red),
-              const SizedBox(height: 16),
-              Text(
-                'Failed to load report',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 8),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 32),
-                child: Text(
-                  _error!,
-                  textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.grey),
+              _buildHeader(context, isDark),
+              Expanded(
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Failed to load report',
+                          style: TextStyle(
+                            fontFamily: 'HelveticaNowDisplay',
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                            color: isDark ? Colors.white : const Color(0xFF07223B),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          _error ?? 'Unknown error',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(
+                            fontFamily: 'HelveticaNowDisplay',
+                            fontSize: 14,
+                            color: isDark ? Colors.white70 : const Color(0xFF7F7F7F),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        ElevatedButton(
+                          onPressed: _fetchScanData,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF3898ED),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 12),
+                          ),
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _fetchScanData,
-                child: const Text('Retry'),
               ),
             ],
           ),
@@ -257,18 +278,71 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
 
     if (_scanResults == null) {
       return Scaffold(
-        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        appBar: AppBar(
-          title: const Text('Error'),
-          backgroundColor: Theme.of(context).scaffoldBackgroundColor,
-        ),
-        body: const Center(
-          child: Text('No scan results available'),
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildHeader(context, isDark),
+              const Expanded(
+                child: Center(
+                  child: Text('No scan results available'),
+                ),
+              ),
+            ],
+          ),
         ),
       );
     }
 
-    // Navigate to the new recommendations screen with loaded data
-    return ScanRecommendationsScreen(scanResponse: _scanResults!);
+    // Show the recommendations screen with loaded data
+    return ScanRecommendationsScreen(
+      scanResponse: _scanResults!,
+      initialCondition: widget.condition,
+    );
+  }
+
+  Widget _buildHeader(BuildContext context, bool isDark) {
+        final textPrimary = isDark ? AppTheme.textPrimaryDark : AppTheme.textPrimaryLight;
+
+    return Container(
+      height: 47,
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.of(context).pop(),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.arrow_back_ios, size: 20, color: isDark ? Colors.white : const Color(0xFF07223B)),
+                const SizedBox(width: 10),
+                Text(
+                  'Back',
+                  style: TextStyle(
+                    fontFamily: 'HelveticaNowDisplay',
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
+                    color: isDark ? Colors.white70 : const Color(0xFF7F7F7F),
+                  ),
+                ),
+              ],
+            ),
+          ),
+GestureDetector(
+            onTap: () {
+              Navigator.of(context).pushNamed(AppRoutes.faceScanInfo);
+            },
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: textPrimary.withOpacity(0.08),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Icon(Icons.info_outline, size: 20, color: textPrimary),
+            ),
+          ),        ],
+      ),
+    );
   }
 }

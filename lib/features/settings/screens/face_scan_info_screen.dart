@@ -70,6 +70,13 @@ class FaceScanInfoScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildInfoCard(
                       context,
+                      title: 'How Your Skin Score Is Calculated',
+                      content: 'Your face image is analyzed across multiple skin concerns, such as:\n• Acne\n• Enlarged pores\n• Dark spots or pigmentation\n• Wrinkles\n• Redness or similar issues\n\nEach concern gets a "severity percentage."\nExample: Acne = 25%, Pores = 40%, Wrinkles = 15%, etc.\n\nWe add up all the detected severity percentages. This gives a total "skin issues score."\n\nYour final Skin Score is calculated as:\nSkin Score = 100 – (Total severity of all detected issues)\n\n• If your total issues are low → your score goes higher\n• If your issues are high → your score goes lower\n\nWe make sure the final score never goes below 0.',
+                      theme: theme,
+                    ),
+                    const SizedBox(height: 16),
+                    _buildInfoCard(
+                      context,
                       title: 'Understanding Confidence Scores',
                       content: 'A confidence score shows how sure the AI is about each detection.\n\nScore Meaning:\n\n80–100% → Very High Confidence\nStrong match to the condition. Likely accurate.\n\n60–79% → Moderate Confidence\nGood match, but lighting/angle may influence accuracy.\n\n40–59% → Low Confidence\nPossible presence, but not certain. Treat as a caution.\n\n10–39% → Very Low Confidence\nWeak pattern. Consider re-scanning with better lighting.\n\nBelow 10%\nAutomatically ignored for area detection.\n\nConfidence exists because skin features can change based on lighting, angles, dryness, or makeup.',
                       theme: theme,

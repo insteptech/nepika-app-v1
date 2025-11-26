@@ -79,14 +79,14 @@ class SkinScoreCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'A numerical rating (0-100) that represents your overall skin health. It\'s calculated by analyzing detected skin conditions, their severity, and how many areas are affected.',
+              'A numerical rating (0-100) that represents your overall skin health based on detected skin concerns.',
               style: textTheme.bodyMedium?.copyWith(
                 height: 1.5,
               ),
             ),
             const SizedBox(height: 20),
             Text(
-              'How to read your score:',
+              'How it\'s calculated:',
               style: textTheme.bodyLarge?.copyWith(
                 fontWeight: FontWeight.w600,
               ),
@@ -94,14 +94,26 @@ class SkinScoreCard extends StatelessWidget {
             const SizedBox(height: 12),
             _buildInfoPoint(
               context,
-              'Higher Score',
-              'Fewer skin concerns detected, healthier skin condition',
+              'Analysis',
+              'Your face is analyzed for concerns like acne, pores, dark spots, wrinkles, and redness',
             ),
             const SizedBox(height: 10),
             _buildInfoPoint(
               context,
-              'Lower Score',
-              'More concerns detected or higher severity issues',
+              'Severity',
+              'Each concern gets a severity percentage (e.g., Acne = 25%, Pores = 40%)',
+            ),
+            const SizedBox(height: 10),
+            _buildInfoPoint(
+              context,
+              'Calculation',
+              'Skin Score = 100 – Total severity of all detected issues',
+            ),
+            const SizedBox(height: 10),
+            _buildInfoPoint(
+              context,
+              'Result',
+              'Lower total issues = higher score, higher total issues = lower score',
             ),
             const SizedBox(height: 10),
             _buildInfoPoint(

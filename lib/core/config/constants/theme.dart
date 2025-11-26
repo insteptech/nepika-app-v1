@@ -8,7 +8,7 @@ class AppTheme {
   static const Color secondaryColor = Color(0xFF00C896);
   static const Color errorColor = Color(0xFFEF4444);
   static const Color warningColor = Color(0xFFFFD748);
-  static const Color successColor = Color(0xFF88FF48);
+  static const Color successColor = Color.fromARGB(255, 81, 204, 15);
 
   // Light Theme Colors
   static const Color backgroundColorLight = Color(0xFFF0F9FF);

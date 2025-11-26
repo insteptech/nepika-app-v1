@@ -5,7 +5,7 @@ import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
-import 'package:nepika/features/face_scan/screens/scan_result_details_screen.dart';
+import 'package:nepika/features/face_scan/screens/scan_recommendations_loader_screen.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/di/injection_container.dart' as di;
 import 'package:nepika/features/routine/main.dart';
@@ -411,7 +411,7 @@ class _DashboardScreenState extends State<DashboardScreen>
                   debugPrint(conditionName);
                   Navigator.of(context, rootNavigator: true).push(
                     MaterialPageRoute(
-                      builder: (context) => ScanResultDetailsScreen(
+                      builder: (context) => ScanRecommendationsLoaderScreen(
                         reportId: latestSkinReportId,
                         condition: conditionName,
                       ),

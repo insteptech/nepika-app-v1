@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
 import 'package:dio/dio.dart';
-import 'package:nepika/core/config/env.dart';
 import 'package:nepika/core/network/secure_api_client.dart';
 
 /// Handles API communication for face scan analysis
@@ -50,22 +49,18 @@ class FaceScanApiHandler {
         final responseData = response.data as Map<String, dynamic>;
 
         if (responseData['success'] == true) {
-          // Extract report image URL
-          final report = responseData['report'] as Map<String, dynamic>?;
-          final imageUrl = report?['image_url'] as String?;
-          
-          String? fullImageUrl;
-          if (imageUrl != null) {
-            fullImageUrl = '${Env.backendBase}$imageUrl';
-            debugPrint('Report image URL: $fullImageUrl');
-          }
+          // Extract report_id from new API structure
+          final reportId = responseData['report_id'] as String?;
+          debugPrint('📝 Report ID: $reportId');
+          debugPrint('📝 API Version: ${responseData['api_version']}');
+          debugPrint('📝 Processing time: ${responseData['processing_time_seconds']}s');
 
           return FaceScanApiResult.success(
             analysisResults: responseData,
-            reportImageUrl: fullImageUrl,
+            reportId: reportId,
           );
         } else {
-          final errorMessage = responseData['error_message'] ?? 'Analysis failed';
+          final errorMessage = responseData['error_message'] ?? responseData['message'] ?? 'Analysis failed';
           return FaceScanApiResult.error(errorMessage);
         }
       } else if (response.statusCode == 403 && response.data != null) {
@@ -148,7 +143,7 @@ class FaceScanApiResult {
   final bool isLimitError;
   final String? errorMessage;
   final Map<String, dynamic>? analysisResults;
-  final String? reportImageUrl;
+  final String? reportId;
   final Map<String, dynamic>? limitData;
 
   const FaceScanApiResult._({
@@ -156,18 +151,18 @@ class FaceScanApiResult {
     this.isLimitError = false,
     this.errorMessage,
     this.analysisResults,
-    this.reportImageUrl,
+    this.reportId,
     this.limitData,
   });
 
   factory FaceScanApiResult.success({
     required Map<String, dynamic> analysisResults,
-    String? reportImageUrl,
+    String? reportId,
   }) {
     return FaceScanApiResult._(
       isSuccess: true,
       analysisResults: analysisResults,
-      reportImageUrl: reportImageUrl,
+      reportId: reportId,
     );
   }
 

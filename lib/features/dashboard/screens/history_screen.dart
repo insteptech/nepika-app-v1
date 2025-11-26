@@ -3,7 +3,7 @@ import '../../../core/api_base.dart';
 import '../../../core/widgets/back_button.dart';
 import '../models/scan_history_models.dart';
 import '../widgets/skeleton_loader.dart';
-import '../../face_scan/screens/scan_result_details_screen.dart';
+import '../../face_scan/screens/scan_recommendations_loader_screen.dart';
 
 /// Scan history screen showing user's scanning timeline
 class HistoryScreen extends StatefulWidget {
@@ -141,7 +141,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
   void _openScanDetails(ScanHistoryItem scan) {
     Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (context) => ScanResultDetailsScreen(
+        builder: (context) => ScanRecommendationsLoaderScreen(
           reportId: scan.id,
         ),
       ),

@@ -8,7 +8,7 @@ import 'package:nepika/features/settings/main.dart';
 import 'package:nepika/features/routine/main.dart';
 import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
-import 'package:nepika/features/face_scan/screens/scan_result_details_screen.dart';
+import 'package:nepika/features/face_scan/screens/scan_recommendations_loader_screen.dart';
 import 'package:nepika/features/community/main.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
 
@@ -592,7 +592,7 @@ class _DashboardState extends State<Dashboard>
         }
         return _buildScrollableRoute(
           settings: RouteSettings(name: AppRoutes.dashboardScanResultDetails),
-          child: ScanResultDetailsScreen(
+          child: ScanRecommendationsLoaderScreen(
             reportId: reportId,
           ),
         );

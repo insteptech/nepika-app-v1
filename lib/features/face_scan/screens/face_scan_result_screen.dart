@@ -5,7 +5,6 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:google_mlkit_face_detection/google_mlkit_face_detection.dart';
-import 'package:nepika/core/widgets/authenticated_network_image.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import '../components/camera_manager.dart';
 import '../components/face_detector_service.dart';
@@ -17,7 +16,7 @@ import '../widgets/shimmer_overlay.dart';
 import '../components/bounding_box_painter.dart';
 import '../models/detection_models.dart';
 import '../models/scan_analysis_models.dart';
-import 'scan_result_details_screen.dart';
+import 'scan_recommendations_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 
@@ -66,7 +65,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
   // API state
   bool _isProcessingAPI = false;
   bool _showShimmerCompletion = false;
-  String? _reportImageUrl;
+  String? _reportId;
   Map<String, dynamic>? _analysisResults;
   DetectionResults? _detectionResults;
   ui.Size? _actualImageSize;
@@ -232,7 +231,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       
       setState(() {
         _capturedImage = processedFile;
-        _reportImageUrl = null;
+        _reportId = null;
         _analysisResults = null;
       });
 
@@ -246,7 +245,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
 
     setState(() {
       _isProcessingAPI = true;
-      _reportImageUrl = null;
+      _reportId = null;
       _analysisResults = null;
     });
 
@@ -260,7 +259,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       // First, trigger completion animation
       setState(() {
         _analysisResults = result.analysisResults;
-        _reportImageUrl = result.reportImageUrl;
+        _reportId = result.reportId;
         _showShimmerCompletion = true;
         // Parse detection results from API response
         _detectionResults = _parseDetectionResults(result.analysisResults);
@@ -283,7 +282,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
       
       setState(() {
         _isProcessingAPI = false;
-        _reportImageUrl = null;
+        _reportId = null;
         _detectionResults = null;
         _scanAnalysisResponse = null;
       });
@@ -629,7 +628,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     await _cameraManager.dispose();
     
     setState(() {
-      _reportImageUrl = null;
+      _reportId = null;
       _analysisResults = null;
       _capturedImage = null;
       _isProcessingAPI = false;
@@ -954,65 +953,78 @@ Widget _buildNavigatingBackView() {
   }
 
   Widget _buildCompactResultView() {
+    debugPrint('🏗️ Building compact result view - _scanAnalysisResponse: ${_scanAnalysisResponse != null}');
+
     return SafeArea(
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        child: Column(
-          children: [
-            const SizedBox(height: 10),
-            
-            // Top controls (with close button)
-            _buildTopControls(),
-            
-            const SizedBox(height: 20),
-            
-            // Main content area - use Expanded to take available space
-            Expanded(
-              child: Stack(
+      child: Column(
+        children: [
+          // Main scrollable content
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+              child: Column(
                 children: [
-                  Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade900,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: _buildMainContentWithAspectRatio(),
+                  const SizedBox(height: 10),
+
+                  // Top controls (with close button)
+                  _buildTopControls(),
+
+                  const SizedBox(height: 20),
+
+                  // Main content area - constrained by aspect ratio
+                  AspectRatio(
+                    aspectRatio: 3 / 4,
+                    child: Stack(
+                      children: [
+                        Container(
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade900,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(20),
+                            child: _buildMainContentWithAspectRatio(),
+                          ),
+                        ),
+
+                        // Condition dropdown overlay - positioned outside InteractiveViewer
+                        if (_detectionResults != null)
+                          Positioned(
+                            bottom: 16,
+                            left: 16,
+                            right: 16,
+                            child: _buildConditionDropdown(),
+                          ),
+                      ],
                     ),
                   ),
-                  
-                  // Condition dropdown overlay - positioned outside InteractiveViewer
-                  if (_detectionResults != null)
-                    Positioned(
-                      bottom: 16,
-                      left: 16,
-                      right: 16,
-                      child: _buildConditionDropdown(),
+
+                  // Analyzing text below image area
+                  if (_isProcessingAPI)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      child: AnalyzingText(
+                        isVisible: _isProcessingAPI,
+                        text: 'Analyzing Image...',
+                        textStyle: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
                 ],
               ),
             ),
+          ),
 
-            // Analyzing text below image area
-            if (_detectionResults == null)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                child: AnalyzingText(
-                  isVisible: _isProcessingAPI,
-                  text: 'Analyzing Image...',
-                  textStyle: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 16,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-
-            // Bottom section with analysis results
-            _buildBottomSection(),
-          ],
-        ),
+          // Bottom section with analysis results - fixed at bottom, outside scroll
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            child: _buildBottomSection(),
+          ),
+        ],
       ),
     );
   }
@@ -1272,16 +1284,8 @@ Widget _buildImageWidget() {
               },
             ),
 
-          // Final layer: Annotated image (only if captured image is not available)
-          if (_reportImageUrl != null && _capturedImage == null)
-            AuthenticatedNetworkImage(
-              imageUrl: _reportImageUrl!,
-              fit: BoxFit.cover,
-              errorWidget: const SizedBox.shrink(),
-              onImageLoaded: () {
-                debugPrint('✅ Face scan: Annotated image loaded successfully');
-              },
-            ),
+          // Note: Annotated image no longer returned by API v2
+          // Detection boxes are now drawn on the captured image using CustomPaint
 
         ],
       ),
@@ -1581,37 +1585,35 @@ Widget _buildImageWidget() {
   }
 
   Widget _buildBottomSection() {
+    debugPrint('🔘 _buildBottomSection called - _scanAnalysisResponse: ${_scanAnalysisResponse != null}, _isProcessingAPI: $_isProcessingAPI');
+
     // Show result button if analysis is available
     if (_scanAnalysisResponse != null) {
+      debugPrint('🔘 Rendering Result button');
       return Container(
-          padding: const EdgeInsets.symmetric(horizontal: 0,vertical: 30),
+          padding: const EdgeInsets.only(top: 16, bottom: 16),
           width: double.infinity,
           child: CustomButton(
-            text: 'Result',
+            text: 'View Results',
             onPressed: () {
-              // Navigate directly to scan result details screen
-              final reportId = _scanAnalysisResponse?.reportId;
-              debugPrint('📊 Report ID for navigation: $reportId');
+              // Navigate to recommendations screen with scan analysis data
+              debugPrint('📊 Navigating to ScanRecommendationsScreen');
+              debugPrint('📊 Report ID: ${_scanAnalysisResponse?.reportId}');
+              debugPrint('📊 Primary Condition: ${_scanAnalysisResponse?.primaryCondition}');
 
-              if (reportId != null) {
-                debugPrint('✅ Navigating to ScanResultDetailsScreen with reportId: $reportId');
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => ScanResultDetailsScreen(
-                      reportId: reportId,
-                    ),
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => ScanRecommendationsScreen(
+                    scanResponse: _scanAnalysisResponse!,
                   ),
-                );
-              } else {
-                // Fallback: show error if no report ID
-                debugPrint('❌ Report ID is null - cannot navigate to details');
-                _showErrorBottomSheet('Report ID not available. Please try scanning again.');
-              }
+                ),
+              );
             },
           ),
         );
     }
 
+    debugPrint('🔘 Returning SizedBox.shrink - no scan response');
     return const SizedBox.shrink();
   }
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models/report_image_model.dart';
-import '../../face_scan/screens/scan_result_details_screen.dart';
+import '../../face_scan/screens/scan_recommendations_loader_screen.dart';
 import '../../../core/widgets/back_button.dart';
 import '../../../core/config/constants/routes.dart';
 
@@ -155,7 +155,7 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> with TickerProv
       final currentImage = widget.allImages![_currentImageIndex];
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => ScanResultDetailsScreen(
+          builder: (context) => ScanRecommendationsLoaderScreen(
             reportId: currentImage.id,
           ),
         ),
