@@ -49,6 +49,7 @@ class AppRoutes {
   static const String dashboardEditRoutine = '/dashboard/routine/edit';
   static const String dashboardAddRoutine = '/dashboard/routine/add';
   static const String dashboardReminderSettings = '/dashboard/routine/reminder';
+  static const String dashboardScheduledReminders = '/dashboard/routine/reminders';
 
   static const String dashboardAllProducts = '/dashboard/products/all';
   static const String dashboardSpecificProduct = '/dashboard/products/info';
@@ -113,6 +114,7 @@ class DashboardRoutes {
   static const String editRoutine = '/routine/edit';
   static const String addRoutine = '/routine/add';
   static const String reminderSettings = '/routine/reminder';
+  static const String scheduledReminders = '/routine/reminders';
   static const String allProducts = '/products/all';
   static const String specificProduct = '/products/info';
 

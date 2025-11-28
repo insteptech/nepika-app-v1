@@ -14,4 +14,6 @@ abstract class ReminderRepository {
   Future<Reminder> getReminderById(String reminderId);
 
   Future<Reminder> toggleReminderStatus(String reminderId);
+
+  Future<void> deleteReminder(String reminderId);
 }

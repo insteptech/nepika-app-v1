@@ -1,5 +1,6 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/reminders/usecases/add_reminder.dart';
+import '../../../domain/reminders/repositories/reminder_repository.dart';
 import '../../../core/services/local_notification_service.dart';
 import '../../../core/utils/app_logger.dart';
 import 'reminder_event.dart';
@@ -7,13 +8,92 @@ import 'reminder_state.dart';
 
 class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   final AddReminder addReminderUseCase;
+  final ReminderRepository reminderRepository;
   final LocalNotificationService localNotificationService;
 
   ReminderBloc({
     required this.addReminderUseCase,
+    required this.reminderRepository,
     required this.localNotificationService,
   }) : super(ReminderInitial()) {
     on<AddReminderEvent>(_onAddReminder);
+    on<GetAllRemindersEvent>(_onGetAllReminders);
+    on<ToggleReminderStatusEvent>(_onToggleReminderStatus);
+    on<DeleteReminderEvent>(_onDeleteReminder);
+  }
+
+  Future<void> _onGetAllReminders(
+    GetAllRemindersEvent event,
+    Emitter<ReminderState> emit,
+  ) async {
+    emit(ReminderLoading());
+    try {
+      AppLogger.info('=== ReminderBloc: Fetching All Reminders ===', tag: 'ReminderBloc');
+      final reminders = await reminderRepository.getAllReminders();
+      AppLogger.info('Fetched ${reminders.length} reminders', tag: 'ReminderBloc');
+      emit(RemindersLoaded(reminders));
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to fetch reminders', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
+      emit(ReminderError(e.toString()));
+    }
+  }
+
+  Future<void> _onToggleReminderStatus(
+    ToggleReminderStatusEvent event,
+    Emitter<ReminderState> emit,
+  ) async {
+    emit(ReminderLoading());
+    try {
+      AppLogger.info('=== ReminderBloc: Toggling Reminder Status ===', tag: 'ReminderBloc');
+      AppLogger.info('Reminder ID: ${event.reminderId}', tag: 'ReminderBloc');
+
+      final updatedReminder = await reminderRepository.toggleReminderStatus(event.reminderId);
+
+      AppLogger.info('Reminder status toggled:', tag: 'ReminderBloc');
+      AppLogger.info('  - ID: ${updatedReminder.id}', tag: 'ReminderBloc');
+      AppLogger.info('  - Enabled: ${updatedReminder.reminderEnabled}', tag: 'ReminderBloc');
+
+      // Update local notification based on new status
+      if (updatedReminder.reminderEnabled) {
+        await localNotificationService.scheduleReminder(
+          reminderId: updatedReminder.id,
+          reminderName: updatedReminder.reminderName,
+          time24Hour: updatedReminder.reminderTime,
+          reminderDays: updatedReminder.reminderDays ?? 'Daily',
+          reminderType: updatedReminder.reminderType ?? 'Morning Routine',
+          isEnabled: true,
+        );
+        AppLogger.success('Notification scheduled for reminder: ${updatedReminder.reminderName}', tag: 'ReminderBloc');
+      } else {
+        await localNotificationService.cancelReminder(updatedReminder.id);
+        AppLogger.info('Notification cancelled for reminder: ${updatedReminder.reminderName}', tag: 'ReminderBloc');
+      }
+
+      emit(ReminderStatusToggled(updatedReminder));
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to toggle reminder status', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
+      emit(ReminderError(e.toString()));
+    }
+  }
+
+  Future<void> _onDeleteReminder(
+    DeleteReminderEvent event,
+    Emitter<ReminderState> emit,
+  ) async {
+    emit(ReminderLoading());
+    try {
+      AppLogger.info('=== ReminderBloc: Deleting Local Reminder Notification ===', tag: 'ReminderBloc');
+      AppLogger.info('Reminder ID: ${event.reminderId}', tag: 'ReminderBloc');
+
+      // Only cancel local notification (no backend delete endpoint available)
+      await localNotificationService.cancelReminder(event.reminderId);
+      AppLogger.success('Local notification cancelled for reminder: ${event.reminderId}', tag: 'ReminderBloc');
+
+      emit(ReminderDeleted(event.reminderId));
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to cancel local reminder notification', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
+      emit(ReminderError(e.toString()));
+    }
   }
 
   Future<void> _onAddReminder(

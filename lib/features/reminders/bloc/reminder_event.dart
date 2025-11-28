@@ -51,3 +51,12 @@ class ToggleReminderStatusEvent extends ReminderEvent {
   @override
   List<Object> get props => [reminderId];
 }
+
+class DeleteReminderEvent extends ReminderEvent {
+  final String reminderId;
+
+  const DeleteReminderEvent(this.reminderId);
+
+  @override
+  List<Object> get props => [reminderId];
+}

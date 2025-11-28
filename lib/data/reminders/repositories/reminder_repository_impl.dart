@@ -38,4 +38,9 @@ class ReminderRepositoryImpl implements ReminderRepository {
   Future<Reminder> toggleReminderStatus(String reminderId) async {
     return await remoteDataSource.toggleReminderStatus(reminderId);
   }
+
+  @override
+  Future<void> deleteReminder(String reminderId) async {
+    return await remoteDataSource.deleteReminder(reminderId);
+  }
 }

@@ -145,7 +145,133 @@ class PrivacyPolicyScreen extends StatelessWidget {
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'The app processes user-uploaded facial images to detect skin type and common concerns. The original image is processed in memory and not stored. An annotated version of the image and analysis results are securely stored on our AWS servers (S3 and RDS).\n\nWhat face data we collect:\n• A single facial image uploaded by the user for skin-analysis scan purposes only.\n• We do not collect or generate biometric identifiers such as face geometry, depth maps, face templates, or facial recognition data.\n\nHow face data is used:\n• To detect skin type, conditions, and concerns.\n• To generate personalized product and routine recommendations.\n• We do not use face data for identity verification, authentication, or tracking.\n\nWhere face data is stored:\n• Raw uploaded image: Processed in memory only and never stored.\n• Annotated image: Securely stored in AWS S3 (encrypted).\n• Scan results: Stored encrypted in AWS RDS (PostgreSQL).\n• All data is encrypted both in transit and at rest.\n\nFace data sharing:\n• We do not share raw images, annotated images, or analysis results with any third parties.\n• All processing takes place on our secured AWS infrastructure.\n\nData retention:\n• Annotated images and scan results are retained for up to 2 years.\n• Exception: If you delete your account, all associated data — including annotated S3 images and analysis results — is permanently deleted immediately.',
+                      'Our app allows users to upload a facial image for the purpose of providing a skin-analysis scan. This section explains how we collect, store, retain, and use this data in compliance with App Store Review Guideline 5.1.1.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'What face data we collect',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• A single facial image uploaded by the user for skin-analysis purposes.\n• An annotated version of the image generated during the analysis.\n• Analysis results relating to skin type and concerns.\n• We do NOT collect or generate biometric identifiers, face geometry, depth maps, or facial recognition templates.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'How face data is used',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• To detect skin type and common skin concerns.\n• To generate personalized skincare recommendations.\n• Not used for identity recognition, verification, or tracking.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Why we store certain face data',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Annotated images and analysis results are stored to allow users to view past scans, track skin progress, and improve future recommendations.\n\nStoring this data enables us to provide a personalized ongoing experience, which cannot be done if all data is deleted immediately after each scan.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Where face data is stored',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'We use Amazon Web Services (AWS) as our secure cloud provider:\n• Raw uploaded image: processed in memory only, never stored.\n• Annotated image: stored encrypted in AWS S3.\n• Scan results: stored encrypted in AWS RDS (PostgreSQL).\n• All data is encrypted both in transit and at rest.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Third-party sharing',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'We do not share face data with any third parties for marketing, analytics, or external processing. The only third party involved is AWS, which acts solely as our infrastructure provider.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Why AWS receives and stores face data',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '• AWS stores the annotated images and scan results only because they host our secure cloud storage environment.\n• AWS does not access, analyze, or process the data.\n• AWS does not retain any face data beyond what we store on our own AWS account.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      'Data retention',
+                      style: textTheme.titleSmall?.copyWith(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: colorScheme.onSurface,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Annotated images and scan results are retained for up to 2 years, because this duration enables long-term progress tracking and personalized recommendations.\n\nYou may delete your account at any time, and when you do so:\n• All annotated images are permanently deleted from AWS S3\n• All scan results are deleted from AWS RDS\n• Deletion is immediate and irreversible.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,

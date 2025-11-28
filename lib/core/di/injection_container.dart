@@ -232,6 +232,7 @@ class ServiceLocator {
     _registerFactory<ReminderBloc>(
       () => ReminderBloc(
         addReminderUseCase: get<AddReminder>(),
+        reminderRepository: get<ReminderRepository>(),
         localNotificationService: get<LocalNotificationService>(),
       ),
     );

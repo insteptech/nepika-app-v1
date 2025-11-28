@@ -38,6 +38,7 @@ import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
+import 'package:nepika/features/reminders/screens/scheduled_reminders_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
@@ -270,6 +271,11 @@ class MyApp extends StatelessWidget {
                   create: (context) => di.ServiceLocator.get<ReminderBloc>(),
                   child: const ReminderSettings(),
                 ),
+              );
+            case AppRoutes.dashboardScheduledReminders:
+            case DashboardRoutes.scheduledReminders:
+              return MaterialPageRoute(
+                builder: (_) => const ScheduledRemindersScreen(),
               );
             case AppRoutes.subscription:
             case AppRoutes.pricing:

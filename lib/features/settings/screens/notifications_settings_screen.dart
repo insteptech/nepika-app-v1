@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/features/dashboard/widgets/delete_account_dialog.dart';
 import 'package:nepika/features/settings/bloc/delete_account_bloc.dart';
@@ -39,7 +40,7 @@ class _NotificationsSettingsScreenState
       SettingsOptionData.option(
         'Notification History',
         onTap: () {
-          // TODO: Implement notification history functionality
+          Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.dashboardScheduledReminders);
         },
       ),
       SettingsOptionData.option(

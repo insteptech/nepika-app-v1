@@ -56,3 +56,12 @@ class ReminderError extends ReminderState {
   @override
   List<Object> get props => [message];
 }
+
+class ReminderDeleted extends ReminderState {
+  final String reminderId;
+
+  const ReminderDeleted(this.reminderId);
+
+  @override
+  List<Object> get props => [reminderId];
+}

@@ -15,6 +15,8 @@ abstract class ReminderRemoteDataSource {
   Future<ReminderModel> getReminderById(String reminderId);
 
   Future<ReminderModel> toggleReminderStatus(String reminderId);
+
+  Future<void> deleteReminder(String reminderId);
 }
 
 class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
@@ -112,6 +114,18 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
       return ReminderModel.fromJson(response.data['data']);
     } else {
       throw Exception('Failed to toggle reminder status');
+    }
+  }
+
+  @override
+  Future<void> deleteReminder(String reminderId) async {
+    final response = await apiBase.request(
+      path: '/reminders/delete/$reminderId',
+      method: 'DELETE',
+    );
+
+    if (response.statusCode != 200 && response.statusCode != 204) {
+      throw Exception('Failed to delete reminder');
     }
   }
 }
