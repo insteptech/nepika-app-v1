@@ -20,7 +20,7 @@ import '../widgets/image_gallery_section.dart';
 import '../widgets/progress_summary_chart.dart';
 import '../widgets/skin_score_card.dart';
 import '../widgets/section_header.dart';
-import '../widgets/conditions_section.dart';
+import '../widgets/conditions_list_section.dart';
 
 // Memoization wrapper using RepaintBoundary for performance
 Widget _memoizedWidget({
@@ -404,7 +404,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             ),
             _memoizedWidget(
               cacheKey: '${latestConditionResult.hashCode}',
-             child: ConditionsSection(
+              child: ConditionsListSection(
                 latestConditionResult: latestConditionResult,
                 onConditionTap: (conditionName) {
                   logJson(latestConditionResult);

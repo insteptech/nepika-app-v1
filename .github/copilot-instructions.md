@@ -97,6 +97,41 @@ NEPIKA is a modern Flutter application designed for beauty and skincare enthusia
 ---
 **This file is for Copilot and developers to understand the NEPIKA app context, architecture, and API flow.**
 
+# Dashboard Widgets
+
+## ConditionsListSection
+A widget that displays skin condition results in a vertical list format with expand/collapse functionality.
+
+**Location:** `lib/features/dashboard/widgets/conditions_list_section.dart`
+
+**Features:**
+- Displays conditions in rows: `[Name] [Percentage] [Details >]`
+- Sorted by percentage (highest first)
+- Color-coded percentages by severity:
+  - Red (≥70%): High severity
+  - Orange (40-69%): Medium severity
+  - Green (<40%): Low severity
+- Expandable/collapsible with "View More" / "View Less" button
+- Shows 3 items initially (configurable via `initialVisibleCount`)
+- Gradient overlay when collapsed
+- Animated height transitions
+
+**Usage:**
+```dart
+ConditionsListSection(
+  latestConditionResult: {'acne': 75, 'dry': 45, 'wrinkle': 30},
+  onConditionTap: (conditionName) {
+    // Navigate to condition details
+  },
+  initialVisibleCount: 3, // Optional, defaults to 3
+)
+```
+
+**Data Format:**
+- `latestConditionResult`: `Map<String, dynamic>` where keys are condition names and values are percentages (num)
+
+---
+
 # Completed Features:
 
 ✅ **Post Detail Screen** - A comprehensive post detail view that shows:

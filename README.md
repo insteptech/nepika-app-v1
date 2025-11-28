@@ -1,104 +1,177 @@
-# nepika_app
+# NEPIKA App
 
-A new Flutter project.
+A modern Flutter application designed for beauty and skincare enthusiasts. NEPIKA provides a community platform where users can share posts, interact with others, manage their profiles, access personalized content, and receive skin analysis through face scanning technology.
+
+## Features
+
+- **Face Scan & Skin Analysis**: AI-powered skin analysis using device camera and ML Kit
+- **Personalized Recommendations**: Product and routine suggestions based on skin analysis
+- **Community Feed**: Share posts, like, comment, and interact with other users
+- **User Profiles**: Customizable profiles with avatar, bio, and posts
+- **Daily Routines**: Personalized skincare routine management
+- **Progress Tracking**: Monitor skin health improvements over time
+- **Push Notifications**: Real-time updates via FCM
+- **In-App Purchases**: Subscription management via Stripe
+
+## Tech Stack
+
+- **Framework**: Flutter 3.8.1+
+- **State Management**: BLoC (flutter_bloc)
+- **Networking**: Dio with automatic token refresh
+- **Local Storage**: SharedPreferences, SecureStorage
+- **Push Notifications**: Firebase Cloud Messaging
+- **ML/AI**: Google ML Kit Face Detection
+- **Payments**: Stripe
+
+## Architecture
+
+The app follows **Clean Architecture** principles:
+
+```
+lib/
+├── core/                 # Shared utilities, config, DI
+│   ├── api_base.dart    # Base HTTP client with Dio
+│   ├── di/              # Dependency injection (ServiceLocator)
+│   ├── config/          # Constants, routes, themes
+│   └── utils/           # Helpers
+├── data/                 # Data sources, models, repositories
+├── domain/               # Entities, repository interfaces, use cases
+└── features/            # Feature-based modules
+    ├── auth/            # Phone + OTP authentication
+    ├── community/       # Feed, posts, comments, profiles
+    ├── dashboard/       # Main dashboard with widgets
+    ├── face_scan/       # Face scanning with ML Kit
+    ├── notifications/   # Push & in-app notifications
+    ├── products/        # Product catalog
+    ├── routine/         # Daily skincare routines
+    └── settings/        # App settings
+```
 
 ## Getting Started
 
-This project is a starting point for a Flutter application.
+### Prerequisites
 
-A few resources to get you started if this is your first Flutter project:
+- Flutter SDK ^3.8.1
+- Dart SDK
+- Xcode (for iOS)
+- Android Studio (for Android)
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+### Installation
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
-# nepika-app
+```bash
+# Clone the repository
+git clone <repository-url>
 
+# Install dependencies
+flutter pub get
 
+# Generate code (injectable, etc.)
+dart run build_runner build --delete-conflicting-outputs
 
+# Run the app
+flutter run
+```
 
+### Build Commands
 
+```bash
+# Android APK
+flutter build apk
 
-Hello Apple Review Team,
+# iOS IPA
+flutter build ipa
 
-Thank you for your guidance. Please find our detailed responses below regarding face data processing, storage, retention, deletion, and subscriptions.
+# Run tests
+flutter test
 
-1. What face data does the app collect?
-The app collects a single facial image uploaded by the user for the purpose of performing a skin-analysis scan.
-We do not collect or generate biometric identifiers such as face geometry, depth maps, face templates, or facial recognition data.
+# Analyze code
+flutter analyze
+```
 
-We only analyze the image to detect:
-• Skin type
-• Common skin concerns
-• Localized facial areas
-• Confidence scores
+## Key Components
 
-2. How is the collected face data used?
-The uploaded image is used solely to run the skin-analysis pipeline.
-From this image, we generate:
-• Skin type prediction
-• Condition and concern classifications
-• Area-specific bounding boxes
-• An annotated image with highlighted areas
-• Personalized product and routine recommendations
+### Dashboard Widgets
 
-We do not use face data for identity verification, authentication, or tracking.
+#### ConditionsListSection
+Displays skin condition results in an expandable vertical list format.
 
-3. Is face data shared with third parties?
-No.
-We do not share raw images, annotated images, or analysis results with any third parties.
-All processing takes place on our secured AWS infrastructure.
+**Location**: `lib/features/dashboard/widgets/conditions_list_section.dart`
 
-4. Where is face data stored?
-• Raw uploaded image: processed in memory only and never stored
-• Annotated image: securely stored in AWS S3
-• Scan results: stored encrypted in AWS RDS (PostgreSQL)
+**Features**:
+- Row format: `[Name] [Percentage] [Details >]`
+- Color-coded severity (Red ≥70%, Orange 40-69%, Green <40%)
+- Expandable with "View More" / "View Less"
+- Animated transitions
 
-All data is encrypted both in transit and at rest.
+```dart
+ConditionsListSection(
+  latestConditionResult: {'acne': 75, 'dry': 45, 'wrinkle': 30},
+  onConditionTap: (conditionName) {
+    // Navigate to condition details
+  },
+  initialVisibleCount: 3,
+)
+```
 
-5. How long is face data retained?
-We follow a 2-year retention policy:
-• Annotated images → up to 2 years
-• Scan results → up to 2 years
+### API Integration
 
-Exception:
-If a user deletes their account, all associated data — including annotated S3 images and analysis results — is permanently deleted immediately.
-We have already updated the backend to ensure S3 file deletion occurs during account removal.
+All API requests use `ApiBase` class with automatic token refresh:
 
-6. Where is this described in the Privacy Policy?
-The app includes dedicated in-app screens for both the Privacy Policy and Terms of Use, accessible at:
-Settings → Privacy Policy
-Settings → Terms of Use
+```dart
+// Standard JSON request
+final response = await ApiBase().request(
+  path: '/endpoint',
+  method: 'POST',
+  body: {'key': 'value'},
+);
 
-The Privacy Policy explicitly includes:
-• What face data is collected
-• How the face image is processed
-• Storage (S3 + RDS)
-• Retention
-• Deletion on account removal
-• No third-party sharing
+// Multipart upload
+final formData = FormData.fromMap({
+  'file': await MultipartFile.fromFile(path),
+});
+final response = await ApiBase().uploadMultipart(
+  path: '/upload',
+  formData: formData,
+);
+```
 
-Relevant Privacy Policy section:
+## Data Privacy & Face Data
 
-“Face Scan Data:
-The app processes user-uploaded facial images to detect skin type and common concerns. The original image is processed in memory and not stored. An annotated version of the image and analysis results are securely stored on our servers. This data is used only to provide skin analysis and personalized recommendations. We do not share face data with third parties. Data is retained for up to two years or deleted immediately upon user-initiated account deletion.”
+### What We Collect
+- Single facial image for skin-analysis scan
+- No biometric identifiers, face geometry, or facial recognition data
 
-7. Subscription Terms of Use (EULA)
-The full Terms of Use (EULA) are provided within the app under:
-Settings → Terms of Use
+### How We Use It
+- Skin type prediction
+- Condition classifications
+- Personalized recommendations
 
-We will also provide the external link directly in the App Store listing as required.
+### Storage & Retention
+- Raw uploaded image: Processed in memory only, never stored
+- Annotated image: Securely stored in AWS S3 (encrypted)
+- Scan results: Stored in AWS RDS (encrypted)
+- Retention: Up to 2 years or deleted immediately upon account deletion
 
-8. Account Deletion
-The app includes a full account deletion flow:
-Settings → Delete Account → Select Reason → Confirm
+### Privacy Policy
+Accessible in-app at: Settings > Privacy Policy
 
-Deletion immediately:
-• Removes the user account
-• Deletes all scan results
-• Deletes all annotated face images from S3
-• Deletes all linked records in our RDS database
+## Account Deletion
 
-Thank you for your review. Please let us know if you require any additional clarifications.
+Full account deletion available at: Settings > Delete Account
+
+Deletion removes:
+- User account
+- All scan results
+- All annotated face images from S3
+- All linked database records
+
+## Contributing
+
+1. Follow Clean Architecture patterns
+2. Use BLoC for state management
+3. Register dependencies in `ServiceLocator.init()`
+4. Run `flutter analyze` before commits
+
+## License
+
+Proprietary - All rights reserved
