@@ -1,3 +1,5 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 // Core
@@ -70,7 +72,8 @@ import '../../domain/payments/usecases/get_subscription_status.dart';
 import '../../domain/payments/usecases/get_subscription_details.dart';
 import '../../domain/payments/usecases/cancel_subscription.dart';
 import '../../domain/payments/usecases/reactivate_subscription.dart';
-import '../../features/payments/bloc/payment_bloc.dart';
+import 'package:nepika/features/payments/bloc/payment_bloc.dart';
+import 'package:nepika/features/payments/components/in_app_purchase_service.dart';
 
 // Delete Account
 import '../../data/auth/datasources/delete_account_remote_data_source.dart';
@@ -84,12 +87,35 @@ class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
   static bool _coreInitialized = false;
   static bool _fullyInitialized = false;
-  
+  static Completer<void>? _initializationCompleter;
+
+  /// Returns true if full initialization is complete
+  static bool get isFullyInitialized => _fullyInitialized;
+
+  /// Wait for full initialization to complete
+  static Future<void> waitForInitialization() async {
+    debugPrint('ServiceLocator.waitForInitialization: fullyInitialized=$_fullyInitialized, completer=${_initializationCompleter != null}');
+    if (_fullyInitialized) return;
+    _initializationCompleter ??= Completer<void>();
+    debugPrint('ServiceLocator.waitForInitialization: Waiting on completer...');
+    return _initializationCompleter!.future;
+  }
+
   static T get<T>() {
     final service = _services[T];
     if (service == null) {
       throw Exception('Service of type $T is not registered. Core: $_coreInitialized, Full: $_fullyInitialized');
     }
+    if (service is Function) {
+      return service() as T;
+    }
+    return service as T;
+  }
+
+  /// Safely get a service, returning null if not registered
+  static T? getOrNull<T>() {
+    final service = _services[T];
+    if (service == null) return null;
     if (service is Function) {
       return service() as T;
     }
@@ -120,6 +146,9 @@ class ServiceLocator {
   /// Initialize remaining services in background
   static Future<void> initializeRemaining() async {
     if (_fullyInitialized) return;
+
+    // Create completer at start so waiters can await it
+    _initializationCompleter ??= Completer<void>();
 
     // Routine - Data sources
     _registerLazySingleton<RoutineRemoteDataSource>(
@@ -346,6 +375,14 @@ class ServiceLocator {
       ),
     );
 
+    // IAP Service (Singleton - it manages its own state)
+    _registerLazySingleton<IAPService>(IAPService());
+
+    // IAP Bloc (Factory - creates new instance each time)
+    _registerFactory<IAPBloc>(
+      () => IAPBloc(iapService: get<IAPService>()),
+    );
+
     // Delete Account - Data sources
     _registerLazySingleton<DeleteAccountRemoteDataSource>(
       DeleteAccountRemoteDataSourceImpl(get<ApiBase>()),
@@ -373,6 +410,11 @@ class ServiceLocator {
     );
     
     _fullyInitialized = true;
+
+    // Complete the initialization completer if anyone is waiting
+    if (_initializationCompleter != null && !_initializationCompleter!.isCompleted) {
+      _initializationCompleter!.complete();
+    }
   }
 
   /// Legacy method for backward compatibility

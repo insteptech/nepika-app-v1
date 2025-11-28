@@ -81,4 +81,7 @@ class IAPErrorOccurred extends IAPEvent {
   IAPErrorOccurred(this.message);
 }
 
+/// Present offer code redemption sheet (iOS 14+ only)
+class PresentOfferCodeRedemption extends IAPEvent {}
+
 // REMOVED: enum IAPStatus - now imported from in_app_purchase_service.dart

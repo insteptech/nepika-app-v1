@@ -29,16 +29,52 @@ class PricingScreen extends StatefulWidget {
 class _PricingScreenState extends State<PricingScreen> {
   String token = '';
   int selectedPlanIndex = 0;
-  late PaymentBloc _paymentBloc;
-  late IAPBloc _iapBloc;  // Add IAP Bloc
+  PaymentBloc? _paymentBloc;
+  IAPBloc? _iapBloc;
   bool _isLoading = false;
+  bool _isInitializing = true;
 
   @override
   void initState() {
     super.initState();
-    _paymentBloc = ServiceLocator.get<PaymentBloc>();
-    _iapBloc = IAPBloc()..add(InitializeIAP());  // Initialize IAP
+    _initializeBlocs();
     _getToken();
+  }
+
+  Future<void> _initializeBlocs() async {
+    print('PricingScreen: Starting initialization, isFullyInitialized=${ServiceLocator.isFullyInitialized}');
+
+    // Wait for ServiceLocator to be fully initialized
+    if (!ServiceLocator.isFullyInitialized) {
+      print('PricingScreen: Waiting for ServiceLocator initialization...');
+      await ServiceLocator.waitForInitialization();
+      print('PricingScreen: ServiceLocator initialization complete');
+    }
+
+    print('PricingScreen: Getting blocs from ServiceLocator');
+
+    try {
+      print('PricingScreen: About to get PaymentBloc...');
+      final paymentBloc = ServiceLocator.get<PaymentBloc>();
+      print('PricingScreen: Got PaymentBloc: $paymentBloc');
+
+      print('PricingScreen: About to get IAPBloc...');
+      final iapBloc = ServiceLocator.get<IAPBloc>();
+      print('PricingScreen: Got IAPBloc: $iapBloc');
+
+      print('PricingScreen: mounted=$mounted');
+      if (mounted) {
+        setState(() {
+          _paymentBloc = paymentBloc;
+          _iapBloc = iapBloc..add(InitializeIAP());
+          _isInitializing = false;
+        });
+        print('PricingScreen: Blocs initialized successfully, _isInitializing=$_isInitializing');
+      }
+    } catch (e, stackTrace) {
+      print('PricingScreen: ERROR getting blocs: $e');
+      print('PricingScreen: Stack trace: $stackTrace');
+    }
   }
 
   void _getToken() async {
@@ -51,14 +87,25 @@ class _PricingScreenState extends State<PricingScreen> {
 
   @override
   void dispose() {
-    _paymentBloc.close();
-    _iapBloc.close();  // Dispose IAP Bloc
+    _paymentBloc?.close();
+    _iapBloc?.close();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
+    // Show loading state while waiting for initialization
+    if (_isInitializing || _paymentBloc == null || _iapBloc == null) {
+      return Scaffold(
+        backgroundColor: theme.scaffoldBackgroundColor,
+        body: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: MultiBlocProvider(
@@ -68,8 +115,8 @@ class _PricingScreenState extends State<PricingScreen> {
                 AppBloc(appRepository: AppRepositoryImpl(ApiBase()))
                   ..add(AppSubscriptions(token)),
           ),
-          BlocProvider.value(value: _paymentBloc),
-          BlocProvider.value(value: _iapBloc),  // Provide IAP Bloc
+          BlocProvider.value(value: _paymentBloc!),
+          BlocProvider.value(value: _iapBloc!),
         ],
         child: SafeArea(
           child: MultiBlocListener(
@@ -167,9 +214,9 @@ class _PricingScreenState extends State<PricingScreen> {
                 // ✅ Merge StoreKit prices with server data
                 List<Map<String, dynamic>> plans = [];
                 try {
-                  if (_iapBloc.isAvailable && _iapBloc.products.isNotEmpty) {
+                  if (_iapBloc!.isAvailable && _iapBloc!.products.isNotEmpty) {
                     // Use StoreKit prices (real, localized)
-                    plans = _iapBloc.mergeWithServerData(plansData);
+                    plans = _iapBloc!.mergeWithServerData(plansData);
                     debugPrint('IAP: Using StoreKit prices for ${plans.length} products');
                   } else {
                     // Fallback to server prices if StoreKit unavailable
@@ -422,7 +469,7 @@ class _PricingScreenState extends State<PricingScreen> {
                             ),
                             // Restore button - now triggers IAP restore
                             GestureDetector(
-                              onTap: () => _iapBloc.add(RestorePurchases()),
+                              onTap: () => _iapBloc?.add(RestorePurchases()),
                               child: Text('Restore', style: theme.textTheme.bodyMedium),
                             ),
                           ],
@@ -455,7 +502,7 @@ class _PricingScreenState extends State<PricingScreen> {
     IAPPurchaseBottomSheet.show(
       context: context,
       selectedPlan: selectedPlan,
-      iapBloc: _iapBloc,
+      iapBloc: _iapBloc!,
       onSuccess: () {
         // Refresh subscription data after successful purchase
         context.read<AppBloc>().add(AppSubscriptions(token));
@@ -1328,13 +1375,13 @@ class _PricingScreenState extends State<PricingScreen> {
   }
   
   void _cancelSubscription(bool cancelImmediately) {
-    _paymentBloc.add(CancelSubscriptionEvent(
+    _paymentBloc?.add(CancelSubscriptionEvent(
       cancelImmediately: cancelImmediately,
     ));
   }
 
   void _reactivateSubscription() {
-    _paymentBloc.add(ReactivateSubscriptionEvent());
+    _paymentBloc?.add(ReactivateSubscriptionEvent());
   }
   
   void _handleCancellationSuccess(dynamic subscriptionDetails) {

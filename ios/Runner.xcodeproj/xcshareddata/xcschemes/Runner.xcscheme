@@ -27,7 +27,8 @@
       selectedDebuggerIdentifier = "Xcode.DebuggerFoundation.Debugger.LLDB"
       selectedLauncherIdentifier = "Xcode.DebuggerFoundation.Launcher.LLDB"
       customLLDBInitFile = "$(SRCROOT)/Flutter/ephemeral/flutter_lldbinit"
-      shouldUseLaunchSchemeArgsEnv = "YES">
+      shouldUseLaunchSchemeArgsEnv = "YES"
+      storeKitConfigurationFileReference = "container:Products.storekit">
       <MacroExpansion>
          <BuildableReference
             BuildableIdentifier = "primary"
@@ -62,7 +63,8 @@
       debugDocumentVersioning = "YES"
       debugServiceExtension = "internal"
       enableGPUValidationMode = "1"
-      allowLocationSimulation = "YES">
+      allowLocationSimulation = "YES"
+      storeKitConfigurationFileReference = "container:Products.storekit">
       <BuildableProductRunnable
          runnableDebuggingMode = "0">
          <BuildableReference

@@ -1,0 +1,145 @@
+{
+  "appPolicies" : {
+    "eula" : "",
+    "policies" : [
+      {
+        "locale" : "en_US",
+        "policyText" : "",
+        "policyURL" : ""
+      }
+    ]
+  },
+  "identifier" : "07160446",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+
+  ],
+  "settings" : {
+    "_applicationInternalID" : "6751228494",
+    "_developerTeamID" : "8YQGCJARNW",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 785831264.28892899,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Load Products"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Purchase"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Verification"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Store Sync"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Subscription Status"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "App Transaction"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Manage Subscriptions Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Refund Request Sheet"
+      },
+      {
+        "current" : null,
+        "enabled" : false,
+        "name" : "Offer Code Redeem Sheet"
+      }
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "21838381",
+      "localizations" : [
+
+      ],
+      "name" : "Nepika Premium",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "14.0",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "6755648970",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited face scans + full skin analysis + AI tips",
+              "displayName" : "Nepika Premium",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "com.assisted.nepika.weekly",
+          "recurringSubscriptionPeriod" : "P1W",
+          "referenceName" : "Nepika Premium Weekly",
+          "subscriptionGroupID" : "21838381",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "99.0",
+          "familyShareable" : false,
+          "groupNumber" : 2,
+          "internalID" : "6755648772",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Unlimited face scans + full skin analysis + AI tips",
+              "displayName" : "Nepika Premium (Yearly)",
+              "locale" : "en_GB"
+            }
+          ],
+          "productID" : "com.assisted.nepika.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Nepika Premium Yearly",
+          "subscriptionGroupID" : "21838381",
+          "type" : "RecurringSubscription",
+          "winbackOffers" : [
+
+          ]
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 4,
+    "minor" : 0
+  }
+}

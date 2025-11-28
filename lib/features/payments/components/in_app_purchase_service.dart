@@ -30,15 +30,19 @@ class IAPService {
   
   List<ProductDetails> _products = [];
   List<ProductDetails> get products => _products;
-  
+
   bool _isAvailable = false;
   bool get isAvailable => _isAvailable;
-  
+
   bool _isInitialized = false;
   bool get isInitialized => _isInitialized;
 
   // MOCK MODE FLAG
   bool _isMockMode = false;
+
+  // Track restore operation for batch backend sync
+  bool _isRestoring = false;
+  final List<PurchaseDetails> _restoredPurchases = [];
 
   static const Set<String> _productIds = {
     'com.assisted.nepika.weekly',
@@ -238,39 +242,68 @@ class IAPService {
         case PurchaseStatus.pending:
           _statusController.add(IAPStatus.pending);
           break;
-          
+
         case PurchaseStatus.purchased:
-        case PurchaseStatus.restored:
+          // New purchase - verify and deliver immediately
           final valid = await _verifyPurchase(purchase);
-          
+
           if (valid) {
             await _deliverProduct(purchase);
-            _statusController.add(
-              purchase.status == PurchaseStatus.restored 
-                ? IAPStatus.restored 
-                : IAPStatus.purchased
-            );
+            _statusController.add(IAPStatus.purchased);
             _purchaseController.add(purchase);
           } else {
             _errorController.add('Purchase verification failed');
             _statusController.add(IAPStatus.failed);
           }
-          
+
           if (purchase.pendingCompletePurchase) {
             await _iap.completePurchase(purchase);
           }
           break;
-          
+
+        case PurchaseStatus.restored:
+          // Restored purchase - collect for batch sync if restoring
+          if (_isRestoring) {
+            _restoredPurchases.add(purchase);
+            debugPrint('IAP: Collected restored purchase: ${purchase.productID}');
+          } else {
+            // Single restore (e.g., from previous incomplete transaction)
+            final valid = await _verifyPurchase(purchase);
+            if (valid) {
+              await _deliverProduct(purchase);
+              _statusController.add(IAPStatus.restored);
+              _purchaseController.add(purchase);
+            }
+          }
+
+          if (purchase.pendingCompletePurchase) {
+            await _iap.completePurchase(purchase);
+          }
+          break;
+
         case PurchaseStatus.error:
           _handlePurchaseError(purchase);
           if (purchase.pendingCompletePurchase) {
             await _iap.completePurchase(purchase);
           }
           break;
-          
+
         case PurchaseStatus.canceled:
           _statusController.add(IAPStatus.canceled);
+          if (_isRestoring) {
+            _isRestoring = false;
+            _restoredPurchases.clear();
+          }
           break;
+      }
+    }
+
+    // After processing all purchases, sync restored ones with backend
+    if (_isRestoring && purchases.isNotEmpty) {
+      // Check if this is the end of restore (no more pending)
+      final hasPending = purchases.any((p) => p.status == PurchaseStatus.pending);
+      if (!hasPending) {
+        await _syncRestoredPurchasesWithBackend();
       }
     }
   }
@@ -342,13 +375,51 @@ class IAPService {
       _errorController.add('Store not available');
       return;
     }
+
     _statusController.add(IAPStatus.loading);
+    _isRestoring = true;
+    _restoredPurchases.clear();
+
     try {
       await _iap.restorePurchases();
+      // Note: Restored purchases will be handled by _handlePurchaseUpdates
+      // which will collect them and sync with backend
     } catch (e) {
+      _isRestoring = false;
+      _restoredPurchases.clear();
       _errorController.add('Failed to restore purchases: $e');
       _statusController.add(IAPStatus.failed);
     }
+  }
+
+  /// Sync all restored purchases with backend in batch
+  Future<void> _syncRestoredPurchasesWithBackend() async {
+    if (_restoredPurchases.isEmpty) {
+      debugPrint('IAP: No purchases to restore');
+      _statusController.add(IAPStatus.restored);
+      return;
+    }
+
+    debugPrint('IAP: Syncing ${_restoredPurchases.length} restored purchases with backend');
+
+    final verificationService = PurchaseVerificationService();
+    final success = await verificationService.restorePurchases(_restoredPurchases);
+
+    if (success) {
+      debugPrint('IAP: Successfully synced restored purchases with backend');
+      _statusController.add(IAPStatus.restored);
+      // Emit the most recent purchase for UI updates
+      if (_restoredPurchases.isNotEmpty) {
+        _purchaseController.add(_restoredPurchases.last);
+      }
+    } else {
+      debugPrint('IAP: Failed to sync restored purchases with backend');
+      _errorController.add('Failed to sync restored purchases');
+      _statusController.add(IAPStatus.failed);
+    }
+
+    _restoredPurchases.clear();
+    _isRestoring = false;
   }
 
   ProductDetails? getProductById(String productId) {
@@ -409,6 +480,30 @@ class IAPService {
 
     final duration = serverPlan['duration']?.toString() ?? '';
     return duration;
+  }
+
+  /// Present offer code redemption sheet (iOS 14+ only)
+  /// This allows users to redeem promotional codes for subscriptions
+  Future<void> presentOfferCodeRedemption() async {
+    if (!Platform.isIOS) {
+      debugPrint('IAP: Offer code redemption is only available on iOS');
+      _errorController.add('Offer codes are only available on iOS');
+      return;
+    }
+
+    if (!_isAvailable) {
+      _errorController.add('Store not available');
+      return;
+    }
+
+    try {
+      final iosPlatformAddition = _iap.getPlatformAddition<InAppPurchaseStoreKitPlatformAddition>();
+      await iosPlatformAddition.presentCodeRedemptionSheet();
+      debugPrint('IAP: Presented offer code redemption sheet');
+    } catch (e) {
+      debugPrint('IAP: Failed to present offer code sheet: $e');
+      _errorController.add('Failed to open offer code redemption');
+    }
   }
 
   void dispose() {

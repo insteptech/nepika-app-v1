@@ -20,10 +20,11 @@ class IAPTestingHelper {
   }
 
   /// Get test product IDs for sandbox testing
+  /// These MUST match App Store Connect product IDs exactly
   static Map<String, String> getTestProductIds() {
     return {
-      'weekly': 'nepika_weekly_subscription',
-      'yearly': 'nepika_yearly_subscription',
+      'weekly': 'com.assisted.nepika.weekly',
+      'yearly': 'com.assisted.nepika.yearly',
     };
   }
 
@@ -38,8 +39,8 @@ class IAPTestingHelper {
   /// Validate product ID format
   static bool isValidProductId(String productId) {
     final validIds = [
-      'nepika_weekly_subscription',
-      'nepika_yearly_subscription',
+      'com.assisted.nepika.weekly',
+      'com.assisted.nepika.yearly',
     ];
     return validIds.contains(productId);
   }
@@ -96,25 +97,25 @@ Error: ${error ?? 'None'}
       {
         'name': 'Successful Purchase',
         'description': 'Test successful weekly subscription purchase',
-        'product_id': 'nepika_weekly_subscription',
+        'product_id': 'com.assisted.nepika.weekly',
         'expected_result': 'success',
       },
       {
         'name': 'Purchase Cancellation',
         'description': 'User cancels purchase during payment flow',
-        'product_id': 'nepika_weekly_subscription',
+        'product_id': 'com.assisted.nepika.weekly',
         'expected_result': 'cancelled',
       },
       {
         'name': 'Network Failure',
         'description': 'Test behavior when network is unavailable',
-        'product_id': 'nepika_yearly_subscription',
+        'product_id': 'com.assisted.nepika.yearly',
         'expected_result': 'error',
       },
       {
         'name': 'Already Subscribed',
         'description': 'Test purchasing when already subscribed',
-        'product_id': 'nepika_weekly_subscription',
+        'product_id': 'com.assisted.nepika.weekly',
         'expected_result': 'already_owned',
       },
       {
@@ -190,8 +191,8 @@ Error: ${error ?? 'None'}
 4. Use real Google account for testing
 
 📋 Test Products:
-- Weekly: nepika_weekly_subscription (\$1.99)
-- Yearly: nepika_yearly_subscription (\$60.00)
+- Weekly: com.assisted.nepika.weekly (\$1.99)
+- Yearly: com.assisted.nepika.yearly (\$60.00)
 
 🔍 Test Scenarios:
 ${getTestScenarios().map((scenario) => '- ${scenario['name']}: ${scenario['description']}').join('\n')}

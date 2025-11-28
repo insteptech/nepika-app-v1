@@ -33,6 +33,7 @@ class IAPBloc extends Bloc<IAPEvent, IAPState> {
     on<IAPStatusChanged>(_onStatusChanged);
     on<IAPPurchaseCompleted>(_onPurchaseCompleted);
     on<IAPErrorOccurred>(_onErrorOccurred);
+    on<PresentOfferCodeRedemption>(_onPresentOfferCodeRedemption);
   }
 
   Future<void> _onInitialize(InitializeIAP event, Emitter<IAPState> emit) async {
@@ -131,6 +132,13 @@ class IAPBloc extends Bloc<IAPEvent, IAPState> {
 
   void _onErrorOccurred(IAPErrorOccurred event, Emitter<IAPState> emit) {
     emit(IAPError(event.message));
+  }
+
+  Future<void> _onPresentOfferCodeRedemption(
+    PresentOfferCodeRedemption event,
+    Emitter<IAPState> emit,
+  ) async {
+    await _iapService.presentOfferCodeRedemption();
   }
 
   // Helper methods

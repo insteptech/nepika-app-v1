@@ -12,25 +12,43 @@ class PurchaseVerificationService {
   final ApiBase _apiBase = ApiBase();
 
   /// Verify purchase with backend server
+  /// Supports both StoreKit 1 (legacy receipt) and StoreKit 2 (JWS transaction)
   Future<bool> verifyPurchase(PurchaseDetails purchase) async {
     try {
       debugPrint('Verifying purchase: ${purchase.productID}');
-      
+      debugPrint('Verification source: ${purchase.verificationData.source}');
+
       final Map<String, dynamic> verificationData = {
         'product_id': purchase.productID,
         'purchase_id': purchase.purchaseID,
-        'verification_data': purchase.verificationData.serverVerificationData,
-        'source': purchase.verificationData.source,
         'platform': Platform.isIOS ? 'ios' : 'android',
         'transaction_date': purchase.transactionDate,
         'status': purchase.status.toString(),
       };
 
-      // Add platform-specific verification data
+      // Handle platform-specific verification data
       if (Platform.isIOS) {
-        verificationData['receipt_data'] = purchase.verificationData.serverVerificationData;
+        // StoreKit 2 uses 'app_store' source and provides JWS transaction data
+        // StoreKit 1 uses 'app_store' source but provides base64 receipt
+        final isStoreKit2 = _isStoreKit2Transaction(purchase);
+
+        if (isStoreKit2) {
+          // StoreKit 2: serverVerificationData contains JWS signed transaction
+          verificationData['storekit_version'] = 2;
+          verificationData['signed_transaction'] = purchase.verificationData.serverVerificationData;
+          // localVerificationData may contain additional transaction info for debugging
+          verificationData['local_verification_data'] = purchase.verificationData.localVerificationData;
+          debugPrint('IAP: Using StoreKit 2 JWS verification');
+        } else {
+          // StoreKit 1: serverVerificationData contains base64 receipt
+          verificationData['storekit_version'] = 1;
+          verificationData['receipt_data'] = purchase.verificationData.serverVerificationData;
+          debugPrint('IAP: Using StoreKit 1 receipt verification');
+        }
       } else {
+        // Android: Google Play purchase token
         verificationData['purchase_token'] = purchase.verificationData.serverVerificationData;
+        verificationData['local_verification_data'] = purchase.verificationData.localVerificationData;
       }
 
       final response = await _apiBase.request(
@@ -58,19 +76,48 @@ class PurchaseVerificationService {
     }
   }
 
+  /// Detect if this is a StoreKit 2 transaction
+  /// StoreKit 2 JWS tokens start with 'eyJ' (base64 encoded JSON header)
+  bool _isStoreKit2Transaction(PurchaseDetails purchase) {
+    final serverData = purchase.verificationData.serverVerificationData;
+    // JWS format: header.payload.signature (three base64url parts separated by dots)
+    // StoreKit 2 JWS always starts with eyJ (base64 of '{"')
+    if (serverData.startsWith('eyJ') && serverData.contains('.')) {
+      final parts = serverData.split('.');
+      return parts.length == 3; // Valid JWS has exactly 3 parts
+    }
+    return false;
+  }
+
   /// Restore purchases and sync with server
+  /// Supports both StoreKit 1 and StoreKit 2 transactions
   Future<bool> restorePurchases(List<PurchaseDetails> purchases) async {
     try {
       debugPrint('Restoring ${purchases.length} purchases');
-      
-      final List<Map<String, dynamic>> purchaseData = purchases.map((purchase) => {
-        'product_id': purchase.productID,
-        'purchase_id': purchase.purchaseID,
-        'verification_data': purchase.verificationData.serverVerificationData,
-        'source': purchase.verificationData.source,
-        'platform': Platform.isIOS ? 'ios' : 'android',
-        'transaction_date': purchase.transactionDate,
-        'status': purchase.status.toString(),
+
+      final List<Map<String, dynamic>> purchaseData = purchases.map((purchase) {
+        final isStoreKit2 = Platform.isIOS && _isStoreKit2Transaction(purchase);
+
+        final data = <String, dynamic>{
+          'product_id': purchase.productID,
+          'purchase_id': purchase.purchaseID,
+          'platform': Platform.isIOS ? 'ios' : 'android',
+          'transaction_date': purchase.transactionDate,
+          'status': purchase.status.toString(),
+        };
+
+        if (Platform.isIOS) {
+          data['storekit_version'] = isStoreKit2 ? 2 : 1;
+          if (isStoreKit2) {
+            data['signed_transaction'] = purchase.verificationData.serverVerificationData;
+          } else {
+            data['receipt_data'] = purchase.verificationData.serverVerificationData;
+          }
+        } else {
+          data['purchase_token'] = purchase.verificationData.serverVerificationData;
+        }
+
+        return data;
       }).toList();
 
       final response = await _apiBase.request(
@@ -120,17 +167,31 @@ class PurchaseVerificationService {
   }
 
   /// Update subscription on server after successful purchase
+  /// Supports both StoreKit 1 and StoreKit 2 transactions
   Future<bool> updateSubscription(PurchaseDetails purchase) async {
     try {
       debugPrint('Updating subscription for: ${purchase.productID}');
-      
+
+      final isStoreKit2 = Platform.isIOS && _isStoreKit2Transaction(purchase);
+
       final Map<String, dynamic> subscriptionData = {
         'product_id': purchase.productID,
         'purchase_id': purchase.purchaseID,
         'platform': Platform.isIOS ? 'ios' : 'android',
-        'verification_data': purchase.verificationData.serverVerificationData,
         'transaction_date': purchase.transactionDate,
       };
+
+      if (Platform.isIOS) {
+        subscriptionData['storekit_version'] = isStoreKit2 ? 2 : 1;
+        if (isStoreKit2) {
+          subscriptionData['signed_transaction'] = purchase.verificationData.serverVerificationData;
+          subscriptionData['local_verification_data'] = purchase.verificationData.localVerificationData;
+        } else {
+          subscriptionData['receipt_data'] = purchase.verificationData.serverVerificationData;
+        }
+      } else {
+        subscriptionData['purchase_token'] = purchase.verificationData.serverVerificationData;
+      }
 
       final response = await _apiBase.request(
         path: '/payments/subscription/activate',
