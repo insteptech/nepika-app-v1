@@ -32,6 +32,9 @@ class _ScanRecommendationsLoaderScreenState extends State<ScanRecommendationsLoa
     _fetchScanData();
   }
 
+
+
+
   Future<void> _fetchScanData() async {
     try {
       setState(() {

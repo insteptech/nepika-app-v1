@@ -101,7 +101,9 @@ class _SettingsOptionTileState extends State<SettingsOptionTile> {
   void didUpdateWidget(covariant SettingsOptionTile oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.toggleValue != oldWidget.toggleValue) {
-      _localToggleValue = widget.toggleValue;
+      setState(() {
+        _localToggleValue = widget.toggleValue;
+      });
     }
   }
 

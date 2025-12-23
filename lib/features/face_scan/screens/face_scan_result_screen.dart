@@ -163,14 +163,14 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     if (_isAligned && mounted) {
       setState(() {
         _isAligned = false;
-        _countdown = 5;
+        _countdown = 3;
       });
       _cancelTimer();
     }
   }
 
   void _startCountdown() {
-    _countdown = 5;
+    _countdown = 3;
     _timer = Timer.periodic(const Duration(seconds: 1), (t) {
       if (!mounted) {
         t.cancel();
@@ -201,7 +201,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     if (mounted) {
       setState(() {
         _isAligned = false;
-        _countdown = 5;
+        _countdown = 3;
       });
       _cancelTimer();
     }
@@ -211,7 +211,7 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     _timer?.cancel();
     _timer = null;
     if (!skipStateUpdate && mounted) {
-      setState(() => _countdown = 5);
+      setState(() => _countdown = 3);
     }
   }
 
@@ -1311,10 +1311,10 @@ Widget _buildImageWidget() {
       child: ListView(
         scrollDirection: Axis.horizontal,
         children: [
-          // "All" chip
+          // "All" chip - shows total number of unique issues/conditions
           _buildConditionChip(
             'All',
-            conditionCounts.values.fold(0, (sum, count) => sum + count),
+            conditionCounts.length,
             Colors.grey,
             _selectedCondition == null,
             () {

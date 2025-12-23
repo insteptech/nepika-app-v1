@@ -73,6 +73,26 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
     return Theme.of(context).colorScheme.primary;
   }
 
+  /// Convert time string to minutes since midnight for sorting (AM -> PM)
+  int _timeToMinutes(String time24Hour) {
+    try {
+      final parts = time24Hour.split(':');
+      if (parts.length < 2) return 0;
+      final hour = int.parse(parts[0]);
+      final minute = int.parse(parts[1]);
+      return hour * 60 + minute;
+    } catch (e) {
+      return 0;
+    }
+  }
+
+  /// Sort reminders by time (AM -> PM)
+  List<Reminder> _sortRemindersByTime(List<Reminder> reminders) {
+    final sorted = List<Reminder>.from(reminders);
+    sorted.sort((a, b) => _timeToMinutes(a.reminderTime).compareTo(_timeToMinutes(b.reminderTime)));
+    return sorted;
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -86,11 +106,16 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
             listener: (context, state) {
               if (state is RemindersLoaded) {
                 setState(() {
-                  _reminders = state.reminders;
+                  _reminders = _sortRemindersByTime(state.reminders);
                 });
               } else if (state is ReminderStatusToggled) {
-                // Refresh the list after toggling
-                _reminderBloc.add(GetAllRemindersEvent());
+                // Update the reminder in the list without re-fetching to maintain order
+                setState(() {
+                  final index = _reminders.indexWhere((r) => r.id == state.reminder.id);
+                  if (index != -1) {
+                    _reminders[index] = state.reminder;
+                  }
+                });
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(

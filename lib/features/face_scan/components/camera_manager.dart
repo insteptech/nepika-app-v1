@@ -123,6 +123,10 @@ class CameraManager {
     try {
       // Stop image stream before capture
       await stopImageStream();
+
+      // Disable flash for capture (prevents iOS front camera flash simulation)
+      await _controller!.setFlashMode(FlashMode.off);
+
       final file = await _controller!.takePicture();
       debugPrint('Photo captured successfully');
       return file;

@@ -29,7 +29,9 @@ class _ToggleSwitchState extends State<ToggleSwitch> {
   void didUpdateWidget(covariant ToggleSwitch oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.value != isOn) {
-      isOn = widget.value;
+      setState(() {
+        isOn = widget.value;
+      });
     }
   }
 

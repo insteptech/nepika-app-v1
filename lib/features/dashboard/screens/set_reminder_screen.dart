@@ -3,7 +3,6 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/core/widgets/custom_text_field.dart';
@@ -38,6 +37,7 @@ class _ReminderSettingsState extends State<ReminderSettings> with WidgetsBinding
 
   bool _reminderEnabled = false;
   bool _isCheckingPermission = true; // Track if we're still checking permission
+  bool _userHasToggledManually = false; // Track if user has manually changed the toggle
   Timer? _permissionCheckTimer; // Timer for periodic permission checks
 
 
@@ -99,6 +99,16 @@ bool get _isFormValid {
   }
 
   Future<void> _checkNotificationPermission() async {
+    // If user has manually toggled, don't override their choice
+    if (_userHasToggledManually) {
+      if (_isCheckingPermission && mounted) {
+        setState(() {
+          _isCheckingPermission = false;
+        });
+      }
+      return;
+    }
+
     try {
       print('=== PERMISSION CHECK START ===');
       print('Platform: ${Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown'}');
@@ -505,25 +515,29 @@ bool get _isFormValid {
       print('Reminder Type: ${_mapReminderType(_selectedType!)}');
       print('Reminder Enabled: $_reminderEnabled');
 
-      // Check notification service status
-      final notifService = LocalNotificationService.instance;
-      final isInitialized = notifService.getStatus()['isInitialized'] ?? false;
-      final canSchedule = await notifService.canScheduleNotifications();
-      print('Notification Service Initialized: $isInitialized');
-      print('Can Schedule Notifications: $canSchedule');
+      // Check notification service status only if reminder is enabled
+      if (_reminderEnabled) {
+        final notifService = LocalNotificationService.instance;
+        final isInitialized = notifService.getStatus()['isInitialized'] ?? false;
+        final canSchedule = await notifService.canScheduleNotifications();
+        print('Notification Service Initialized: $isInitialized');
+        print('Can Schedule Notifications: $canSchedule');
 
-      if (!canSchedule && _reminderEnabled) {
-        print('WARNING: Cannot schedule notifications but reminder is enabled!');
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Notification permission is required to enable reminders'),
-              backgroundColor: Colors.orange,
-              duration: Duration(seconds: 3),
-            ),
-          );
+        if (!canSchedule) {
+          print('WARNING: Cannot schedule notifications but reminder is enabled!');
+          if (mounted) {
+            ScaffoldMessenger.of(blocContext).showSnackBar(
+              const SnackBar(
+                content: Text('Notification permission is required to enable reminders'),
+                backgroundColor: Colors.orange,
+                duration: Duration(seconds: 3),
+              ),
+            );
+          }
+          return;
         }
-        return;
+      } else {
+        print('Reminder is disabled, skipping notification permission check');
       }
 
       print('========================');
@@ -542,7 +556,7 @@ bool get _isFormValid {
     } catch (e) {
       print('Error in _onDonePressed: $e');
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
+        ScaffoldMessenger.of(blocContext).showSnackBar(
           SnackBar(content: Text('Error: ${e.toString()}')),
         );
       }
@@ -550,38 +564,31 @@ bool get _isFormValid {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext parentContext) {
     return BlocProvider(
-      create: (context) => sl<ReminderBloc>(),
+      create: (_) => sl<ReminderBloc>(),
       child: Builder(
         builder: (blocContext) {
           return BlocListener<ReminderBloc, ReminderState>(
-            listener: (context, state) {
+            listener: (_, state) {
               print('=== BLoC State Change ===');
               print('State: ${state.runtimeType}');
 
               if (state is ReminderAdded) {
                 print('Reminder added successfully: ${state.reminder.id}');
+                print('Attempting to pop screen...');
 
-                // Verify notification was scheduled
-                LocalNotificationService.instance.getPendingNotifications().then((pending) {
-                  print('=== Pending Notifications After Save ===');
-                  print('Total pending: ${pending.length}');
-                  for (var notif in pending) {
-                    print('  - ID: ${notif.id}, Title: ${notif.title}');
-                  }
-                  print('======================================');
-                });
-
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
+                // Show snackbar and navigate back
+                ScaffoldMessenger.of(parentContext).clearSnackBars();
+                ScaffoldMessenger.of(parentContext).showSnackBar(
                   const SnackBar(content: Text('Reminder saved successfully!')),
                 );
-                Navigator.of(context).pushNamed(AppRoutes.dashboardHome);
+                Navigator.of(parentContext).pop();
+                print('Pop called');
               } else if (state is ReminderError) {
                 print('Reminder error: ${state.message}');
-                ScaffoldMessenger.of(context).clearSnackBars();
-                ScaffoldMessenger.of(context).showSnackBar(
+                ScaffoldMessenger.of(parentContext).clearSnackBars();
+                ScaffoldMessenger.of(parentContext).showSnackBar(
                   SnackBar(
                     content: Text('Failed to save reminder: ${state.message}'),
                     backgroundColor: Colors.red,
@@ -787,6 +794,9 @@ bool get _isFormValid {
                                   showDivider: false,
                                   toggleValue: _reminderEnabled,
                                   onToggleChanged: (value) async {
+                                    // Mark that user has manually changed the toggle
+                                    _userHasToggledManually = true;
+
                                     if (value) {
                                       // User wants to enable reminders - check permission first
                                       await _requestNotificationPermission();

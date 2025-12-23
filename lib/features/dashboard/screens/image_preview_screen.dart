@@ -39,7 +39,9 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> with TickerProv
   bool _isDragging = false;
   double _dragProgress = 0.0;
   double _panStartY = 0.0;
+  double _panStartX = 0.0;
   double _lastDeltaY = 0.0;
+  bool _gestureDecided = false; // Track if we've decided on horizontal vs vertical
 
   @override
   void initState() {
@@ -326,16 +328,30 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> with TickerProv
       onPointerDown: (details) {
         // Track the start position for potential pan gesture
         _panStartY = details.position.dy;
+        _panStartX = details.position.dx;
+        _gestureDecided = false;
       },
       onPointerMove: (details) {
         // Check if this looks like a downward drag
         final deltaY = details.position.dy - _panStartY;
-        if (deltaY > 10 && !_isDragging) { // Minimum 10px downward movement
-          _onPanStart(DragStartDetails(
-            globalPosition: details.position,
-            localPosition: details.localPosition,
-          ));
+        final deltaX = (details.position.dx - _panStartX).abs();
+
+        // Only decide once per gesture
+        if (!_gestureDecided && (deltaY.abs() > 15 || deltaX > 15)) {
+          _gestureDecided = true;
+
+          // Only treat as vertical dismiss if:
+          // 1. Vertical movement is significantly greater than horizontal (2:1 ratio)
+          // 2. Movement is downward
+          // 3. Minimum vertical threshold met
+          if (deltaY > 30 && deltaY > deltaX * 2) {
+            _onPanStart(DragStartDetails(
+              globalPosition: details.position,
+              localPosition: details.localPosition,
+            ));
+          }
         }
+
         if (_isDragging) {
           _onPanUpdate(DragUpdateDetails(
             globalPosition: details.position,
@@ -354,6 +370,7 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> with TickerProv
           ));
         }
         _lastDeltaY = 0;
+        _gestureDecided = false;
       },
       child: GestureDetector(
         onTap: _toggleHeaderFooter,
@@ -399,15 +416,29 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> with TickerProv
         return Listener(
           onPointerDown: (details) {
             _panStartY = details.position.dy;
+            _panStartX = details.position.dx;
+            _gestureDecided = false;
           },
           onPointerMove: (details) {
             final deltaY = details.position.dy - _panStartY;
-            if (deltaY > 10 && !_isDragging) {
-              _onPanStart(DragStartDetails(
-                globalPosition: details.position,
-                localPosition: details.localPosition,
-              ));
+            final deltaX = (details.position.dx - _panStartX).abs();
+
+            // Only decide once per gesture
+            if (!_gestureDecided && (deltaY.abs() > 15 || deltaX > 15)) {
+              _gestureDecided = true;
+
+              // Only treat as vertical dismiss if:
+              // 1. Vertical movement is significantly greater than horizontal (2:1 ratio)
+              // 2. Movement is downward
+              // 3. Minimum vertical threshold met
+              if (deltaY > 30 && deltaY > deltaX * 2) {
+                _onPanStart(DragStartDetails(
+                  globalPosition: details.position,
+                  localPosition: details.localPosition,
+                ));
+              }
             }
+
             if (_isDragging) {
               _onPanUpdate(DragUpdateDetails(
                 globalPosition: details.position,
@@ -426,6 +457,7 @@ class _ImagePreviewScreenState extends State<ImagePreviewScreen> with TickerProv
               ));
             }
             _lastDeltaY = 0;
+            _gestureDecided = false;
           },
           child: GestureDetector(
             onTap: _toggleHeaderFooter,
