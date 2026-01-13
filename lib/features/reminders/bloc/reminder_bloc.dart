@@ -20,6 +20,7 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     on<GetAllRemindersEvent>(_onGetAllReminders);
     on<ToggleReminderStatusEvent>(_onToggleReminderStatus);
     on<DeleteReminderEvent>(_onDeleteReminder);
+    on<UpdateReminderEvent>(_onUpdateReminder);
   }
 
   Future<void> _onGetAllReminders(
@@ -161,6 +162,53 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
       emit(ReminderAdded(reminder));
     } catch (e, stackTrace) {
       AppLogger.error('Failed to add reminder and schedule notification', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
+      emit(ReminderError(e.toString()));
+    }
+  }
+
+  Future<void> _onUpdateReminder(
+    UpdateReminderEvent event,
+    Emitter<ReminderState> emit,
+  ) async {
+    emit(ReminderLoading());
+    try {
+      AppLogger.info('=== ReminderBloc: Updating Reminder (Delete+Add) ===', tag: 'ReminderBloc');
+      AppLogger.info('Old ID: ${event.oldReminderId}', tag: 'ReminderBloc');
+      
+      // 1. Delete the old reminder (Local notification cancel + Backend delete)
+      // Note: Backend delete is used because we don't have an update endpoint
+      AppLogger.info('Deleting old reminder...', tag: 'ReminderBloc');
+      await reminderRepository.deleteReminder(event.oldReminderId);
+      await localNotificationService.cancelReminder(event.oldReminderId);
+
+      // 2. Create new reminder with updated details
+      AppLogger.info('Creating new reminder with updated details...', tag: 'ReminderBloc');
+      
+      final reminder = await addReminderUseCase(
+        reminderName: event.reminderName,
+        reminderTime: event.reminderTime,
+        reminderDays: event.reminderDays,
+        reminderType: event.reminderType,
+        reminderEnabled: event.reminderEnabled,
+      );
+
+      // 3. Schedule notification for new reminder
+      if (reminder.reminderEnabled) {
+        await localNotificationService.scheduleReminder(
+          reminderId: reminder.id,
+          reminderName: reminder.reminderName,
+          time24Hour: reminder.reminderTime,
+          reminderDays: reminder.reminderDays ?? 'Daily',
+          reminderType: reminder.reminderType ?? 'Morning Routine',
+          isEnabled: reminder.reminderEnabled,
+        );
+         AppLogger.success('Notification rescheduled for updated reminder: ${reminder.reminderName}', tag: 'ReminderBloc');
+      }
+
+      AppLogger.success('=== ReminderBloc: Update Complete ===', tag: 'ReminderBloc');
+      emit(ReminderUpdated(reminder));
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to update reminder', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
       emit(ReminderError(e.toString()));
     }
   }

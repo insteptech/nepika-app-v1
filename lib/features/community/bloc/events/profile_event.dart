@@ -290,3 +290,9 @@ class CheckBlockStatus extends ProfileEvent {
     required this.userId,
   });
 }
+
+class UpdateLocalProfile extends ProfileEvent {
+  final CommunityProfileEntity profile;
+
+  UpdateLocalProfile({required this.profile});
+}

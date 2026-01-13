@@ -19,6 +19,7 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
     on<UploadProfileImage>(_onUploadProfileImage);
     on<FetchUserProfile>(_onFetchUserProfile);
     on<GetCommunityProfile>(_onGetCommunityProfile);
+    on<UpdateLocalProfile>(_onUpdateLocalProfile);
 
     // Follow system events
     on<FollowUser>(_onFollowUser);
@@ -278,6 +279,13 @@ class ProfileBloc extends Bloc<ProfileEvent, ProfileState> {
         message: e.toString(),
       ));
     }
+  }
+
+  void _onUpdateLocalProfile(
+    UpdateLocalProfile event,
+    Emitter<ProfileState> emit,
+  ) {
+    emit(CommunityProfileLoaded(profile: event.profile));
   }
 
   // Follow System Handlers

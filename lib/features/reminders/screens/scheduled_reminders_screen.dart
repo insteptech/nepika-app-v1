@@ -8,6 +8,7 @@ import 'package:nepika/domain/reminders/entities/reminder.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/reminders/bloc/reminder_event.dart';
 import 'package:nepika/features/reminders/bloc/reminder_state.dart';
+import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:nepika/features/routine/widgets/sticky_header_delegate.dart';
 
 class ScheduledRemindersScreen extends StatefulWidget {
@@ -152,25 +153,6 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const CustomBackButton(),
-                              TextButton.icon(
-                                onPressed: () {
-                                  Navigator.of(context).pushNamed(
-                                    AppRoutes.dashboardReminderSettings,
-                                  );
-                                },
-                                icon: Icon(
-                                  Icons.add,
-                                  color: theme.colorScheme.primary,
-                                ),
-                                label: Text(
-                                  'Add',
-                                  style: TextStyle(
-                                    fontSize:
-                                        theme.textTheme.headlineMedium?.fontSize,
-                                    color: theme.colorScheme.primary,
-                                  ),
-                                ),
-                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -241,18 +223,34 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
                               padding: EdgeInsets.only(
                                 bottom: index < _reminders.length - 1 ? 12 : 20,
                               ),
-                              child: _ReminderCard(
-                                reminder: reminder,
-                                formattedTime:
-                                    _formatTime(reminder.reminderTime),
-                                icon: _getRoutineIcon(reminder.reminderType),
-                                iconColor: _getRoutineColor(
-                                    reminder.reminderType, context),
-                                onToggle: (value) {
-                                  _reminderBloc.add(
-                                    ToggleReminderStatusEvent(reminder.id),
+                              child: GestureDetector(
+                                onTap: () async {
+                                  // Navigate to edit screen
+                                  await Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (context) => ReminderSettings(
+                                        reminderToEdit: reminder,
+                                      ),
+                                    ),
                                   );
+                                  // Refresh list when coming back
+                                  if (mounted) {
+                                    _reminderBloc.add(GetAllRemindersEvent());
+                                  }
                                 },
+                                child: _ReminderCard(
+                                  reminder: reminder,
+                                  formattedTime:
+                                      _formatTime(reminder.reminderTime),
+                                  icon: _getRoutineIcon(reminder.reminderType),
+                                  iconColor: _getRoutineColor(
+                                      reminder.reminderType, context),
+                                  onToggle: (value) {
+                                    _reminderBloc.add(
+                                      ToggleReminderStatusEvent(reminder.id),
+                                    );
+                                  },
+                                ),
                               ),
                             );
                           },

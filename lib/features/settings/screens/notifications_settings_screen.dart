@@ -38,17 +38,17 @@ class _NotificationsSettingsScreenState
         },
       ),
       SettingsOptionData.option(
-        'Notification History',
+        'Scheduled Reminders',
         onTap: () {
           Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.dashboardScheduledReminders);
         },
       ),
-      SettingsOptionData.option(
-        'Settings',
-        onTap: () {
-          // TODO: Implement general settings functionality
-        },
-      ),
+      // SettingsOptionData.option(
+      //   'Settings',
+      //   onTap: () {
+      //     // TODO: Implement general settings functionality
+      //   },
+      // ),
       SettingsOptionData.toggle(
         'Dark Mode',
         toggleValue: themeNotifier.themeMode == ThemeMode.dark,
@@ -57,18 +57,18 @@ class _NotificationsSettingsScreenState
           await themeNotifier.toggleTheme(value);
         },
       ),
-      SettingsOptionData.option(
-        'Version Info / About App',
-        onTap: () {
-          // TODO: Implement version info functionality
-        },
-      ),
-      SettingsOptionData.option(
-        'App Walkthrough / Tips',
-        onTap: () {
-          // TODO: Implement app walkthrough functionality
-        },
-      ),
+      // SettingsOptionData.option(
+      //   'Version Info / About App',
+      //   onTap: () {
+      //     // TODO: Implement version info functionality
+      //   },
+      // ),
+      // SettingsOptionData.option(
+      //   'App Walkthrough / Tips',
+      //   onTap: () {
+      //     // TODO: Implement app walkthrough functionality
+      //   },
+      // ),
       // SettingsOptionData.option(
       //   'Delete Account',
       //   onTap: () {

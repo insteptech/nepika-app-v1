@@ -622,7 +622,9 @@ Navigator.of(context, rootNavigator: true).pushNamed(
           listeners: [
             BlocListener<ProfileBloc, ProfileState>(
               listener: (context, state) {
-                if (state is CommunityProfileLoaded && state.profile.isSelf) {
+                // Accept profile if it's marked as self OR if the userId matches the current user
+                if (state is CommunityProfileLoaded && 
+                    (state.profile.isSelf || state.profile.userId == _userId)) {
                   setState(() {
                     _currentUserProfile = state.profile;
                   });

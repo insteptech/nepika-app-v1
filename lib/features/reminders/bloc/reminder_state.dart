@@ -21,6 +21,15 @@ class ReminderAdded extends ReminderState {
   List<Object> get props => [reminder];
 }
 
+class ReminderUpdated extends ReminderState {
+  final Reminder reminder;
+
+  const ReminderUpdated(this.reminder);
+
+  @override
+  List<Object> get props => [reminder];
+}
+
 class RemindersLoaded extends ReminderState {
   final List<Reminder> reminders;
 

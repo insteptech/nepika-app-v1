@@ -10,24 +10,24 @@ class CommunitySettingsScreen extends StatelessWidget {
 
   List<SettingsOptionData> _buildOptions(BuildContext context) {
     return [
-      SettingsOptionData.option(
-        'Community Data Results',
-        onTap: () {
-          // TODO: Implement community data results functionality
-        },
-      ),
-      SettingsOptionData.option(
-        'Forum Home',
-        onTap: () {
-          // TODO: Implement forum home functionality
-        },
-      ),
-      SettingsOptionData.option(
-        'Forum Thread View',
-        onTap: () {
-          // TODO: Implement forum thread view functionality
-        },
-      ),
+      // SettingsOptionData.option(
+      //   'Community Data Results',
+      //   onTap: () {
+      //     // TODO: Implement community data results functionality
+      //   },
+      // ),
+      // SettingsOptionData.option(
+      //   'Forum Home',
+      //   onTap: () {
+      //     // TODO: Implement forum home functionality
+      //   },
+      // ),
+      // SettingsOptionData.option(
+      //   'Forum Thread View',
+      //   onTap: () {
+      //     // TODO: Implement forum thread view functionality
+      //   },
+      // ),
       SettingsOptionData.option(
         'Suggest a Feature Form',
         onTap: () {

@@ -16,12 +16,18 @@ import 'package:nepika/features/reminders/bloc/reminder_state.dart';
 import 'package:nepika/features/settings/widgets/settings_option_tile.dart';
 import 'package:nepika/features/routine/widgets/sticky_header_delegate.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:nepika/domain/reminders/entities/reminder.dart';
 
 enum ReminderDays { daily, weekdays, weekends }
 enum ReminderType { morning, night }
 
 class ReminderSettings extends StatefulWidget {
-  const ReminderSettings({super.key});
+  final Reminder? reminderToEdit;
+
+  const ReminderSettings({
+    super.key,
+    this.reminderToEdit,
+  });
 
   @override
   State<ReminderSettings> createState() => _ReminderSettingsState();
@@ -54,21 +60,67 @@ bool get _isFormValid {
   void initState() {
     super.initState();
 
-    // Set default time (e.g., current time in HH:MM AM/PM format)
-    final now = DateTime.now();
-    final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
-    final minute = now.minute.toString().padLeft(2, '0');
-    final period = now.hour >= 12 ? 'PM' : 'AM';
-    _reminderTimeController.text = '$hour:$minute $period';
+    // Pre-fill if editing
+    if (widget.reminderToEdit != null) {
+      final reminder = widget.reminderToEdit!;
+      _reminderNameController.text = reminder.reminderName;
+      
+      try {
+        // Convert 24h to 12h for display
+        final timeParts = reminder.reminderTime.split(':');
+        int hour = int.parse(timeParts[0]);
+        final minute = timeParts[1];
+        final period = hour >= 12 ? 'PM' : 'AM';
+        
+        if (hour > 12) hour -= 12;
+        if (hour == 0) hour = 12;
+        
+        _reminderTimeController.text = '$hour:$minute $period';
+      } catch (e) {
+        // Fallback or log error
+        print('Error parsing time for edit: $e');
+      }
 
-    // Add listener for time validation
-    _reminderTimeController.addListener(_validateTime);
+      // Map days string to enum
+      if (reminder.reminderDays != null) {
+        if (reminder.reminderDays!.toLowerCase() == 'daily') {
+          _selectedDay = ReminderDays.daily;
+        } else if (reminder.reminderDays!.toLowerCase() == 'weekdays') {
+          _selectedDay = ReminderDays.weekdays;
+        } else if (reminder.reminderDays!.toLowerCase() == 'weekends') {
+          _selectedDay = ReminderDays.weekends;
+        }
+      }
 
-    // Add app lifecycle observer to detect when user returns from settings
-    WidgetsBinding.instance.addObserver(this);
+      // Map type string to enum
+      if (reminder.reminderType != null) {
+        if (reminder.reminderType!.toLowerCase().contains('morning')) {
+          _selectedType = ReminderType.morning;
+        } else if (reminder.reminderType!.toLowerCase().contains('night')) {
+          _selectedType = ReminderType.night;
+        }
+      }
+      
+      _reminderEnabled = reminder.reminderEnabled;
+      // Skip initial permission check if editing existing (assume state from object)
+      // But verify if enabled
+      if (_reminderEnabled) {
+         _checkNotificationPermissionSync(); // Verify it's actually allowed
+      } else {
+        _isCheckingPermission = false;
+      }
 
-    // Check notification permission status immediately before first build
-    _checkNotificationPermissionSync();
+    } else {
+      // Set default time for new reminder (e.g., current time in HH:MM AM/PM format)
+      final now = DateTime.now();
+      final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
+      final minute = now.minute.toString().padLeft(2, '0');
+      final period = now.hour >= 12 ? 'PM' : 'AM';
+      _reminderTimeController.text = '$hour:$minute $period';
+      
+      // Check notification permission status immediately before first build
+      _checkNotificationPermissionSync();
+    }
 
     // Start periodic permission check (every 1 second) - only runs while this screen is active
     _permissionCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
@@ -543,15 +595,28 @@ bool get _isFormValid {
       print('========================');
 
       if (mounted) {
-        blocContext.read<ReminderBloc>().add(
-          AddReminderEvent(
-            reminderName: _reminderNameController.text.trim(),
-            reminderTime: time24Hour,
-            reminderDays: _mapReminderDays(_selectedDay!),
-            reminderType: _mapReminderType(_selectedType!),
-            reminderEnabled: _reminderEnabled,
-          ),
-        );
+        if (widget.reminderToEdit != null) {
+           blocContext.read<ReminderBloc>().add(
+            UpdateReminderEvent(
+              oldReminderId: widget.reminderToEdit!.id,
+              reminderName: _reminderNameController.text.trim(),
+              reminderTime: time24Hour,
+              reminderDays: _mapReminderDays(_selectedDay!),
+              reminderType: _mapReminderType(_selectedType!),
+              reminderEnabled: _reminderEnabled,
+            ),
+          );
+        } else {
+          blocContext.read<ReminderBloc>().add(
+            AddReminderEvent(
+              reminderName: _reminderNameController.text.trim(),
+              reminderTime: time24Hour,
+              reminderDays: _mapReminderDays(_selectedDay!),
+              reminderType: _mapReminderType(_selectedType!),
+              reminderEnabled: _reminderEnabled,
+            ),
+          );
+        }
       }
     } catch (e) {
       print('Error in _onDonePressed: $e');
@@ -585,6 +650,13 @@ bool get _isFormValid {
                 );
                 Navigator.of(parentContext).pop();
                 print('Pop called');
+              } else if (state is ReminderUpdated) {
+                 print('Reminder updated successfully: ${state.reminder.id}');
+                 ScaffoldMessenger.of(parentContext).clearSnackBars();
+                 ScaffoldMessenger.of(parentContext).showSnackBar(
+                   const SnackBar(content: Text('Reminder updated successfully!')),
+                 );
+                 Navigator.of(parentContext).pop();
               } else if (state is ReminderError) {
                 print('Reminder error: ${state.message}');
                 ScaffoldMessenger.of(parentContext).clearSnackBars();
@@ -632,7 +704,7 @@ bool get _isFormValid {
                                   child: TextButton(
                                     onPressed: (!_isFormValid || isLoading) ? null : () => _onDonePressed(blocContext),
                                     child: Text(
-                                      isLoading ? 'Saving...' : 'Done',
+                                      isLoading ? 'Saving...' : (widget.reminderToEdit != null ? 'Update' : 'Done'),
                                       style: TextStyle(
                                         fontSize: Theme.of(context).textTheme.headlineMedium?.fontSize,
                                         color: Theme.of(context).colorScheme.primary,
@@ -655,13 +727,13 @@ bool get _isFormValid {
                         minHeight: 40,
                         maxHeight: 40,
                         isFirstHeader: true,
-                        title: "Set Your Reminders",
+                        title: widget.reminderToEdit != null ? "Edit Reminder" : "Set Your Reminders",
                         child: Container(
                           color: theme.scaffoldBackgroundColor,
                           padding: const EdgeInsets.symmetric(horizontal: 20),
                           alignment: Alignment.centerLeft,
                           child: Text(
-                            "Set Your Reminders",
+                            widget.reminderToEdit != null ? "Edit Reminder" : "Set Your Reminders",
                             style: theme.textTheme.displaySmall,
                           ),
                         ),

@@ -44,7 +44,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   // ------------------------------------------------------------
   // SCROLL CONTROLLER
   // ------------------------------------------------------------
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+
 
   final ScrollController _scrollController = ScrollController();
   double _lastOffset = 0.0;
@@ -174,14 +174,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       return;
     }
 
-    _resetNavBarVisibility();
-    setState(() {
-      _currentRoute = route;
-    });
-    
-    // Navigator.pushNamed(context, route);
-
-    _navigatorKey.currentState?.pushNamed(route);
+    // Use the root navigator since this screen is on top of the dashboard
+    Navigator.of(context).pushNamed(route);
   }
 
 

@@ -32,6 +32,34 @@ class AddReminderEvent extends ReminderEvent {
       ];
 }
 
+class UpdateReminderEvent extends ReminderEvent {
+  final String oldReminderId;
+  final String reminderName;
+  final String reminderTime;
+  final String? reminderDays;
+  final String? reminderType;
+  final bool reminderEnabled;
+
+  const UpdateReminderEvent({
+    required this.oldReminderId,
+    required this.reminderName,
+    required this.reminderTime,
+    this.reminderDays,
+    this.reminderType,
+    this.reminderEnabled = true,
+  });
+
+  @override
+  List<Object?> get props => [
+        oldReminderId,
+        reminderName,
+        reminderTime,
+        reminderDays,
+        reminderType,
+        reminderEnabled,
+      ];
+}
+
 class GetAllRemindersEvent extends ReminderEvent {}
 
 class GetReminderByIdEvent extends ReminderEvent {

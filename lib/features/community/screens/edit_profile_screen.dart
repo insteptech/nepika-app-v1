@@ -207,6 +207,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         child: BlocListener<ProfileBloc, ProfileState>(
           listener: (context, state) {
             if (state is ProfileUpdateStarted) {
+              if (!mounted) return;
               setState(() {
                 _isLoading = true;
               });
@@ -231,28 +232,18 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
               );
             } else if (state is ProfileUpdateSuccess) {
+              if (!mounted) return;
               setState(() {
                 _isLoading = false;
               });
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white, size: 20),
-                      SizedBox(width: 8),
-                      Text('Profile updated successfully!'),
-                    ],
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
-                ),
-              );
+              // Success message is shown in the parent screen
               Navigator.of(context).pop({
                 'username': state.updatedProfile.username,
                 'bio': state.updatedProfile.bio,
                 'profileImage': state.updatedProfile.profileImageUrl,
               });
             } else if (state is ProfileUpdateError) {
+              if (!mounted) return;
               setState(() {
                 _isLoading = false;
               });

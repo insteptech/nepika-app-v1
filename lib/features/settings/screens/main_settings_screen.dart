@@ -16,6 +16,7 @@ import '../components/logout_dialog.dart';
 import '../components/settings_options_list.dart';
 import '../models/settings_option_data.dart';
 import '../widgets/settings_header.dart';
+import '../widgets/settings_section.dart';
 // import '../bloc/delete_account_bloc.dart';
 import 'community_settings_screen.dart';
 import 'help_support_screen.dart';
@@ -68,107 +69,7 @@ class MainSettingsScreen extends StatelessWidget {
   }
 
 
-  List<SettingsOptionData> _buildSettingsOptions(BuildContext context) {
-    return [
-      // SettingsOptionData.option(
-      //   'My Products',
-      //   onTap: () {
-      //     Navigator.of(context).pushNamed(AppRoutes.dashboardAllProducts);
-      //   },
-      // ),
-      SettingsOptionData.option(
-        'Community & Engagement',
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const CommunitySettingsScreen(),
-            ),
-          );
-        },
-      ),
-      SettingsOptionData.option(
-        'Update Onboarding Data',
-        onTap: () {
-          Navigator.of(
-            context,
-            rootNavigator: false,
-          ).push(MaterialPageRoute(builder: (_) => const OnboardingDataScreen()));
-        },
-      ),
-      SettingsOptionData.option(
-        'Notifications & Settings',
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => const NotificationsSettingsScreen(),
-            ),
-          );
-        },
-      ),
-      SettingsOptionData.option(
-        'Reminders',
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (_) => BlocProvider(
-                create: (context) => di.ServiceLocator.get<ReminderBloc>(),
-                child: const ReminderSettings(),
-              ),
-            ),
-          );
-        },
-      ),
-      SettingsOptionData.option(
-        'Face Scan Info',
-        onTap: () {
-          Navigator.of(
-            context,
-            rootNavigator: true,
-          ).pushNamed(AppRoutes.faceScanInfo);
-        },
-      ),
-      SettingsOptionData.option(
-        'Help and Support',
-        onTap: () {
-          Navigator.of(context).push(
-            MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
-          );
-        },
-      ),
-      SettingsOptionData.option(
-        'Terms of use',
-        onTap: () {
-          Navigator.of(
-            context,
-            rootNavigator: true,
-          ).pushNamed(AppRoutes.termsOfUse);
-        },
-      ),
-      SettingsOptionData.option(
-        'Privacy Policy',
-        onTap: () {
-          Navigator.of(
-            context,
-            rootNavigator: true,
-          ).pushNamed(AppRoutes.privacyPolicy);
-        },
-      ),
-      SettingsOptionData.option(
-        'Subscription & Payment',
-        onTap: () {
-          Navigator.of(
-            context,
-            rootNavigator: true,
-          ).pushNamed(AppRoutes.subscription);
-        },
-      ),
-      SettingsOptionData.option(
-        'Delete Account',
-        onTap: () => _showDeleteAccountDialog(context),
-        textColor: Colors.red,
-      ),
-    ];
-  }
+
 
 
   Future<void> _showDeleteAccountDialog(BuildContext context) async {
@@ -202,7 +103,6 @@ class MainSettingsScreen extends StatelessWidget {
     final theme = Theme.of(context);
     final textTheme = theme.textTheme;
     final colorScheme = theme.colorScheme;
-    final options = _buildSettingsOptions(context);
 
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
@@ -210,9 +110,151 @@ class MainSettingsScreen extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             const SettingsHeader(title: 'Settings'),
-            SliverToBoxAdapter(
-              child: SettingsOptionsList(options: options),
+            
+              SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'ONBOARDING DATA',
+                options: [
+                  SettingsOptionData.option(
+                    'Update Onboarding Data',
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                        rootNavigator: false,
+                      ).push(MaterialPageRoute(builder: (_) => const OnboardingDataScreen()));
+                    },
+                  ),
+                ],
+              ),
             ),
+
+            // Community Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'COMMUNITY',
+                options: [
+                  SettingsOptionData.option(
+                    'Community & Engagement',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const CommunitySettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Notifications & Reminders Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'NOTIFICATIONS AND REMINDERS',
+                options: [
+                  SettingsOptionData.option(
+                    'Notifications & Settings',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsSettingsScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  SettingsOptionData.option(
+                    'Reminders',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => BlocProvider(
+                            create: (context) => di.ServiceLocator.get<ReminderBloc>(),
+                            child: const ReminderSettings(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Subscription Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'SUBSCRIPTION',
+                options: [
+                  SettingsOptionData.option(
+                    'Subscription & Payment',
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.subscription);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Info Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'INFO',
+                options: [
+                  SettingsOptionData.option(
+                    'Face Scan Info',
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.faceScanInfo);
+                    },
+                  ),
+                  // SettingsOptionData.option(
+                  //   'Help and Support',
+                  //   onTap: () {
+                  //     Navigator.of(context).push(
+                  //       MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+                  //     );
+                  //   },
+                  // ),
+                  SettingsOptionData.option(
+                    'Terms of use',
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.termsOfUse);
+                    },
+                  ),
+                  SettingsOptionData.option(
+                    'Privacy Policy',
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.privacyPolicy);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
+            // Account Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'ACCOUNT',
+                options: [
+                  SettingsOptionData.option(
+                    'Delete Account',
+                    onTap: () => _showDeleteAccountDialog(context),
+                    textColor: Colors.red,
+                  ),
+                ],
+              ),
+            ),
+
             SliverFillRemaining(
               hasScrollBody: false,
               child: Align(

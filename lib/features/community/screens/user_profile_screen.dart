@@ -549,7 +549,7 @@ Join the conversation: $profileUrl''';
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
+      builder: (sheetContext) => Container(
         decoration: BoxDecoration(
           color: Theme.of(context).scaffoldBackgroundColor,
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
@@ -573,9 +573,11 @@ Join the conversation: $profileUrl''';
                   leading: const Icon(Icons.edit),
                   title: const Text('Edit Profile'),
                   onTap: () async {
-                    final navigator = Navigator.of(context);
-                    final scaffold = ScaffoldMessenger.of(context);
-                    navigator.pop();
+                    // Close the bottom sheet locally first
+                    Navigator.of(sheetContext).pop();
+                    
+                    // Navigate using the PARENT context which is still mounted
+                    if (!mounted) return;
                     
                     final result = await CommunityNavigation.navigateToEditProfile(
                       context,
@@ -586,17 +588,21 @@ Join the conversation: $profileUrl''';
                     );
                     
                     if (result != null && mounted) {
-                      // Handle the updated profile data
-                      scaffold.showSnackBar(
-                        const SnackBar(
-                          content: Text('Profile updated successfully!'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
+                      // Immediately update local state with returned data
+                      setState(() {
+                         if (_profileData != null) {
+                           _profileData = _profileData!.copyWith(
+                             username: result['username'],
+                             bio: result['bio'],
+                             profileImageUrl: result['profileImage'],
+                           );
+                         }
+                      });
+
                       
-                      // Optionally refresh the profile data
-                      if (_token != null && profileUserId != null && _profileBloc != null) {
-                        _profileBloc!.add(GetCommunityProfile(token: _token!, userId: profileUserId!));
+                      // Broadcast the updated profile to the Bloc so other screens (like Feed) update immediately
+                      if (_profileBloc != null && _profileData != null) {
+                        _profileBloc!.add(UpdateLocalProfile(profile: _profileData!));
                       }
                     }
                   },
@@ -824,8 +830,18 @@ Join the conversation: $profileUrl''';
   Widget build(BuildContext context) {
     if (_token == null) {
       return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.onTertiary,
-        body: const Center(child: CircularProgressIndicator()),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('Profile')),
+        body: const Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Initializing Profile...'),
+            ],
+          ),
+        ),
       );
     }
 
@@ -858,13 +874,23 @@ Join the conversation: $profileUrl''';
     } catch (e) {
       debugPrint('ProfilePage: ProfileBloc not available yet: $e');
       return Scaffold(
-        backgroundColor: Theme.of(context).colorScheme.onTertiary,
-        body: const Center(child: CircularProgressIndicator()),
+        backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+        appBar: AppBar(title: const Text('Profile Error')),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, size: 48, color: Colors.red),
+              const SizedBox(height: 16),
+              Text('Error: ${e.toString().substring(0, 50)}...'),
+            ],
+          ),
+        ),
       );
     }
 
     return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.onTertiary,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: BlocListener<ProfileBloc, ProfileState>(
             listener: _handleBlocStateChanges,
@@ -1151,7 +1177,16 @@ Join the conversation: $profileUrl''';
     if (_profileData == null) {
       return const SizedBox(
         height: 200,
-        child: Center(child: CircularProgressIndicator()),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text('Loading Profile Data...'),
+            ],
+          ),
+        ),
       );
     }
 
@@ -1250,8 +1285,6 @@ Join the conversation: $profileUrl''';
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final scaffold = ScaffoldMessenger.of(context);
-                      
                       final result = await CommunityNavigation.navigateToEditProfile(
                         context,
                         token: _token ?? '',
@@ -1261,17 +1294,29 @@ Join the conversation: $profileUrl''';
                       );
                       
                       if (result != null && mounted) {
-                        // Handle the updated profile data
-                        scaffold.showSnackBar(
+                        // Immediately update local state with returned data
+                        setState(() {
+                           if (_profileData != null) {
+                             _profileData = _profileData!.copyWith(
+                               username: result['username'],
+                               bio: result['bio'],
+                               profileImageUrl: result['profileImage'],
+                             );
+                           }
+                        });
+
+                        // Show success message
+                        ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(
                             content: Text('Profile updated successfully!'),
                             backgroundColor: Colors.green,
                           ),
                         );
                         
-                        // Optionally refresh the profile data
-                        if (_token != null && profileUserId != null && _profileBloc != null) {
-                          _profileBloc!.add(GetCommunityProfile(token: _token!, userId: profileUserId!));
+                        
+                        // Broadcast the updated profile to the Bloc so other screens (like Feed) update immediately
+                        if (_profileBloc != null && _profileData != null) {
+                          _profileBloc!.add(UpdateLocalProfile(profile: _profileData!));
                         }
                       }
                     },
@@ -1505,6 +1550,14 @@ Join the conversation: $profileUrl''';
     final isLoading = tab == ActiveTab.threads ? _loadingMoreThreads : _loadingMoreReplies;
     final hasMore = tab == ActiveTab.threads ? _hasMoreThreads : _hasMoreReplies;
 
+    // Handle case where token or userId is not yet loaded
+    if (_token == null || _currentUserId == null) {
+      return const SizedBox(
+        height: 200,
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
     if (currentPosts.isEmpty && !isLoading) {
       return SizedBox(
         height: 400,
@@ -1574,7 +1627,10 @@ class _StickyTabsDelegate extends SliverPersistentHeaderDelegate {
 
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return child;
+    return SizedBox(
+      height: maxExtent,
+      child: child,
+    );
   }
 
   @override

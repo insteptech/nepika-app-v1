@@ -31,6 +31,7 @@ export 'components/settings_options_list.dart';
 // Widgets
 export 'widgets/settings_header.dart';
 export 'widgets/settings_option_tile.dart';
+export 'widgets/settings_section.dart';
 
 // Models
 export 'models/settings_option_data.dart';

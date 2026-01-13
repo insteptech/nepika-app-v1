@@ -675,6 +675,48 @@ class CommunityProfileEntity {
       'updated_at': updatedAt?.toIso8601String(),
     };
   }
+
+  CommunityProfileEntity copyWith({
+    String? id,
+    String? userId,
+    String? tenantId,
+    String? username,
+    String? bio,
+    String? profileImageUrl,
+    String? bannerImageUrl,
+    bool? isPrivate,
+    bool? isVerified,
+    int? followersCount,
+    int? followingCount,
+    int? postsCount,
+    Map<String, dynamic>? settings,
+    bool? isSelf,
+    bool? isFollowing,
+    String? followRequestStatus,
+    DateTime? createdAt,
+    DateTime? updatedAt,
+  }) {
+    return CommunityProfileEntity(
+      id: id ?? this.id,
+      userId: userId ?? this.userId,
+      tenantId: tenantId ?? this.tenantId,
+      username: username ?? this.username,
+      bio: bio ?? this.bio,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      bannerImageUrl: bannerImageUrl ?? this.bannerImageUrl,
+      isPrivate: isPrivate ?? this.isPrivate,
+      isVerified: isVerified ?? this.isVerified,
+      followersCount: followersCount ?? this.followersCount,
+      followingCount: followingCount ?? this.followingCount,
+      postsCount: postsCount ?? this.postsCount,
+      settings: settings ?? this.settings,
+      isSelf: isSelf ?? this.isSelf,
+      isFollowing: isFollowing ?? this.isFollowing,
+      followRequestStatus: followRequestStatus ?? this.followRequestStatus,
+      createdAt: createdAt ?? this.createdAt,
+      updatedAt: updatedAt ?? this.updatedAt,
+    );
+  }
 }
 
 class CreateProfileEntity {
