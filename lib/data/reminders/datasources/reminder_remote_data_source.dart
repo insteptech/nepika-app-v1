@@ -105,13 +105,25 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
 
   @override
   Future<ReminderModel> toggleReminderStatus(String reminderId) async {
+    print('=== Toggle Reminder API Request ===');
+    print('Reminder ID: $reminderId');
+    print('Endpoint: PUT /reminders/$reminderId/toggle');
+
     final response = await apiBase.request(
       path: '/reminders/$reminderId/toggle',
       method: 'PUT',
     );
 
+    print('=== Toggle Reminder API Response ===');
+    print('Status Code: ${response.statusCode}');
+    print('Raw Response Data: ${response.data}');
+    print('reminder_enabled value: ${response.data['data']?['reminder_enabled']}');
+    print('===================================');
+
     if (response.statusCode == 200) {
-      return ReminderModel.fromJson(response.data['data']);
+      final model = ReminderModel.fromJson(response.data['data']);
+      print('Parsed ReminderModel.reminderEnabled: ${model.reminderEnabled}');
+      return model;
     } else {
       throw Exception('Failed to toggle reminder status');
     }

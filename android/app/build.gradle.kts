@@ -22,7 +22,7 @@ android {
 
     defaultConfig {
         applicationId = "com.assisted.nepika"
-        minSdk = 23
+        minSdk = flutter.minSdkVersion
         targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -47,17 +47,26 @@ android {
     }
 
     signingConfigs {
-        create("release") {
-            keyAlias = keystoreProperties["keyAlias"] as String
-            keyPassword = keystoreProperties["keyPassword"] as String
-            storeFile = file(keystoreProperties["storeFile"] as String)
-            storePassword = keystoreProperties["storePassword"] as String
+        if (keystorePropertiesFile.exists() && 
+            keystoreProperties["keyAlias"] != null &&
+            keystoreProperties["keyPassword"] != null &&
+            keystoreProperties["storeFile"] != null &&
+            keystoreProperties["storePassword"] != null) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
         }
     }
 
     buildTypes {
         getByName("release") {
-            signingConfig = signingConfigs.getByName("release")
+            // Only use release signing if it was configured
+            if (signingConfigs.names.contains("release")) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             isMinifyEnabled = false
             isShrinkResources = false
         }

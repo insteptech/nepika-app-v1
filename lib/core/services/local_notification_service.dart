@@ -368,6 +368,14 @@ class LocalNotificationService {
             AppLogger.error('Cannot schedule notifications - permission not granted', tag: 'Notifications');
             throw Exception('notifications_not_permitted');
           }
+          
+          // Check and request exact alarm permission for Android 12+
+          final bool canScheduleExact = await androidPlugin.canScheduleExactNotifications() ?? false;
+          AppLogger.info('Can schedule exact notifications: $canScheduleExact', tag: 'Notifications');
+          if (!canScheduleExact) {
+            AppLogger.warning('Exact alarm permission not granted, requesting...', tag: 'Notifications');
+            await androidPlugin.requestExactAlarmsPermission();
+          }
         }
       }
 
@@ -399,6 +407,13 @@ class LocalNotificationService {
           return false;
       }
 
+      // Debug: Show pending notifications
+      final pending = await _localNotifications.pendingNotificationRequests();
+      AppLogger.info('Pending notifications count: ${pending.length}', tag: 'Notifications');
+      for (final p in pending) {
+        AppLogger.info('  - ID: ${p.id}, Title: ${p.title}', tag: 'Notifications');
+      }
+
       AppLogger.success('Reminder scheduled successfully: $reminderName', tag: 'Notifications');
       return true;
     } catch (e) {
@@ -424,7 +439,7 @@ class LocalNotificationService {
       'Time for your $reminderType!',
       scheduledDate,
       _notificationDetails,
-      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time, // Repeat daily
       payload: 'reminder:$reminderId',
     );
@@ -493,10 +508,12 @@ class LocalNotificationService {
     final tz.TZDateTime now = tz.TZDateTime.now(tz.local);
     tz.TZDateTime scheduledDate = tz.TZDateTime(tz.local, now.year, now.month, now.day, hour, minute);
 
+    AppLogger.info('Current time: ${now.toString()}', tag: 'Notifications');
+    AppLogger.info('Target time: ${scheduledDate.toString()}', tag: 'Notifications');
+
     // If the scheduled time has already passed today, schedule for tomorrow
-    // Add a 2-minute buffer to avoid immediate scheduling issues
-    final bufferTime = now.add(const Duration(minutes: 2));
-    if (scheduledDate.isBefore(bufferTime)) {
+    // No buffer - schedule for today if the time hasn't passed yet
+    if (scheduledDate.isBefore(now)) {
       scheduledDate = scheduledDate.add(const Duration(days: 1));
       AppLogger.info('Scheduled time has passed today, scheduling for tomorrow: ${scheduledDate.toString()}', tag: 'Notifications');
     } else {

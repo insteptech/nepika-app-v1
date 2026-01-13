@@ -816,6 +816,31 @@ bool get _isFormValid {
                                onPressed: () => _onDonePressed(blocContext),
                              ),
                              const SizedBox(height: 10),
+                             
+                             // TEST BUTTON - Remove after debugging
+                             TextButton(
+                               onPressed: () async {
+                                 print('=== TEST NOTIFICATION ===');
+                                 final notifService = LocalNotificationService.instance;
+                                 final success = await notifService.showImmediateNotification(
+                                   title: 'Test Notification',
+                                   body: 'If you see this, notifications work!',
+                                 );
+                                 print('Immediate notification result: $success');
+                                 if (mounted) {
+                                   ScaffoldMessenger.of(context).showSnackBar(
+                                     SnackBar(
+                                       content: Text(success 
+                                         ? 'Test notification sent! Check your notifications.' 
+                                         : 'Failed to send test notification'),
+                                       backgroundColor: success ? Colors.green : Colors.red,
+                                     ),
+                                   );
+                                 }
+                               },
+                               child: const Text('🔔 Send Test Notification (Debug)'),
+                             ),
+                             const SizedBox(height: 10),
 
                            ],
                          ),
