@@ -76,7 +76,10 @@ class _QuestionInputState extends State<QuestionInput> {
       _initializeRangeController(initialValue);
     } else if (widget.question.inputType == "slider") {
       // Initialize slider state based on existing value
-      _sliderCompleted = initialValue != null && initialValue.toString().isNotEmpty;
+      // "no" means the toggle was explicitly turned off, so _sliderCompleted should be false
+      _sliderCompleted = initialValue != null && 
+          initialValue.toString().isNotEmpty && 
+          initialValue.toString().toLowerCase() != "no";
       _textController = TextEditingController();
     } else {
       _textController = TextEditingController(text: initialValue?.toString() ?? '');

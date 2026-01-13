@@ -96,6 +96,7 @@ class PostEntity {
   final String username; // Direct from API
   final String? userAvatar; // Direct from API
   final bool isLikedByUser; // Direct from API
+  final List<String>? mediaUrls; // Direct from API
 
   PostEntity({
     required this.id,
@@ -112,6 +113,7 @@ class PostEntity {
     required this.username,
     this.userAvatar,
     required this.isLikedByUser,
+    this.mediaUrls,
   });
 
   // Convenience getters for backward compatibility
@@ -139,6 +141,9 @@ class PostEntity {
       username: json['username']?.toString() ?? '',
       userAvatar: json['user_avatar']?.toString(),
       isLikedByUser: json['is_liked_by_user'] as bool? ?? false,
+      mediaUrls: json['media_urls'] != null 
+          ? List<String>.from(json['media_urls']) 
+          : null,
     );
   }
 
@@ -158,6 +163,7 @@ class PostEntity {
       'username': username,
       'user_avatar': userAvatar,
       'is_liked_by_user': isLikedByUser,
+      'media_urls': mediaUrls,
     };
   }
 }

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../domain/community/entities/community_entities.dart';
+import '../../../../core/services/share_service.dart';
 import 'like_comment_share_row.dart';
 
 /// Post actions widget handling like, comment, and share functionality
@@ -36,6 +37,7 @@ class PostActions extends StatelessWidget {
       onLikeStatusChanged: onLikeStatusChanged,
       currentLikeStatus: currentLikeStatus,
       currentLikeCount: currentLikeCount,
+      onShareTap: () => ShareService.sharePost(context: context, post: post),
     );
   }
 }

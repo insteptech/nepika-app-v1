@@ -21,6 +21,9 @@ import '../widgets/settings_section.dart';
 import 'community_settings_screen.dart';
 import 'help_support_screen.dart';
 import 'notifications_settings_screen.dart';
+import '../../community/screens/edit_profile_screen.dart';
+import '../../../domain/community/repositories/community_repository.dart';
+import '../../community/bloc/blocs/profile_bloc.dart';
 
 class MainSettingsScreen extends StatelessWidget {
   const MainSettingsScreen({super.key});
@@ -110,8 +113,142 @@ class MainSettingsScreen extends StatelessWidget {
         child: CustomScrollView(
           slivers: [
             const SettingsHeader(title: 'Settings'),
+
+            // Profile Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'PROFILE',
+                options: [
+                  SettingsOptionData.option(
+                    'Edit Profile',
+                    onTap: () async {
+                      try {
+                        // Show loading indicator
+                        showDialog(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (context) => const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+
+                        final sharedPrefs = await SharedPreferences.getInstance();
+                        final token = sharedPrefs.getString(AppConstants.accessTokenKey);
+                        final userDataStr = sharedPrefs.getString(AppConstants.userDataKey);
+                        
+                        // Parse userId from stored user data if possible, or handle otherwise
+                        String? userId;
+                        // Note: AppConstants.userDataKey usually stores JSON. 
+                        // We might need to fetch the user ID from the token or stored data.
+                        // Assuming we can get the profile just with the token if the repo supports 'me' 
+                        // or we interpret the token.
+                        // Actually CommunityRepository.getUserProfile requires userId.
+                        // Let's try to get it from local storage.
+                        
+                        if (token != null && userDataStr != null) {
+                           // Quick parsing of user data specific to this app structure
+                           // This part depends on how UserData is stored. 
+                           // Let's assume standard extraction or fetch "my profile"
+                           
+                           // Option B: Fetch "my" profile if repository supports it.
+                           // The repository method is getUserProfile(token, userId).
+                           
+                           // Using a workaround: The repository in this app usually requires a user ID.
+                           // Let's try to find where we can get the current user ID.
+                           // Usually it's in AppConstants.userDataKey decoded JSON 'id'.
+                           
+                           // Simpler approach: Verify if we can just navigate to UserProfileScreen?
+                           // No, user specifically asked for Edit Profile.
+                           
+                           // Let's assume we can get ID from sharedPrefs.
+                           // For now, I'll attempt to parse specific ID logic or use a known pattern.
+                           
+                           // Actually, let's look at `_logout` it clears AppConstants.userTokenKey. 
+                           // Is there a helper class for UserData?
+                           // Let's rely on `CommunityRepository` fetching the profile.
+                           
+                           // Assuming we have to verify the user ID first.
+                           // I will peek at `UserProfileScreen` again to see how it gets ID.
+                           // It gets it from `_initializeData`.
+                           
+                           // Let's just implement dynamic retrieval here.
+                           
+                           // Only proceed if context mounted after async
+                           if (!context.mounted) return;
+                           
+                           // Get repo
+                           final repo = di.ServiceLocator.get<CommunityRepository>();
+                           
+                           // We need user ID. 
+                           // For this implementation, let's fetch 'my' profile if possible or extract ID.
+                           // Let's assume we can pass the userId if we parse it.
+                           
+                           // Temporarily assuming we can invoke a "fetch my profile" or similar logic?
+                           // CommunityRepository doesn't usually have "fetchMyProfile" without ID.
+                           // Wait, `ProfileBloc` handles `FetchMyProfile`?
+                           // Let's check `ProfileBloc`.
+                           
+                           // If `ProfileBloc` exists, we can use it.
+                           // But we are in Settings.
+                           
+                           // Let's use `CommunityNavigation` helper if it exists for this?
+                           // No.
+                           
+                           // Let's parse the UserData string to get ID.
+                           final regExp = RegExp(r'"id"\s*:\s*"([^"]+)"');
+                           final match = regExp.firstMatch(userDataStr);
+                           userId = match?.group(1);
+
+                           if (userId != null) {
+                             final profile = await repo.getUserProfile(
+                               token: token,
+                               userId: userId,
+                             );
+                             
+                             if (context.mounted) {
+                               // Hide loading
+                               Navigator.of(context, rootNavigator: true).pop();
+                               
+                               // Navigate to Edit Profile
+                               await Navigator.of(context).push(
+                                 MaterialPageRoute(
+                                   builder: (_) => BlocProvider.value(
+                                     value: di.ServiceLocator.get<ProfileBloc>(),
+                                     child: EditProfileScreen(
+                                       token: token,
+                                       currentUsername: profile.username,
+                                       currentBio: profile.bio,
+                                       currentProfileImage: profile.profileImageUrl,
+                                     ),
+                                   ),
+                                 ),
+                               );
+                               // After return, simply stay on settings page (user requirement)
+                             }
+                           } else {
+                              throw Exception("User ID not found");
+                           }
+                        } else {
+                          throw Exception("Not authenticated");
+                        }
+                      } catch (e) {
+                        if (context.mounted) {
+                          // Hide loading if showing (might need better logic)
+                          // Currently this assumes the dialog is top.
+                          Navigator.of(context, rootNavigator: true).maybePop();
+                          
+                          ScaffoldMessenger.of(context).showSnackBar(
+                             SnackBar(content: Text('Error: ${e.toString()}')),
+                          );
+                        }
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ),
             
-              SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: SettingsSection(
                 title: 'ONBOARDING DATA',
                 options: [

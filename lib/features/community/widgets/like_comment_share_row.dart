@@ -20,6 +20,7 @@ class LikeCommentShareRow extends StatefulWidget {
   final bool? currentLikeStatus;
   final int? currentLikeCount;
   final bool showCommentButton;
+  final VoidCallback? onShareTap;
 
   const LikeCommentShareRow({
     super.key,
@@ -36,6 +37,7 @@ class LikeCommentShareRow extends StatefulWidget {
     this.currentLikeStatus,
     this.currentLikeCount,
     this.showCommentButton = true,
+    this.onShareTap,
   });
 
   @override
@@ -93,9 +95,20 @@ class _LikeCommentShareRowState extends State<LikeCommentShareRow> {
               ),
             ),
           ),
+        /*
         InkWell(
           onTap: () {
-            // Share functionality
+            // Use ShareService to invoke native share sheet
+            // We need to construct a minimal PostEntity or change widget to accept it.
+            // For now, let's just share the post ID/Link since we don't have the full post entity here
+            // To fix this propery, we should pass the PostEntity to this widget
+            // But since this widget is used in multiple places, let's create a temporary entity or 
+            // better yet, refactor the parenting widget to handle the logic if needed.
+            // Actually, the parent PostActions HAS the post entity.
+            // Let's modify this widget to optionally accept onShareTap callback?
+            // Or better, update ShareService to take ID and basic content if full entity not available.
+            // WAITING: I need to update the widget to accept onShareTap callback so parent constructs it.
+             widget.onShareTap?.call();
           },
           borderRadius: BorderRadius.circular(20),
           child: Padding(
@@ -107,6 +120,7 @@ class _LikeCommentShareRowState extends State<LikeCommentShareRow> {
             ),
           ),
         ),
+        */
       ],
     );
   }
