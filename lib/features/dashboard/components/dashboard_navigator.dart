@@ -5,6 +5,7 @@ import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
 import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
+import 'package:nepika/features/reminders/screens/scheduled_reminders_screen.dart';
 import '../screens/set_reminder_screen.dart';
 // import 'package:nepika/presentation/pages/pricing_and_error/not_found.dart';
 import 'package:nepika/features/routine/main.dart';
@@ -44,6 +45,7 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
     AppRoutes.dashboardAddRoutine: 2,
     AppRoutes.dashboardSpecificProduct: 3,
     AppRoutes.dashboardReminderSettings: 4,
+    AppRoutes.dashboardScheduledReminders: 4,
     AppRoutes.notificationsAndSettings: 4,
     AppRoutes.setupNotifications: 4,
     AppRoutes.communityAndEngagement: 4,
@@ -226,6 +228,7 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
   }
 
   Route<dynamic>? _generateRoute(RouteSettings settings) {
+    debugPrint('DashboardNavigator: Generating route for ${settings.name}');
     switch (settings.name) {
       case AppRoutes.dashboardHome:
         return _createPageRoute(
@@ -280,6 +283,14 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
               create: (context) => di.ServiceLocator.get<ReminderBloc>(),
               child: const ReminderSettings(),
             ),
+          ),
+        );
+      case AppRoutes.dashboardScheduledReminders:
+        return _createPageRoute(
+          settings,
+          ScrollablePageWrapper(
+            onScroll: _handleScroll,
+            child: const ScheduledRemindersScreen(),
           ),
         );
       case AppRoutes.dashboardAllProducts:

@@ -1,6 +1,7 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../domain/reminders/usecases/add_reminder.dart';
 import '../../../domain/reminders/repositories/reminder_repository.dart';
+import '../../../domain/reminders/entities/reminder.dart';
 import '../../../core/services/local_notification_service.dart';
 import '../../../core/utils/app_logger.dart';
 import 'reminder_event.dart';
@@ -27,12 +28,115 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     GetAllRemindersEvent event,
     Emitter<ReminderState> emit,
   ) async {
-    emit(ReminderLoading());
     try {
-      AppLogger.info('=== ReminderBloc: Fetching All Reminders ===', tag: 'ReminderBloc');
-      final reminders = await reminderRepository.getAllReminders();
-      AppLogger.info('Fetched ${reminders.length} reminders', tag: 'ReminderBloc');
-      emit(RemindersLoaded(reminders));
+      // If forcing refresh, reset to initial state for loading
+      bool isRefreshing = event.forceRefresh;
+      
+      if (!isRefreshing && state is RemindersLoaded && (state as RemindersLoaded).hasReachedMax) return;
+
+      final currentState = state;
+      var currentReminders = <Reminder>[];
+      var nextPage = 1;
+
+      if (!isRefreshing && currentState is RemindersLoaded) {
+        currentReminders = currentState.reminders;
+        nextPage = currentState.currentPage + 1;
+      } else {
+        emit(ReminderLoading());
+      }
+
+      AppLogger.info('=== ReminderBloc: Fetching Reminders (Page $nextPage, Refresh: $isRefreshing) ===', tag: 'ReminderBloc');
+      final paginatedReminders = await reminderRepository.getAllReminders(page: nextPage);
+      
+      final newReminders = paginatedReminders.reminders;
+      final hasMore = paginatedReminders.hasMore;
+
+      AppLogger.info('Fetched ${newReminders.length} reminders', tag: 'ReminderBloc');
+      
+      if (!isRefreshing && currentState is RemindersLoaded) {
+        final currentIds = currentState.reminders.map((e) => e.id).toSet();
+        final uniqueNewReminders = newReminders.where((r) => !currentIds.contains(r.id)).toList();
+
+        emit(currentState.copyWith(
+          reminders: List.of(currentState.reminders)..addAll(uniqueNewReminders),
+          hasReachedMax: !hasMore,
+          currentPage: nextPage,
+        ));
+        
+        final allReminders = List<Reminder>.from(currentState.reminders)..addAll(uniqueNewReminders);
+
+        if (!hasMore) {
+          // Full sync: Clear all local schedule and rebuild from complete list
+          await localNotificationService.cancelAllReminders();
+          for (final reminder in allReminders) {
+            if (reminder.reminderEnabled) {
+              await localNotificationService.scheduleReminder(
+                reminderId: reminder.id,
+                reminderName: reminder.reminderName,
+                time24Hour: reminder.reminderTime,
+                reminderDays: reminder.reminderDays ?? 'Daily',
+                reminderType: reminder.reminderType ?? 'Morning Routine',
+                isEnabled: true,
+              );
+            }
+          }
+        } else {
+           // Partial sync: Just add/update newly fetched ones
+           for (final reminder in uniqueNewReminders) {
+            if (reminder.reminderEnabled) {
+              await localNotificationService.scheduleReminder(
+                reminderId: reminder.id,
+                reminderName: reminder.reminderName,
+                time24Hour: reminder.reminderTime,
+                reminderDays: reminder.reminderDays ?? 'Daily',
+                reminderType: reminder.reminderType ?? 'Morning Routine',
+                isEnabled: true,
+              );
+            } else {
+              await localNotificationService.cancelReminder(reminder.id);
+            }
+          }
+        }
+      } else {
+        emit(RemindersLoaded(
+          reminders: newReminders,
+          hasReachedMax: !hasMore,
+          currentPage: nextPage,
+        ));
+        
+        if (!hasMore) {
+          // Full sync: Clear all local schedule and rebuild from complete list
+          await localNotificationService.cancelAllReminders();
+          for (final reminder in newReminders) {
+            if (reminder.reminderEnabled) {
+              await localNotificationService.scheduleReminder(
+                reminderId: reminder.id,
+                reminderName: reminder.reminderName,
+                time24Hour: reminder.reminderTime,
+                reminderDays: reminder.reminderDays ?? 'Daily',
+                reminderType: reminder.reminderType ?? 'Morning Routine',
+                isEnabled: true,
+              );
+            }
+          }
+        } else {
+           // Partial sync (Page 1 but has more pages? Rare but possible)
+           for (final reminder in newReminders) {
+            if (reminder.reminderEnabled) {
+              await localNotificationService.scheduleReminder(
+                reminderId: reminder.id,
+                reminderName: reminder.reminderName,
+                time24Hour: reminder.reminderTime,
+                reminderDays: reminder.reminderDays ?? 'Daily',
+                reminderType: reminder.reminderType ?? 'Morning Routine',
+                isEnabled: true,
+              );
+            } else {
+              await localNotificationService.cancelReminder(reminder.id);
+            }
+          }
+        }
+      }
     } catch (e, stackTrace) {
       AppLogger.error('Failed to fetch reminders', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
       emit(ReminderError(e.toString()));
@@ -43,16 +147,24 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     ToggleReminderStatusEvent event,
     Emitter<ReminderState> emit,
   ) async {
-    emit(ReminderLoading());
+    // Keep current reminders to optimistically update or restore on error
+    final currentState = state;
+    List<Reminder> currentReminders = [];
+    if (currentState is RemindersLoaded) {
+      currentReminders = currentState.reminders;
+    }
+    
+    // Don't emit loading for toggle to avoid flickering, update list locally first if possible or just wait
+    // Actually, original code emitted loading. Let's try to keep it smooth.
+    // Ideally we would update the specific item in the list and emit Loaded immediately, then revert if failed.
+    // For now, sticking to pattern but preserving list if loaded.
+
+    // emit(ReminderLoading()); // Removing full screen loading for toggle
+    
     try {
       AppLogger.info('=== ReminderBloc: Toggling Reminder Status ===', tag: 'ReminderBloc');
-      AppLogger.info('Reminder ID: ${event.reminderId}', tag: 'ReminderBloc');
-
+      
       final updatedReminder = await reminderRepository.toggleReminderStatus(event.reminderId);
-
-      AppLogger.info('Reminder status toggled:', tag: 'ReminderBloc');
-      AppLogger.info('  - ID: ${updatedReminder.id}', tag: 'ReminderBloc');
-      AppLogger.info('  - Enabled: ${updatedReminder.reminderEnabled}', tag: 'ReminderBloc');
 
       // Update local notification based on new status
       if (updatedReminder.reminderEnabled) {
@@ -64,16 +176,25 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
           reminderType: updatedReminder.reminderType ?? 'Morning Routine',
           isEnabled: true,
         );
-        AppLogger.success('Notification scheduled for reminder: ${updatedReminder.reminderName}', tag: 'ReminderBloc');
       } else {
         await localNotificationService.cancelReminder(updatedReminder.id);
-        AppLogger.info('Notification cancelled for reminder: ${updatedReminder.reminderName}', tag: 'ReminderBloc');
       }
 
       emit(ReminderStatusToggled(updatedReminder));
+      
+      // Also update the list state if applicable
+      if (currentState is RemindersLoaded) {
+         final updatedList = currentState.reminders.map((r) => r.id == updatedReminder.id ? updatedReminder : r).toList();
+         emit(currentState.copyWith(reminders: updatedList));
+      }
+      
     } catch (e, stackTrace) {
       AppLogger.error('Failed to toggle reminder status', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
       emit(ReminderError(e.toString()));
+      // Restore previous state if it was loaded
+      if (currentState is RemindersLoaded) {
+        emit(currentState);
+      }
     }
   }
 
@@ -81,19 +202,36 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     DeleteReminderEvent event,
     Emitter<ReminderState> emit,
   ) async {
+    final currentState = state;
     emit(ReminderLoading());
     try {
-      AppLogger.info('=== ReminderBloc: Deleting Local Reminder Notification ===', tag: 'ReminderBloc');
-      AppLogger.info('Reminder ID: ${event.reminderId}', tag: 'ReminderBloc');
-
-      // Only cancel local notification (no backend delete endpoint available)
+      AppLogger.info('=== ReminderBloc: Deleting Reminder ===', tag: 'ReminderBloc');
+      
+      // 1. Delete from backend
+      await reminderRepository.deleteReminder(event.reminderId);
+      
+      // 2. Cancel local notification
       await localNotificationService.cancelReminder(event.reminderId);
-      AppLogger.success('Local notification cancelled for reminder: ${event.reminderId}', tag: 'ReminderBloc');
+      
+      AppLogger.success('Reminder deleted: ${event.reminderId}', tag: 'ReminderBloc');
 
       emit(ReminderDeleted(event.reminderId));
+      
+      // Update list state
+      if (currentState is RemindersLoaded) {
+        final updatedList = currentState.reminders.where((r) => r.id != event.reminderId).toList();
+        emit(currentState.copyWith(reminders: updatedList));
+      } else {
+        // Refresh list if we don't have it (e.g. was deleted from detail view?)
+        add(GetAllRemindersEvent()); 
+      }
+      
     } catch (e, stackTrace) {
-      AppLogger.error('Failed to cancel local reminder notification', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
+      AppLogger.error('Failed to delete reminder', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
       emit(ReminderError(e.toString()));
+       if (currentState is RemindersLoaded) {
+        emit(currentState);
+      }
     }
   }
 
@@ -101,18 +239,12 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
     AddReminderEvent event,
     Emitter<ReminderState> emit,
   ) async {
-    emit(ReminderLoading());
+     final currentState = state;
+     emit(ReminderLoading());
     try {
       AppLogger.info('=== ReminderBloc: Adding Reminder ===', tag: 'ReminderBloc');
-      AppLogger.info('Event Data:', tag: 'ReminderBloc');
-      AppLogger.info('  - Name: ${event.reminderName}', tag: 'ReminderBloc');
-      AppLogger.info('  - Time: ${event.reminderTime}', tag: 'ReminderBloc');
-      AppLogger.info('  - Days: ${event.reminderDays}', tag: 'ReminderBloc');
-      AppLogger.info('  - Type: ${event.reminderType}', tag: 'ReminderBloc');
-      AppLogger.info('  - Enabled: ${event.reminderEnabled}', tag: 'ReminderBloc');
-
+     
       // First save the reminder to the backend
-      AppLogger.info('Calling addReminderUseCase...', tag: 'ReminderBloc');
       final reminder = await addReminderUseCase(
         reminderName: event.reminderName,
         reminderTime: event.reminderTime,
@@ -120,79 +252,8 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
         reminderType: event.reminderType,
         reminderEnabled: event.reminderEnabled,
       );
-
-      AppLogger.info('Reminder saved to backend:', tag: 'ReminderBloc');
-      AppLogger.info('  - ID: ${reminder.id}', tag: 'ReminderBloc');
-      AppLogger.info('  - Name: ${reminder.reminderName}', tag: 'ReminderBloc');
-      AppLogger.info('  - Time: ${reminder.reminderTime}', tag: 'ReminderBloc');
-      AppLogger.info('  - Days: ${reminder.reminderDays}', tag: 'ReminderBloc');
-      AppLogger.info('  - Type: ${reminder.reminderType}', tag: 'ReminderBloc');
-      AppLogger.info('  - Enabled: ${reminder.reminderEnabled}', tag: 'ReminderBloc');
 
       // Then schedule the local notification
-      if (reminder.reminderEnabled) {
-        AppLogger.info('Scheduling notification for reminder: ${reminder.reminderName}', tag: 'ReminderBloc');
-        AppLogger.info('Scheduling parameters:', tag: 'ReminderBloc');
-        AppLogger.info('  - reminderId: ${reminder.id}', tag: 'ReminderBloc');
-        AppLogger.info('  - reminderName: ${reminder.reminderName}', tag: 'ReminderBloc');
-        AppLogger.info('  - time24Hour: ${reminder.reminderTime}', tag: 'ReminderBloc');
-        AppLogger.info('  - reminderDays: ${reminder.reminderDays ?? 'Daily'}', tag: 'ReminderBloc');
-        AppLogger.info('  - reminderType: ${reminder.reminderType ?? 'Morning Routine'}', tag: 'ReminderBloc');
-        AppLogger.info('  - isEnabled: ${reminder.reminderEnabled}', tag: 'ReminderBloc');
-
-        final bool notificationScheduled = await localNotificationService.scheduleReminder(
-          reminderId: reminder.id,
-          reminderName: reminder.reminderName,
-          time24Hour: reminder.reminderTime,
-          reminderDays: reminder.reminderDays ?? 'Daily',
-          reminderType: reminder.reminderType ?? 'Morning Routine',
-          isEnabled: reminder.reminderEnabled,
-        );
-
-        if (notificationScheduled) {
-          AppLogger.success('✅ Notification scheduled successfully for reminder: ${reminder.reminderName}', tag: 'ReminderBloc');
-        } else {
-          AppLogger.warning('⚠️ Failed to schedule notification for reminder: ${reminder.reminderName}', tag: 'ReminderBloc');
-        }
-      } else {
-        AppLogger.info('Reminder is disabled, skipping notification scheduling', tag: 'ReminderBloc');
-      }
-
-      AppLogger.success('=== ReminderBloc: Completed Successfully ===', tag: 'ReminderBloc');
-      emit(ReminderAdded(reminder));
-    } catch (e, stackTrace) {
-      AppLogger.error('Failed to add reminder and schedule notification', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
-      emit(ReminderError(e.toString()));
-    }
-  }
-
-  Future<void> _onUpdateReminder(
-    UpdateReminderEvent event,
-    Emitter<ReminderState> emit,
-  ) async {
-    emit(ReminderLoading());
-    try {
-      AppLogger.info('=== ReminderBloc: Updating Reminder (Delete+Add) ===', tag: 'ReminderBloc');
-      AppLogger.info('Old ID: ${event.oldReminderId}', tag: 'ReminderBloc');
-      
-      // 1. Delete the old reminder (Local notification cancel + Backend delete)
-      // Note: Backend delete is used because we don't have an update endpoint
-      AppLogger.info('Deleting old reminder...', tag: 'ReminderBloc');
-      await reminderRepository.deleteReminder(event.oldReminderId);
-      await localNotificationService.cancelReminder(event.oldReminderId);
-
-      // 2. Create new reminder with updated details
-      AppLogger.info('Creating new reminder with updated details...', tag: 'ReminderBloc');
-      
-      final reminder = await addReminderUseCase(
-        reminderName: event.reminderName,
-        reminderTime: event.reminderTime,
-        reminderDays: event.reminderDays,
-        reminderType: event.reminderType,
-        reminderEnabled: event.reminderEnabled,
-      );
-
-      // 3. Schedule notification for new reminder
       if (reminder.reminderEnabled) {
         await localNotificationService.scheduleReminder(
           reminderId: reminder.id,
@@ -202,14 +263,71 @@ class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
           reminderType: reminder.reminderType ?? 'Morning Routine',
           isEnabled: reminder.reminderEnabled,
         );
-         AppLogger.success('Notification rescheduled for updated reminder: ${reminder.reminderName}', tag: 'ReminderBloc');
+      }
+
+      emit(ReminderAdded(reminder));
+      
+      // Refresh list
+      add(GetAllRemindersEvent());
+      
+    } catch (e, stackTrace) {
+      AppLogger.error('Failed to add reminder', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
+      emit(ReminderError(e.toString()));
+       if (currentState is RemindersLoaded) {
+        emit(currentState);
+      }
+    }
+  }
+
+  Future<void> _onUpdateReminder(
+    UpdateReminderEvent event,
+    Emitter<ReminderState> emit,
+  ) async {
+    final currentState = state;
+    emit(ReminderLoading());
+    try {
+      AppLogger.info('=== ReminderBloc: Updating Reminder ===', tag: 'ReminderBloc');
+      
+      // 1. Update backend
+      final reminder = await reminderRepository.updateReminder(
+         reminderId: event.oldReminderId,
+         reminderName: event.reminderName,
+         reminderTime: event.reminderTime,
+         reminderDays: event.reminderDays,
+         reminderType: event.reminderType,
+         reminderEnabled: event.reminderEnabled,
+      );
+
+      // 2. Reschedule notification
+      await localNotificationService.cancelReminder(reminder.id);
+      if (reminder.reminderEnabled) {
+        await localNotificationService.scheduleReminder(
+          reminderId: reminder.id,
+          reminderName: reminder.reminderName,
+          time24Hour: reminder.reminderTime,
+          reminderDays: reminder.reminderDays ?? 'Daily',
+          reminderType: reminder.reminderType ?? 'Morning Routine',
+          isEnabled: reminder.reminderEnabled,
+        );
       }
 
       AppLogger.success('=== ReminderBloc: Update Complete ===', tag: 'ReminderBloc');
       emit(ReminderUpdated(reminder));
+      
+      // Update list directly if loaded
+       if (currentState is RemindersLoaded) {
+         final updatedList = currentState.reminders.map((r) => r.id == reminder.id ? reminder : r).toList();
+         emit(currentState.copyWith(reminders: updatedList));
+      } else {
+        add(GetAllRemindersEvent());
+      }
+      
     } catch (e, stackTrace) {
       AppLogger.error('Failed to update reminder', tag: 'ReminderBloc', error: e, stackTrace: stackTrace);
       emit(ReminderError(e.toString()));
+      if (currentState is RemindersLoaded) {
+        emit(currentState);
+      }
     }
   }
 }

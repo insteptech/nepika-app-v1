@@ -174,8 +174,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       return;
     }
 
-    // Use the root navigator since this screen is on top of the dashboard
-    Navigator.of(context).pushNamed(route);
+    // The NotificationsScreen is an overlay on top of the Dashboard.
+    // Simply pop to return to the Dashboard which already has the proper navbar.
+    // The Dashboard maintains its own navigation state.
+    Navigator.of(context).pop();
   }
 
 

@@ -60,7 +60,13 @@ class UpdateReminderEvent extends ReminderEvent {
       ];
 }
 
-class GetAllRemindersEvent extends ReminderEvent {}
+class GetAllRemindersEvent extends ReminderEvent {
+  final bool forceRefresh;
+  const GetAllRemindersEvent({this.forceRefresh = false});
+  
+  @override
+  List<Object> get props => [forceRefresh];
+}
 
 class GetReminderByIdEvent extends ReminderEvent {
   final String reminderId;

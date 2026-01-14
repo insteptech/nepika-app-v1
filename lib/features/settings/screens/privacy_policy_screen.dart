@@ -54,98 +54,69 @@ class PrivacyPolicyScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const SizedBox(height: 25),
+                    
+                    // Header Information
                     Text(
-                      'This Privacy Policy describes how Nepika Creative Ltd ("we," "our," or "us"), a company registered in England and Wales with company number 16507702 and registered office at 20 Wenlock Road, London, N1 7GU, England, collects, uses, and protects your personal data when you visit and use our website. We are committed to protecting your privacy and complying with applicable data protection laws, including the General Data Protection Regulation (GDPR), the UK GDPR, and the Data Protection Act 2018. We are registered with the Information Commissioner\'s Office (ICO) under registration number ZB937756.',
+                      'Nepika Creative Ltd, 20 Wenlock Road, London, N1 7GU, UK\n\nRegistered in England 16507702\n\nData Protection ICO: ZB937756',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 16),
                     Text(
-                      '1. Information We Collect',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'We may collect the following types of personal data when you use our website:\n• Name and contact details (e.g., email address, phone number) if you submit them via our contact form.\n• Any information you include in messages or inquiries sent through our website forms.\n• Technical data such as your IP address, browser type, and pages visited.\n• Cookie and usage data collected through analytics tools (e.g., Google Analytics).',
+                      'Nepika ("we," "our," "us") provides AI-powered insights and tools that use computer vision, emotional analysis, and content generation technology. Your privacy is central to how we design our systems. This Privacy Policy explains what information we collect, how we use it, how we protect it, and the choices you have.\n\nThis Privacy Policy applies to the Nepika mobile application, website, and any related services ("Services").',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '2. How We Use Your Information',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 1
+                    _buildSectionTitle(textTheme, colorScheme, '1. Information We Collect'),
                     const SizedBox(height: 8),
                     Text(
-                      'We use your personal data for the following purposes:\n• To respond to inquiries and communicate with you.\n• To analyze and improve our website and user experience.\n• To ensure website security and prevent misuse.\n• To comply with legal obligations.',
+                      'We collect the following categories of information to provide and improve our Services.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '3. Legal Basis for Processing',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '1.1 Information You Provide'),
                     const SizedBox(height: 8),
                     Text(
-                      'We process your personal data based on:\n• Your consent (e.g., when you submit a contact form).\n• Our legitimate interests in analyzing website performance and improving user experience.\n• Compliance with legal obligations where applicable.',
+                      '• Name\n• Email address or phone number\n• Account credentials\n• Profile information you voluntarily submit\n• Support communication content\n\nWe do not require sensitive personal identifiers unless explicitly needed for a feature.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '4. Cookies and Analytics',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '1.2 Automatically Collected Information'),
                     const SizedBox(height: 8),
                     Text(
-                      'Our website uses cookies and similar technologies to enhance your browsing experience. We may use third-party analytics services, such as Google Analytics, which collect information about your use of our site. You can manage or disable cookies through your browser settings.',
+                      '• Device type, OS, unique identifiers\n• IP address and approximate location\n• Usage logs, crash data, performance data\n• Interaction patterns (buttons clicked, session length, etc.)\n\nThis helps improve stability, reliability, and performance.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '5. Face Scan Data',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '1.3 Face Data & Biometric Processing'),
                     const SizedBox(height: 8),
                     Text(
-                      'Our app allows users to upload a facial image for the purpose of providing a skin-analysis scan. This section explains how we collect, store, retain, and use this data in compliance with App Store Review Guideline 5.1.1.',
+                      'Nepika provides features that use temporary facial analysis to generate insights. We treat facial information with the highest level of protection.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -153,17 +124,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    _buildSubSubsectionTitle(textTheme, colorScheme, '1.3.1 What Face Data We Process'),
                     Text(
-                      'What face data we collect',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• A single facial image uploaded by the user for skin-analysis purposes.\n• An annotated version of the image generated during the analysis.\n• Analysis results relating to skin type and concerns.\n• We do NOT collect or generate biometric identifiers, face geometry, depth maps, or facial recognition templates.',
+                      '• Temporary image frames from your device camera\n• Temporary facial landmarks, expressions, or attributes extracted by the model\n\nWe do NOT collect or create:\n• Faceprints\n• Biometric identifiers\n• Identity recognition templates\n• Any persistently stored facial profiles',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -171,17 +135,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    _buildSubSubsectionTitle(textTheme, colorScheme, '1.3.2 Face Data Is Not Retained'),
                     Text(
-                      'How face data is used',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• To detect skin type and common skin concerns.\n• To generate personalized skincare recommendations.\n• Not used for identity recognition, verification, or tracking.',
+                      'All face data is processed ephemerally (real-time only) and is never stored on our servers or on your device after processing.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -189,17 +146,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    _buildSubSubsectionTitle(textTheme, colorScheme, '1.3.3 Why We Process Face Data'),
                     Text(
-                      'Why we store certain face data',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Annotated images and analysis results are stored to allow users to view past scans, track skin progress, and improve future recommendations.\n\nStoring this data enables us to provide a personalized ongoing experience, which cannot be done if all data is deleted immediately after each scan.',
+                      'Face data is processed solely to:\n• Generate instant insights related to appearance, emotional state, or content enhancement\n• Display results back to the user immediately\n\nFace data is never used for identification, authentication, surveillance, tracking, advertising, or profiling.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -207,17 +157,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    _buildSubSubsectionTitle(textTheme, colorScheme, '1.3.4 Retention Duration'),
                     Text(
-                      'Where face data is stored',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'We use Amazon Web Services (AWS) as our secure cloud provider:\n• Raw uploaded image: processed in memory only, never stored.\n• Annotated image: stored encrypted in AWS S3.\n• Scan results: stored encrypted in AWS RDS (PostgreSQL).\n• All data is encrypted both in transit and at rest.',
+                      'We retain zero biometric data. Data is discarded immediately after in-session processing.\n\nIf a feature optionally supports sending anonymized numerical metrics for model improvement (disabled by default):\n• These values cannot reverse-engineer a face.\n• Users may opt out and delete this data anytime.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -225,17 +168,10 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    _buildSubSubsectionTitle(textTheme, colorScheme, '1.3.5 Third-Party Processors for Face Data'),
                     Text(
-                      'Third-party sharing',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'We do not share face data with any third parties for marketing, analytics, or external processing. The only third party involved is AWS, which acts solely as our infrastructure provider.',
+                      'We do not share raw face data with advertisers, analytics companies, or unrelated partners. If facial analysis requires remote compute, we may use a secure cloud processor such as AWS, Google Cloud, Azure, or our own inference servers.\n\nThese providers:\n• Only process image frames in real time\n• Are contractually prohibited from storing face data\n• Delete data immediately after producing results',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
@@ -243,170 +179,211 @@ class PrivacyPolicyScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 12),
+                    
+                    _buildSubSubsectionTitle(textTheme, colorScheme, '1.3.6 Do Third Parties Store Face Data?'),
                     Text(
-                      'Why AWS receives and stores face data',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      '• AWS stores the annotated images and scan results only because they host our secure cloud storage environment.\n• AWS does not access, analyze, or process the data.\n• AWS does not retain any face data beyond what we store on our own AWS account.',
+                      'No. Third-party processors used by Nepika do not store, retain, or reuse face data.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 12),
-                    Text(
-                      'Data retention',
-                      style: textTheme.titleSmall?.copyWith(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Annotated images and scan results are retained for up to 2 years, because this duration enables long-term progress tracking and personalized recommendations.\n\nYou may delete your account at any time, and when you do so:\n• All annotated images are permanently deleted from AWS S3\n• All scan results are deleted from AWS RDS\n• Deletion is immediate and irreversible.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '6. Data Retention',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 2
+                    _buildSectionTitle(textTheme, colorScheme, '2. How We Use Your Information'),
                     const SizedBox(height: 8),
                     Text(
-                      'We retain personal data only as long as necessary to respond to your inquiries or as required by law. Technical data and analytics may be stored for a limited time to monitor and improve website performance. For face scan data retention, please see Section 5 above.',
+                      'We use collected information to:\n• Provide and personalize the app experience\n• Run AI models and generate insights\n• Improve reliability, performance, and features\n• Maintain account security\n• Communicate updates, offers, or important notices\n• Prevent fraud and enforce policies\n• Comply with legal obligations\n\nWe do not sell your personal data.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '7. Account Deletion',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 3
+                    _buildSectionTitle(textTheme, colorScheme, '3. Sharing of Information'),
                     const SizedBox(height: 8),
                     Text(
-                      'You can delete your account at any time through the app:\nSettings → Delete Account → Select Reason → Confirm\n\nWhen you delete your account, the following happens immediately:\n• Your user account is permanently removed.\n• All scan results and analysis data are deleted from our database.\n• All annotated face images are deleted from AWS S3.\n• All linked records in our RDS database are permanently removed.\n\nThis deletion is immediate and irreversible. We do not retain any face scan data or personal information after account deletion.',
+                      'We only share information when necessary.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '8. Your Rights',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '3.1 Service Providers'),
                     const SizedBox(height: 8),
                     Text(
-                      'Under the GDPR and UK GDPR, you have the right to:\n• Access, correct, or delete your personal data.\n• Object to or restrict the processing of your data.\n• Withdraw consent at any time.\n• Request data portability.\n• Lodge a complaint with a data protection authority.',
+                      'Trusted partners who help us operate:\n• Cloud hosting\n• Storage\n• Analytics\n• Customer support\n• Security\n\nAll partners are contractually bound to:\n• Use information strictly for service delivery\n• Not sell or misuse your data\n• Comply with strict privacy and security controls',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '9. Data Security',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '3.2 Legal Compliance'),
                     const SizedBox(height: 8),
                     Text(
-                      'We implement appropriate technical and organizational measures to protect your personal data against unauthorized access, alteration, disclosure, or destruction.',
+                      'We may share information to comply with:\n• Applicable laws\n• Lawful legal requests\n• Protection of rights, safety, and security\n\nWe do not provide biometric data to law enforcement because we do not store any.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '10. Third-Party Services',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 4
+                    _buildSectionTitle(textTheme, colorScheme, '4. Data Storage & Retention'),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '4.1 Personal Data'),
                     const SizedBox(height: 8),
                     Text(
-                      'We may use trusted third-party service providers to manage our website and analytics. These providers are bound by strict data protection obligations.',
+                      'Account and service data are stored only as long as required to:\n• Provide the service\n• Comply with regulations\n• Resolve disputes',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '11. Changes to This Privacy Policy',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '4.2 Face Data'),
                     const SizedBox(height: 8),
                     Text(
-                      'We may update this Privacy Policy from time to time. Any changes will be posted on this page with an updated revision date.',
+                      'Face data is stored 0 seconds. It is processed in real time and immediately deleted.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '12. Contact Us',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
+                    const SizedBox(height: 16),
+                    
+                    _buildSubsectionTitle(textTheme, colorScheme, '4.3 Deletion Controls'),
                     const SizedBox(height: 8),
                     Text(
-                      'If you have any questions or concerns about this Privacy Policy or how we handle your personal data, please contact us at:\n\nNepika Creative Ltd\n20 Wenlock Road\nLondon\nN1 7GU\nEngland\nEmail: info@nepika.com',
+                      'Users may request deletion of:\n• Account data\n• Optional non-biometric analytics data\n• Communication data\n\nDeletion requests are processed within 30 days.',
                       style: textTheme.bodyMedium?.copyWith(
                         fontSize: 14,
                         color: colorScheme.onSurfaceVariant,
                         height: 1.6,
                       ),
                     ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 5
+                    _buildSectionTitle(textTheme, colorScheme, '5. Security'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We implement industry-standard security measures, including:\n• Encryption in transit and at rest\n• Role-based access controls\n• Strict data-access auditing\n• No storage of biometric identifiers\n• Continuous monitoring and updates',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 6
+                    _buildSectionTitle(textTheme, colorScheme, '6. Children\'s Privacy'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Nepika is not intended for children under 18. We do not knowingly collect personal data from children.\n\nIf a parent believes a child has provided data, contact us for immediate deletion.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 7
+                    _buildSectionTitle(textTheme, colorScheme, '7. International Users'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We comply with global data regulations such as:\n• GDPR (EU)\n• UK GDPR\n• CCPA/CPRA (California)\n• India DPDP Act (2023)\n\nYour information may be processed in locations where we or our providers operate.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 8
+                    _buildSectionTitle(textTheme, colorScheme, '8. Your Rights'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Depending on your region, you may have rights to:\n• Access your data\n• Correct inaccuracies\n• Request deletion\n• Opt out of marketing\n• Withdraw consent for facial processing\n• Export your data\n• File complaints with regulators\n\nContact us to exercise these rights.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 9
+                    _buildSectionTitle(textTheme, colorScheme, '9. Third-Party Links'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Some features may link to third-party websites. We are not responsible for their privacy practices.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 10
+                    _buildSectionTitle(textTheme, colorScheme, '10. Changes to This Policy'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'We may update this Privacy Policy periodically. Significant changes will be communicated via in-app notices or email.',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Section 11
+                    _buildSectionTitle(textTheme, colorScheme, '11. Contact Us'),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Nepika Privacy Team\nEmail: support@nepika.com\nWebsite: https://www.nepika.com',
+                      style: textTheme.bodyMedium?.copyWith(
+                        fontSize: 14,
+                        color: colorScheme.onSurfaceVariant,
+                        height: 1.6,
+                      ),
+                    ),
+                    
                     const SizedBox(height: 30),
                     Text(
-                      'Last updated: July 2025',
+                      'Last Updated: December 2025',
                       style: textTheme.bodySmall?.copyWith(
                         fontSize: 12,
                         color: colorScheme.onSurfaceVariant,
@@ -418,6 +395,42 @@ class PrivacyPolicyScreen extends StatelessWidget {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSectionTitle(TextTheme textTheme, ColorScheme colorScheme, String title) {
+    return Text(
+      title,
+      style: textTheme.titleMedium?.copyWith(
+        fontSize: 16,
+        fontWeight: FontWeight.w600,
+        color: colorScheme.onSurface,
+      ),
+    );
+  }
+
+  Widget _buildSubsectionTitle(TextTheme textTheme, ColorScheme colorScheme, String title) {
+    return Text(
+      title,
+      style: textTheme.titleSmall?.copyWith(
+        fontSize: 15,
+        fontWeight: FontWeight.w500,
+        color: colorScheme.onSurface,
+      ),
+    );
+  }
+
+  Widget _buildSubSubsectionTitle(TextTheme textTheme, ColorScheme colorScheme, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4),
+      child: Text(
+        title,
+        style: textTheme.bodyMedium?.copyWith(
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: colorScheme.onSurface,
         ),
       ),
     );

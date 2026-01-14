@@ -635,7 +635,7 @@ bool get _isFormValid {
       child: Builder(
         builder: (blocContext) {
           return BlocListener<ReminderBloc, ReminderState>(
-            listener: (_, state) {
+            listener: (listenerContext, state) {
               print('=== BLoC State Change ===');
               print('State: ${state.runtimeType}');
 
@@ -643,20 +643,35 @@ bool get _isFormValid {
                 print('Reminder added successfully: ${state.reminder.id}');
                 print('Attempting to pop screen...');
 
-                // Show snackbar and navigate back
-                ScaffoldMessenger.of(parentContext).clearSnackBars();
-                ScaffoldMessenger.of(parentContext).showSnackBar(
-                  const SnackBar(content: Text('Reminder saved successfully!')),
-                );
-                Navigator.of(parentContext).pop();
-                print('Pop called');
+                // Capture messenger before popping to avoid context issues
+                final messenger = ScaffoldMessenger.maybeOf(parentContext);
+
+                // Pop first, then show snackbar on the previous screen
+                if (mounted && Navigator.of(parentContext).canPop()) {
+                  Navigator.of(parentContext).pop();
+                  print('Pop called successfully');
+                  
+                  // Show snackbar after pop completes
+                  WidgetsBinding.instance.addPostFrameCallback((_) {
+                    messenger?.showSnackBar(
+                      const SnackBar(content: Text('Reminder saved successfully!')),
+                    );
+                  });
+                }
               } else if (state is ReminderUpdated) {
                  print('Reminder updated successfully: ${state.reminder.id}');
-                 ScaffoldMessenger.of(parentContext).clearSnackBars();
-                 ScaffoldMessenger.of(parentContext).showSnackBar(
-                   const SnackBar(content: Text('Reminder updated successfully!')),
-                 );
-                 Navigator.of(parentContext).pop();
+                 
+                 final messenger = ScaffoldMessenger.maybeOf(parentContext);
+
+                 if (mounted && Navigator.of(parentContext).canPop()) {
+                   Navigator.of(parentContext).pop();
+                   
+                   WidgetsBinding.instance.addPostFrameCallback((_) {
+                     messenger?.showSnackBar(
+                       const SnackBar(content: Text('Reminder updated successfully!')),
+                     );
+                   });
+                 }
               } else if (state is ReminderError) {
                 print('Reminder error: ${state.message}');
                 ScaffoldMessenger.of(parentContext).clearSnackBars();
@@ -889,29 +904,7 @@ bool get _isFormValid {
                              ),
                              const SizedBox(height: 10),
                              
-                             // TEST BUTTON - Remove after debugging
-                             TextButton(
-                               onPressed: () async {
-                                 print('=== TEST NOTIFICATION ===');
-                                 final notifService = LocalNotificationService.instance;
-                                 final success = await notifService.showImmediateNotification(
-                                   title: 'Test Notification',
-                                   body: 'If you see this, notifications work!',
-                                 );
-                                 print('Immediate notification result: $success');
-                                 if (mounted) {
-                                   ScaffoldMessenger.of(context).showSnackBar(
-                                     SnackBar(
-                                       content: Text(success 
-                                         ? 'Test notification sent! Check your notifications.' 
-                                         : 'Failed to send test notification'),
-                                       backgroundColor: success ? Colors.green : Colors.red,
-                                     ),
-                                   );
-                                 }
-                               },
-                               child: const Text('🔔 Send Test Notification (Debug)'),
-                             ),
+
                              const SizedBox(height: 10),
 
                            ],

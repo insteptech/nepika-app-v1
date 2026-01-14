@@ -1,5 +1,6 @@
 import '../../../core/api_base.dart';
 import '../models/reminder_model.dart';
+import '../models/paginated_reminders_model.dart';
 
 abstract class ReminderRemoteDataSource {
   Future<ReminderModel> addReminder({
@@ -10,11 +11,20 @@ abstract class ReminderRemoteDataSource {
     bool reminderEnabled = true,
   });
 
-  Future<List<ReminderModel>> getAllReminders();
+  Future<PaginatedRemindersModel> getAllReminders({int page = 1, int pageSize = 20});
 
   Future<ReminderModel> getReminderById(String reminderId);
 
   Future<ReminderModel> toggleReminderStatus(String reminderId);
+
+  Future<ReminderModel> updateReminder({
+    required String reminderId,
+    String? reminderName,
+    String? reminderTime,
+    String? reminderDays,
+    String? reminderType,
+    bool? reminderEnabled,
+  });
 
   Future<void> deleteReminder(String reminderId);
 }
@@ -73,17 +83,35 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
   }
 
   @override
-  Future<List<ReminderModel>> getAllReminders() async {
+  Future<PaginatedRemindersModel> getAllReminders({int page = 1, int pageSize = 20}) async {
     final response = await apiBase.request(
       path: '/reminders/',
       method: 'GET',
+      query: {
+        'page': page,
+        'page_size': pageSize,
+      },
     );
 
     if (response.statusCode == 200) {
-      final List<dynamic> remindersJson = response.data['data'];
-      return remindersJson
-          .map((json) => ReminderModel.fromJson(json))
-          .toList();
+      final data = response.data['data'];
+      
+      if (data is List) {
+        // API returned a simple list, manual pagination handling
+        final reminders = data.map((json) => ReminderModel.fromJson(json)).toList();
+        final hasMore = reminders.length >= pageSize;
+        
+        return PaginatedRemindersModel(
+          reminders: reminders,
+          total: 0, // Unknown
+          page: page,
+          pageSize: pageSize,
+          hasMore: hasMore,
+        );
+      } else {
+        // API returned pagination object
+        return PaginatedRemindersModel.fromJson(data);
+      }
     } else {
       throw Exception('Failed to get reminders');
     }
@@ -130,9 +158,48 @@ class ReminderRemoteDataSourceImpl implements ReminderRemoteDataSource {
   }
 
   @override
-  Future<void> deleteReminder(String reminderId) async {
+  Future<ReminderModel> updateReminder({
+    required String reminderId,
+    String? reminderName,
+    String? reminderTime,
+    String? reminderDays,
+    String? reminderType,
+    bool? reminderEnabled,
+  }) async {
+    final requestBody = {
+      if (reminderName != null) 'reminder_name': reminderName,
+      if (reminderTime != null) 'reminder_time': reminderTime,
+      if (reminderDays != null) 'reminder_days': reminderDays,
+      if (reminderType != null) 'reminder_type': reminderType,
+      if (reminderEnabled != null) 'reminder_enabled': reminderEnabled,
+    };
+
+    print('=== Update Reminder ===');
+    print('URL: /reminders/$reminderId');
+    print('Method: PUT');
+    print('Body: $requestBody');
+
     final response = await apiBase.request(
-      path: '/reminders/delete/$reminderId',
+      path: '/reminders/$reminderId',
+      method: 'PUT',
+      body: requestBody,
+    );
+
+    if (response.statusCode == 200) {
+      return ReminderModel.fromJson(response.data['data']);
+    } else {
+      throw Exception('Failed to update reminder');
+    }
+  }
+
+  @override
+  Future<void> deleteReminder(String reminderId) async {
+    print('=== Delete Reminder ===');
+    print('URL: /reminders/$reminderId');
+    print('Method: DELETE');
+
+    final response = await apiBase.request(
+      path: '/reminders/$reminderId',
       method: 'DELETE',
     );
 

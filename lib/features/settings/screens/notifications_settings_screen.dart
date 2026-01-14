@@ -37,12 +37,7 @@ class _NotificationsSettingsScreenState
           );
         },
       ),
-      SettingsOptionData.option(
-        'Scheduled Reminders',
-        onTap: () {
-          Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.dashboardScheduledReminders);
-        },
-      ),
+
       // SettingsOptionData.option(
       //   'Settings',
       //   onTap: () {

@@ -14,6 +14,7 @@ import 'package:nepika/features/face_scan/screens/scan_report_loader_screen.dart
 import 'package:nepika/features/dashboard/screens/image_gallery_screen.dart';
 import 'package:nepika/features/dashboard/screens/history_screen.dart';
 import 'package:nepika/features/settings/screens/main_settings_screen.dart';
+import 'package:nepika/features/settings/screens/help_support_screen.dart';
 import 'core/di/injection_container.dart' as di;
 import 'core/services/fcm_background_handler.dart';
 import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
@@ -43,6 +44,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'core/config/constants/routes.dart';
 import 'core/services/navigation_service.dart';
 import 'core/services/unified_fcm_service.dart';
+import 'domain/reminders/entities/reminder.dart';
 import 'data/auth/datasources/auth_remote_data_source_impl.dart';
 import 'data/auth/datasources/auth_local_data_source_impl.dart';
 import 'data/auth/repositories/auth_repository_impl.dart';
@@ -264,12 +266,18 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (_) => const MainSettingsScreen(),
               );
+            case AppRoutes.helpAndSupport:
+            case SettingsRoutes.helpAndSupport:
+              return MaterialPageRoute(
+                builder: (_) => const HelpSupportScreen(),
+              );
             case AppRoutes.dashboardReminderSettings:
             case DashboardRoutes.reminderSettings:
+              final reminder = settings.arguments as Reminder?;
               return MaterialPageRoute(
                 builder: (_) => BlocProvider(
                   create: (context) => di.ServiceLocator.get<ReminderBloc>(),
-                  child: const ReminderSettings(),
+                  child: ReminderSettings(reminderToEdit: reminder),
                 ),
               );
             case AppRoutes.dashboardScheduledReminders:

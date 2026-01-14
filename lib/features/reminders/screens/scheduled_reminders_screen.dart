@@ -23,17 +23,34 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
   late ReminderBloc _reminderBloc;
   List<Reminder> _reminders = [];
 
+  final ScrollController _scrollController = ScrollController();
+
   @override
   void initState() {
     super.initState();
     _reminderBloc = sl<ReminderBloc>();
     _reminderBloc.add(GetAllRemindersEvent());
+    _scrollController.addListener(_onScroll);
   }
 
   @override
   void dispose() {
+    _scrollController.dispose();
     _reminderBloc.close();
     super.dispose();
+  }
+
+  void _onScroll() {
+    if (_isBottom) {
+      _reminderBloc.add(GetAllRemindersEvent());
+    }
+  }
+
+  bool get _isBottom {
+    if (!_scrollController.hasClients) return false;
+    final maxScroll = _scrollController.position.maxScrollExtent;
+    final currentScroll = _scrollController.offset;
+    return currentScroll >= (maxScroll * 0.9);
   }
 
   String _formatTime(String time24Hour) {
@@ -87,11 +104,41 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
     }
   }
 
-  /// Sort reminders by time (AM -> PM)
+  // Sorting locally might conflict with pagination (server should sort),
+  // but keeping it for now if pagination returns sorted chunks or if we want to sort current list.
+  // Warning: Client-side sorting with pagination can be weird. Assuming backend returns sorted data.
+  // If not, we only sort the currently loaded list.
   List<Reminder> _sortRemindersByTime(List<Reminder> reminders) {
     final sorted = List<Reminder>.from(reminders);
     sorted.sort((a, b) => _timeToMinutes(a.reminderTime).compareTo(_timeToMinutes(b.reminderTime)));
     return sorted;
+  }
+
+  Future<void> _confirmDelete(BuildContext context, Reminder reminder) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Delete Reminder?'),
+          content: Text('Are you sure you want to delete "${reminder.reminderName}"?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirm == true) {
+      _reminderBloc.add(DeleteReminderEvent(reminder.id));
+    }
   }
 
   @override
@@ -110,36 +157,56 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
                   _reminders = _sortRemindersByTime(state.reminders);
                 });
               } else if (state is ReminderStatusToggled) {
-                // Update the reminder in the list without re-fetching to maintain order
                 setState(() {
                   final index = _reminders.indexWhere((r) => r.id == state.reminder.id);
                   if (index != -1) {
                     _reminders[index] = state.reminder;
                   }
                 });
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      state.reminder.reminderEnabled
-                          ? 'Reminder enabled'
-                          : 'Reminder disabled',
-                    ),
-                    duration: const Duration(seconds: 2),
-                  ),
-                );
+                if (!context.mounted) return;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(
+                          state.reminder.reminderEnabled
+                              ? 'Reminder enabled'
+                              : 'Reminder disabled',
+                        ),
+                        duration: const Duration(seconds: 2),
+                      ),
+                    );
+                  }
+                });
+              } else if (state is ReminderDeleted) {
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Reminder deleted')),
+                    );
+                  }
+                });
+              } else if (state is ReminderUpdated) {
+                // Handled via state update
               } else if (state is ReminderError) {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('Error: ${state.message}'),
-                    backgroundColor: Colors.red,
-                  ),
-                );
+                if (!context.mounted) return;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Error: ${state.message}'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
+                });
               }
             },
             builder: (context, state) {
-              final isLoading = state is ReminderLoading && _reminders.isEmpty;
+              final isLoadingInitial = state is ReminderLoading && _reminders.isEmpty;
 
               return CustomScrollView(
+                controller: _scrollController,
                 slivers: [
                   // Static top content (back button + Add button)
                   SliverToBoxAdapter(
@@ -153,6 +220,37 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const CustomBackButton(),
+                              ElevatedButton(
+                                onPressed: () {
+                                  Navigator.of(context, rootNavigator: true).pushNamed(
+                                    AppRoutes.dashboardReminderSettings,
+                                  ).then((_) {
+                                    _reminderBloc.add(const GetAllRemindersEvent(forceRefresh: true));
+                                  });
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: theme.colorScheme.primary,
+                                  foregroundColor: Colors.white,
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
+                                child: const Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(
+                                      'Add',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    SizedBox(width: 4),
+                                    Icon(Icons.add, size: 18),
+                                  ],
+                                ),
+                              ),
                             ],
                           ),
                           const SizedBox(height: 10),
@@ -202,7 +300,7 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
                   ),
 
                   // Content
-                  if (isLoading)
+                  if (isLoadingInitial)
                     const SliverFillRemaining(
                       child: Center(
                         child: CircularProgressIndicator(),
@@ -218,43 +316,88 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
                       sliver: SliverList(
                         delegate: SliverChildBuilderDelegate(
                           (context, index) {
+                            if (index >= _reminders.length) {
+                              return (state is RemindersLoaded && !state.hasReachedMax)
+                                  ? const Padding(
+                                      padding: EdgeInsets.symmetric(vertical: 20),
+                                      child: Center(child: CircularProgressIndicator()),
+                                    )
+                                  : const SizedBox.shrink();
+                            }
+                            
                             final reminder = _reminders[index];
                             return Padding(
                               padding: EdgeInsets.only(
                                 bottom: index < _reminders.length - 1 ? 12 : 20,
                               ),
-                              child: GestureDetector(
-                                onTap: () async {
-                                  // Navigate to edit screen
-                                  await Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (context) => ReminderSettings(
-                                        reminderToEdit: reminder,
-                                      ),
-                                    ),
+                              child: Dismissible(
+                                key: Key(reminder.id),
+                                direction: DismissDirection.endToStart,
+                                confirmDismiss: (direction) async {
+                                  return await showDialog(
+                                    context: context,
+                                    builder: (BuildContext context) {
+                                      return AlertDialog(
+                                        title: const Text("Delete Reminder?"),
+                                        content: Text("Are you sure you want to delete ${reminder.reminderName}?"),
+                                        actions: <Widget>[
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(false),
+                                            child: const Text("Cancel"),
+                                          ),
+                                          TextButton(
+                                            onPressed: () => Navigator.of(context).pop(true),
+                                            style: TextButton.styleFrom(foregroundColor: Colors.red),
+                                            child: const Text("Delete"),
+                                          ),
+                                        ],
+                                      );
+                                    },
                                   );
-                                  // Refresh list when coming back
-                                  if (mounted) {
-                                    _reminderBloc.add(GetAllRemindersEvent());
-                                  }
                                 },
-                                child: _ReminderCard(
-                                  reminder: reminder,
-                                  formattedTime:
-                                      _formatTime(reminder.reminderTime),
-                                  icon: _getRoutineIcon(reminder.reminderType),
-                                  iconColor: _getRoutineColor(
-                                      reminder.reminderType, context),
-                                  onToggle: (value) {
-                                    _reminderBloc.add(
-                                      ToggleReminderStatusEvent(reminder.id),
-                                    );
+                                onDismissed: (direction) {
+                                  // Optimistically remove from local list immediately to satisfy Dismissible requirement
+                                  setState(() {
+                                    _reminders.removeAt(index);
+                                  });
+                                  // Then sync with backend
+                                  _reminderBloc.add(DeleteReminderEvent(reminder.id));
+                                },
+                                background: Container(
+                                  decoration: BoxDecoration(
+                                    color: Colors.red,
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  alignment: Alignment.centerRight,
+                                  padding: const EdgeInsets.only(right: 20),
+                                  child: const Icon(Icons.delete, color: Colors.white),
+                                ),
+                                child: GestureDetector(
+                                  onTap: () {
+                                     Navigator.of(context).pushNamed(
+                                      AppRoutes.dashboardReminderSettings,
+                                      arguments: reminder,
+                                    ).then((_) {
+                                      // Refresh when returning from edit
+                                      _reminderBloc.add(const GetAllRemindersEvent(forceRefresh: true));
+                                    });
                                   },
+                                  child: _ReminderCard(
+                                    reminder: reminder,
+                                    formattedTime: _formatTime(reminder.reminderTime),
+                                    icon: _getRoutineIcon(reminder.reminderType),
+                                    iconColor: _getRoutineColor(reminder.reminderType, context),
+                                    onToggle: (value) {
+                                      _reminderBloc.add(
+                                        ToggleReminderStatusEvent(reminder.id),
+                                      );
+                                    },
+                                  ),
                                 ),
                               ),
                             );
                           },
-                          childCount: _reminders.length,
+                          childCount: _reminders.length + 1, // +1 for loader
                         ),
                       ),
                     ),
@@ -297,7 +440,9 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
               onPressed: () {
                 Navigator.of(context).pushNamed(
                   AppRoutes.dashboardReminderSettings,
-                );
+                ).then((_) {
+                  _reminderBloc.add(const GetAllRemindersEvent(forceRefresh: true));
+                });
               },
               icon: const Icon(Icons.add),
               label: const Text('Add Reminder'),

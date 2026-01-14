@@ -32,11 +32,29 @@ class ReminderUpdated extends ReminderState {
 
 class RemindersLoaded extends ReminderState {
   final List<Reminder> reminders;
+  final bool hasReachedMax;
+  final int currentPage;
 
-  const RemindersLoaded(this.reminders);
+  const RemindersLoaded({
+    this.reminders = const [],
+    this.hasReachedMax = false,
+    this.currentPage = 1,
+  });
+
+  RemindersLoaded copyWith({
+    List<Reminder>? reminders,
+    bool? hasReachedMax,
+    int? currentPage,
+  }) {
+    return RemindersLoaded(
+      reminders: reminders ?? this.reminders,
+      hasReachedMax: hasReachedMax ?? this.hasReachedMax,
+      currentPage: currentPage ?? this.currentPage,
+    );
+  }
 
   @override
-  List<Object> get props => [reminders];
+  List<Object> get props => [reminders, hasReachedMax, currentPage];
 }
 
 class ReminderLoaded extends ReminderState {

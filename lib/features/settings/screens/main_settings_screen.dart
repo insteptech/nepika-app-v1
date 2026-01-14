@@ -210,7 +210,7 @@ class MainSettingsScreen extends StatelessWidget {
                                Navigator.of(context, rootNavigator: true).pop();
                                
                                // Navigate to Edit Profile
-                               await Navigator.of(context).push(
+                               final result = await Navigator.of(context).push(
                                  MaterialPageRoute(
                                    builder: (_) => BlocProvider.value(
                                      value: di.ServiceLocator.get<ProfileBloc>(),
@@ -223,7 +223,15 @@ class MainSettingsScreen extends StatelessWidget {
                                    ),
                                  ),
                                );
-                               // After return, simply stay on settings page (user requirement)
+                               
+                               if (result != null && context.mounted) {
+                                 ScaffoldMessenger.of(context).showSnackBar(
+                                   const SnackBar(
+                                     content: Text('Profile updated successfully!'),
+                                     backgroundColor: Colors.green,
+                                   ),
+                                 );
+                               }
                              }
                            } else {
                               throw Exception("User ID not found");
@@ -302,13 +310,8 @@ class MainSettingsScreen extends StatelessWidget {
                   SettingsOptionData.option(
                     'Reminders',
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => BlocProvider(
-                            create: (context) => di.ServiceLocator.get<ReminderBloc>(),
-                            child: const ReminderSettings(),
-                          ),
-                        ),
+                      Navigator.of(context, rootNavigator: true).pushNamed(
+                         AppRoutes.dashboardScheduledReminders,
                       );
                     },
                   ),
@@ -348,14 +351,15 @@ class MainSettingsScreen extends StatelessWidget {
                       ).pushNamed(AppRoutes.faceScanInfo);
                     },
                   ),
-                  // SettingsOptionData.option(
-                  //   'Help and Support',
-                  //   onTap: () {
-                  //     Navigator.of(context).push(
-                  //       MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
-                  //     );
-                  //   },
-                  // ),
+                  SettingsOptionData.option(
+                    'Help and Support',
+                    onTap: () {
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.helpAndSupport);
+                    },
+                  ),
                   SettingsOptionData.option(
                     'Terms of use',
                     onTap: () {
