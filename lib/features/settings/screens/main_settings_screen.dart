@@ -382,6 +382,27 @@ class MainSettingsScreen extends StatelessWidget {
               ),
             ),
 
+            // Additional Section
+            SliverToBoxAdapter(
+              child: SettingsSection(
+                title: 'ADDITIONAL',
+                options: [
+                  SettingsOptionData.option(
+                    'FAQ',
+                    onTap: () {
+                      Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.faq);
+                    },
+                  ),
+                  SettingsOptionData.option(
+                    'Feedback & Rate Us',
+                    onTap: () {
+                      Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.feedback);
+                    },
+                  ),
+                ],
+              ),
+            ),
+
             // Account Section
             SliverToBoxAdapter(
               child: SettingsSection(

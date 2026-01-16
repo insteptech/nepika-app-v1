@@ -92,8 +92,9 @@ class AppRoutes {
   static const String privacyPolicy = '/privacy-policy';
   static const String termsOfUse = '/terms-of-use';
   static const String faceScanInfo = '/face-scan-info';
+  static const String faq = '/faq';
+  static const String feedback = '/feedback';
   static const String about = '/about';
-
 
   CommunityRoutes get community => CommunityRoutes();
 

@@ -83,6 +83,18 @@ import '../../domain/auth/usecases/get_delete_reasons_usecase.dart';
 import '../../domain/auth/usecases/delete_account_usecase.dart';
 import '../../features/settings/bloc/delete_account_bloc.dart';
 
+import '../../../../core/di/injection_container.dart' as di;
+import '../../data/support/datasources/faq_remote_data_source.dart';
+import '../../data/support/repositories/faq_repository_impl.dart';
+import '../../domain/support/repositories/faq_repository.dart';
+import '../../domain/support/usecases/get_faqs.dart';
+import '../../features/support/bloc/faq_bloc.dart';
+import '../../data/support/datasources/feedback_remote_data_source.dart';
+import '../../data/support/repositories/feedback_repository_impl.dart';
+import '../../domain/support/repositories/feedback_repository.dart';
+import '../../domain/support/usecases/submit_feedback.dart';
+import '../../features/support/bloc/feedback_bloc.dart';
+
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
   static bool _coreInitialized = false;
@@ -408,6 +420,52 @@ class ServiceLocator {
         getDeleteReasonsUseCase: get<GetDeleteReasonsUseCase>(),
         deleteAccountUseCase: get<DeleteAccountUseCase>(),
       ),
+    );
+    
+    // Support (FAQ) - Data sources
+    _registerLazySingleton<FaqRemoteDataSource>(
+      FaqRemoteDataSourceImpl(get<ApiBase>()),
+    );
+
+    // Support (FAQ) - Repository
+    _registerLazySingleton<FaqRepository>(
+      FaqRepositoryImpl(
+        remoteDataSource: get<FaqRemoteDataSource>(),
+        networkInfo: get<NetworkInfo>(),
+      ),
+    );
+
+    // Support (FAQ) - Use cases
+    _registerLazySingleton<GetFaqs>(
+      GetFaqs(get<FaqRepository>()),
+    );
+
+    // Support (FAQ) - Bloc (Factory)
+    _registerFactory<FaqBloc>(
+      () => FaqBloc(getFaqs: get<GetFaqs>()),
+    );
+
+    // Support (Feedback) - Data sources
+    _registerLazySingleton<FeedbackRemoteDataSource>(
+      FeedbackRemoteDataSourceImpl(get<ApiBase>()),
+    );
+
+    // Support (Feedback) - Repository
+    _registerLazySingleton<FeedbackRepository>(
+      FeedbackRepositoryImpl(
+        remoteDataSource: get<FeedbackRemoteDataSource>(),
+        networkInfo: get<NetworkInfo>(),
+      ),
+    );
+
+    // Support (Feedback) - Use cases
+    _registerLazySingleton<SubmitFeedback>(
+      SubmitFeedback(get<FeedbackRepository>()),
+    );
+
+    // Support (Feedback) - Bloc (Factory)
+    _registerFactory<FeedbackBloc>(
+      () => FeedbackBloc(submitFeedback: get<SubmitFeedback>()),
     );
     
     _fullyInitialized = true;

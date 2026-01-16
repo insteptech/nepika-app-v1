@@ -48,6 +48,20 @@ This prepares the iOS project.
 5. Once processed, it may show "Missing Compliance". Click "Manage", select "No" for encryption (unless you added specific crypto features), and Start Testing.
 6. Add External Testers or Internal Testers to release it.
 
+## Alternative: Upload via Transporter
+If you prefer using **Transporter** instead of Xcode's built-in uploader:
+
+1. In Xcode Organizer, click **Distribute App** -> **TestFlight & App Store** -> **Export** (instead of Upload).
+2. Save the `.ipa` file to your desktop.
+3. Open Transporter:
+   ```bash
+   open -a Transporter
+   ```
+   *(Download free from Mac App Store if not installed)*
+4. Sign in with your Apple Developer account.
+5. Drag-and-drop the `.ipa` file into Transporter.
+6. Click **Deliver** to upload.
+
 ## Troubleshooting
 - **Signing Errors**: Go to Xcode -> Signing & Capabilities -> Select your Team. Ensure "Automatically manage signing" is checked.
 - **Version Exists**: Ensure you incremented the build number (we did this for you: `1.0.1+3`).

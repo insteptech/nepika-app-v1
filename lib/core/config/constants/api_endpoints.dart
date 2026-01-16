@@ -38,6 +38,10 @@ class ApiEndpoints {
   // # it need condition slug at end of this endpoint
   static const String fetchSkinConditionDetails = '/dashboard/skin-condition';
   
+  // Support Endpoints
+  static const String faqs = '/faqs';
+  static const String feedback = '/auth/users/feedback';
+  
   // Community Endpoints - Updated to match API specification
   static const String communityPosts = '/community/posts';
   static const String userSearch = '/community/search/users';

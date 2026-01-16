@@ -15,6 +15,8 @@ import 'package:nepika/features/dashboard/screens/image_gallery_screen.dart';
 import 'package:nepika/features/dashboard/screens/history_screen.dart';
 import 'package:nepika/features/settings/screens/main_settings_screen.dart';
 import 'package:nepika/features/settings/screens/help_support_screen.dart';
+import 'package:nepika/features/support/screens/faq_screen.dart';
+import 'package:nepika/features/support/screens/feedback_screen.dart';
 import 'core/di/injection_container.dart' as di;
 import 'core/services/fcm_background_handler.dart';
 import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
@@ -338,6 +340,10 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
             case AppRoutes.faceScanInfo:
               return MaterialPageRoute(builder: (_) => const FaceScanInfoScreen());
+            case AppRoutes.faq:
+              return MaterialPageRoute(builder: (_) => const FaqScreen());
+            case AppRoutes.feedback:
+              return MaterialPageRoute(builder: (_) => const FeedbackScreen());
             case AppRoutes.editProfile:
               return MaterialPageRoute(
                 builder: (_) {
