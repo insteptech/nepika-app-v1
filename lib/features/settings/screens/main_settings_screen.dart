@@ -378,15 +378,6 @@ class MainSettingsScreen extends StatelessWidget {
                       ).pushNamed(AppRoutes.privacyPolicy);
                     },
                   ),
-                ],
-              ),
-            ),
-
-            // Additional Section
-            SliverToBoxAdapter(
-              child: SettingsSection(
-                title: 'ADDITIONAL',
-                options: [
                   SettingsOptionData.option(
                     'FAQ',
                     onTap: () {
@@ -402,6 +393,8 @@ class MainSettingsScreen extends StatelessWidget {
                 ],
               ),
             ),
+
+
 
             // Account Section
             SliverToBoxAdapter(
