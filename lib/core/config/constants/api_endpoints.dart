@@ -14,6 +14,10 @@ class ApiEndpoints {
   static const String verifyOtp = '/auth/users/verify-otp';
   static const String resendOtp = '/auth/users/resend-otp';
   static const String refreshToken = '/auth/users/refresh-token';
+  
+  // Mobile Number Update Endpoints
+  static const String updateMobileSendOtp = '/auth/users/update-mobile/send-otp';
+  static const String updateMobileVerifyOtp = '/auth/users/update-mobile/verify-otp';
 
   static const String userOnboarding = '/user/onboarding';
 

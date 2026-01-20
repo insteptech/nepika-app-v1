@@ -28,4 +28,16 @@ abstract class AuthRemoteDataSource {
     required String otpCode,
     required String otpId,
   });
+
+  /// Send OTP for updating mobile number
+  Future<Map<String, dynamic>> sendUpdateMobileOtp({
+    required String newMobileNumber,
+  });
+
+  /// Verify OTP and update mobile number
+  Future<Map<String, dynamic>> verifyUpdateMobileOtp({
+    required String newMobileNumber,
+    required String otpCode,
+    required String otpId,
+  });
 }

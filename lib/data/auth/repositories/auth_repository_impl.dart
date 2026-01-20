@@ -215,4 +215,82 @@ class AuthRepositoryImpl implements AuthRepository {
       return failure(AuthFailure(message: errorMessage));
     }
   }
+  @override
+  Future<Result<Map<String, dynamic>>> sendUpdateMobileOtp({required String newMobileNumber}) async {
+    try {
+      final response = await remoteDataSource.sendUpdateMobileOtp(
+        newMobileNumber: newMobileNumber,
+      );
+      return success(response);
+    } catch (e) {
+      debugPrint('AuthRepository: Error sending update mobile OTP');
+      
+      String errorMessage = 'Failed to send OTP';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map && data['detail'] != null) {
+          errorMessage = data['detail'].toString();
+        } else if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else {
+          errorMessage = e.message ?? errorMessage;
+        }
+      } else if (e is Exception) {
+          errorMessage = e.toString().replaceFirst('Exception: ', '');
+      }
+      
+      return failure(ServerFailure(message: errorMessage));
+    }
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> verifyUpdateMobileOtp({
+    required String newMobileNumber,
+    required String otpCode,
+    required String otpId,
+  }) async {
+    try {
+      final response = await remoteDataSource.verifyUpdateMobileOtp(
+        newMobileNumber: newMobileNumber,
+        otpCode: otpCode,
+        otpId: otpId,
+      );
+      return success(response);
+    } catch (e) {
+      debugPrint('========================================');
+      debugPrint('AuthRepository: Error during Mobile Update OTP verification');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Error: $e');
+
+      String errorMessage = 'Failed to verify OTP';
+      if (e is DioException) {
+        debugPrint('DioException status code: ${e.response?.statusCode}');
+        debugPrint('DioException response data: ${e.response?.data}');
+
+        final data = e.response?.data;
+        if (data is Map && data['detail'] != null) {
+          errorMessage = data['detail'].toString();
+        } else if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else if (e.response?.statusCode == 400) {
+          errorMessage = 'Invalid OTP. Please check and try again.';
+        } else if (e.response?.statusCode == 401) {
+          errorMessage = 'OTP has expired. Please request a new one.';
+        } else if (e.response?.statusCode == 404) {
+          errorMessage = 'OTP session not found. Please restart the verification process.';
+        } else {
+          errorMessage = e.message ?? errorMessage;
+        }
+      } else if (e is Exception) {
+        errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        }
+      }
+
+      debugPrint('Final error message: $errorMessage');
+      debugPrint('========================================');
+      return failure(AuthFailure(message: errorMessage));
+    }
+  }
 }

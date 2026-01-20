@@ -24,6 +24,7 @@ import 'notifications_settings_screen.dart';
 import '../../community/screens/edit_profile_screen.dart';
 import '../../../domain/community/repositories/community_repository.dart';
 import '../../community/bloc/blocs/profile_bloc.dart';
+import 'update_mobile_number_screen.dart';
 
 class MainSettingsScreen extends StatelessWidget {
   const MainSettingsScreen({super.key});
@@ -401,6 +402,16 @@ class MainSettingsScreen extends StatelessWidget {
               child: SettingsSection(
                 title: 'ACCOUNT',
                 options: [
+                  SettingsOptionData.option(
+                    'Update Mobile Number',
+                    onTap: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => const UpdateMobileNumberScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   SettingsOptionData.option(
                     'Delete Account',
                     onTap: () => _showDeleteAccountDialog(context),

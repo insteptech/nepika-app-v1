@@ -142,4 +142,46 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
     return result.data as Map<String, dynamic>;
   }
+
+  @override
+  Future<Map<String, dynamic>> sendUpdateMobileOtp({
+    required String newMobileNumber,
+  }) async {
+    final result = await _apiClient.request(
+      path: ApiEndpoints.updateMobileSendOtp,
+      method: 'POST',
+      body: {
+        'new_mobile_number': newMobileNumber,
+      },
+    );
+
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to send OTP to new mobile number');
+    }
+
+    return result.data['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<Map<String, dynamic>> verifyUpdateMobileOtp({
+    required String newMobileNumber,
+    required String otpCode,
+    required String otpId,
+  }) async {
+    final result = await _apiClient.request(
+      path: ApiEndpoints.updateMobileVerifyOtp,
+      method: 'POST',
+      body: {
+        'new_mobile_number': newMobileNumber,
+        'otp_code': otpCode,
+        'otp_id': otpId,
+      },
+    );
+
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to verify mobile update OTP');
+    }
+
+    return result.data as Map<String, dynamic>;
+  }
 }
