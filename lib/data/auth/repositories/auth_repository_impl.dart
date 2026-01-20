@@ -216,10 +216,14 @@ class AuthRepositoryImpl implements AuthRepository {
     }
   }
   @override
-  Future<Result<Map<String, dynamic>>> sendUpdateMobileOtp({required String newMobileNumber}) async {
+  Future<Result<Map<String, dynamic>>> sendUpdateMobileOtp({
+    required String newMobileNumber,
+    String? recoveryToken,
+  }) async {
     try {
       final response = await remoteDataSource.sendUpdateMobileOtp(
         newMobileNumber: newMobileNumber,
+        recoveryToken: recoveryToken,
       );
       return success(response);
     } catch (e) {
@@ -248,12 +252,14 @@ class AuthRepositoryImpl implements AuthRepository {
     required String newMobileNumber,
     required String otpCode,
     required String otpId,
+    String? recoveryToken,
   }) async {
     try {
       final response = await remoteDataSource.verifyUpdateMobileOtp(
         newMobileNumber: newMobileNumber,
         otpCode: otpCode,
         otpId: otpId,
+        recoveryToken: recoveryToken,
       );
       return success(response);
     } catch (e) {
@@ -292,5 +298,59 @@ class AuthRepositoryImpl implements AuthRepository {
       debugPrint('========================================');
       return failure(AuthFailure(message: errorMessage));
     }
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> recoverSendEmailOtp({
+    required String email,
+  }) async {
+    try {
+      final response = await remoteDataSource.recoverSendEmailOtp(
+        email: email,
+      );
+      return success(response);
+    } catch (e) {
+      debugPrint('AuthRepository: Error sending recovery email OTP');
+      return failure(ServerFailure(message: _getErrorMessage(e)));
+    }
+  }
+
+  @override
+  Future<Result<Map<String, dynamic>>> recoverVerifyEmailOtp({
+    required String email,
+    required String otpCode,
+    required String otpId,
+  }) async {
+    try {
+      final response = await remoteDataSource.recoverVerifyEmailOtp(
+        email: email,
+        otpCode: otpCode,
+        otpId: otpId,
+      );
+      return success(response);
+    } catch (e) {
+      debugPrint('AuthRepository: Error verifying recovery email OTP');
+      return failure(ServerFailure(message: _getErrorMessage(e)));
+    }
+  }
+
+  String _getErrorMessage(dynamic e) {
+    String errorMessage = 'An error occurred';
+    if (e is DioException) {
+      final data = e.response?.data;
+      if (data is Map && data['detail'] != null) {
+        errorMessage = data['detail'].toString();
+      } else if (data is Map && data['message'] != null) {
+        errorMessage = data['message'].toString();
+      } else {
+        errorMessage = e.message ?? errorMessage;
+      }
+    } else if (e is Exception) {
+      errorMessage = e.toString();
+      if (errorMessage.startsWith('Exception: ')) {
+        errorMessage = errorMessage.replaceFirst('Exception: ', '');
+      }
+    }
+    return errorMessage;
   }
 }

@@ -146,13 +146,22 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
   @override
   Future<Map<String, dynamic>> sendUpdateMobileOtp({
     required String newMobileNumber,
+    String? recoveryToken,
   }) async {
+    final headers = <String, String>{};
+    if (recoveryToken != null) {
+      headers['Authorization'] = 'Bearer $recoveryToken';
+    }
+
     final result = await _apiClient.request(
-      path: ApiEndpoints.updateMobileSendOtp,
+      path: recoveryToken != null 
+          ? ApiEndpoints.recoverUpdateMobileSendOtp 
+          : ApiEndpoints.updateMobileSendOtp,
       method: 'POST',
       body: {
         'new_mobile_number': newMobileNumber,
       },
+      headers: headers.isNotEmpty ? headers : null,
     );
 
     if (result.statusCode != 200 || result.data['success'] != true) {
@@ -167,15 +176,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     required String newMobileNumber,
     required String otpCode,
     required String otpId,
+    String? recoveryToken,
   }) async {
+    final headers = <String, String>{};
+    if (recoveryToken != null) {
+      headers['Authorization'] = 'Bearer $recoveryToken';
+    }
+
     final result = await _apiClient.request(
-      path: ApiEndpoints.updateMobileVerifyOtp,
+      path: recoveryToken != null
+          ? ApiEndpoints.recoverUpdateMobileVerifyOtp
+          : ApiEndpoints.updateMobileVerifyOtp,
       method: 'POST',
       body: {
         'new_mobile_number': newMobileNumber,
         'otp_code': otpCode,
         'otp_id': otpId,
       },
+      headers: headers.isNotEmpty ? headers : null,
     );
 
     if (result.statusCode != 200 || result.data['success'] != true) {
@@ -183,5 +201,47 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
 
     return result.data as Map<String, dynamic>;
+  }
+
+  @override
+  Future<Map<String, dynamic>> recoverSendEmailOtp({
+    required String email,
+  }) async {
+    final result = await _apiClient.request(
+      path: ApiEndpoints.recoverSendEmailOtp,
+      method: 'POST',
+      body: {
+        'email': email,
+      },
+    );
+
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to send recovery email OTP');
+    }
+
+    return result.data['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<Map<String, dynamic>> recoverVerifyEmailOtp({
+    required String email,
+    required String otpCode,
+    required String otpId,
+  }) async {
+    final result = await _apiClient.request(
+      path: ApiEndpoints.recoverVerifyEmailOtp,
+      method: 'POST',
+      body: {
+        'email': email,
+        'otp_code': otpCode,
+        'otp_id': otpId,
+      },
+    );
+
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to verify recovery email OTP');
+    }
+
+    return result.data['data'] as Map<String, dynamic>;
   }
 }

@@ -32,11 +32,25 @@ abstract class AuthRemoteDataSource {
   /// Send OTP for updating mobile number
   Future<Map<String, dynamic>> sendUpdateMobileOtp({
     required String newMobileNumber,
+    String? recoveryToken,
   });
 
   /// Verify OTP and update mobile number
   Future<Map<String, dynamic>> verifyUpdateMobileOtp({
     required String newMobileNumber,
+    required String otpCode,
+    required String otpId,
+    String? recoveryToken,
+  });
+  
+  /// Send OTP for recovery email verification
+  Future<Map<String, dynamic>> recoverSendEmailOtp({
+    required String email,
+  });
+
+  /// Verify OTP for recovery email verification and get recovery token
+  Future<Map<String, dynamic>> recoverVerifyEmailOtp({
+    required String email,
     required String otpCode,
     required String otpId,
   });

@@ -21,6 +21,14 @@ class AppRoutes {
   // Onboarding Routes
   static const String faceScanOnboarding = '/face-scan-onboarding';
   
+  static const String sendOtp = '/auth/users/send-otp';
+  static const String verifyOtp = '/auth/users/verify-otp';
+  static const String resendOtp = '/auth/users/resend-otp';
+  
+  // Mobile Recovery Route
+  static const String mobileRecovery = '/auth/mobile-recovery';
+  static const String refreshToken = '/auth/users/refresh-token';
+  
   // Main App Routes
   static const String home = '/home';
   static const String faceScan = '/face-scan--optimized';

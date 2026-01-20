@@ -18,6 +18,12 @@ class ApiEndpoints {
   // Mobile Number Update Endpoints
   static const String updateMobileSendOtp = '/auth/users/update-mobile/send-otp';
   static const String updateMobileVerifyOtp = '/auth/users/update-mobile/verify-otp';
+  
+  // Mobile Number Recovery Endpoints
+  static const String recoverSendEmailOtp = '/auth/recover/send-email-otp';
+  static const String recoverVerifyEmailOtp = '/auth/recover/verify-email-otp';
+  static const String recoverUpdateMobileSendOtp = '/auth/recover/update-mobile/send-otp';
+  static const String recoverUpdateMobileVerifyOtp = '/auth/recover/update-mobile/verify-otp';
 
   static const String userOnboarding = '/user/onboarding';
 

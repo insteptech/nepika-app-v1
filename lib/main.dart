@@ -30,6 +30,7 @@ import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';
 import 'package:nepika/features/auth/auth_module.dart' as auth_feature;
 import 'package:nepika/features/auth/screens/phone_entry_screen.dart';
 import 'package:nepika/features/auth/screens/otp_verification_screen.dart';
+import 'package:nepika/features/auth/screens/mobile_recovery_screen.dart';
 import 'package:nepika/features/community/main.dart';
 import 'package:nepika/features/notifications/screens/notifications_screen.dart';
 import 'package:nepika/features/notifications/screens/notification_debug_screen.dart';
@@ -191,6 +192,10 @@ class MyApp extends StatelessWidget {
             case AppRoutes.otpVerification:
               return MaterialPageRoute(
                 builder: (_) => const OtpVerificationScreen(),
+              );
+            case AppRoutes.mobileRecovery:
+              return MaterialPageRoute(
+                builder: (_) => const MobileRecoveryScreen(),
               );
             case AppRoutes.userInfo:
               return MaterialPageRoute(builder: (_) => const OnboardingScreen());
