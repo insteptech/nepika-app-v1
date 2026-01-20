@@ -20,6 +20,7 @@ import 'package:nepika/features/onboarding/utils/onboarding_validator.dart';
 import 'package:nepika/features/onboarding/utils/visibility_evaluator.dart';
 import 'package:nepika/features/onboarding/widgets/onboarding_skeleton.dart';
 import 'package:nepika/features/onboarding/widgets/onboarding_error.dart';
+import 'package:nepika/features/onboarding/screens/email_verification_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class OnboardingScreen extends StatefulWidget {
@@ -57,6 +58,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
   // Track submission state to keep form visible
   bool _isSubmitting = false;
+  bool _isEmailVerificationOpen = false;
   OnboardingStepLoaded? _lastLoadedState;
 
   final _secureStorage = SecureStorage();
@@ -262,8 +264,12 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       _bloc.add(const NavigateToPreviousStep());
       _loadCurrentStep();
     } else {
+      // On step 1, we can't go back further. Navigate to login screen instead of popping (which causes black screen).
       if (mounted) {
-        Navigator.of(context).pop();
+        Navigator.of(context).pushNamedAndRemoveUntil(
+          AppRoutes.login,
+          (route) => false,
+        );
       }
     }
   }
@@ -312,9 +318,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else if (state is OnboardingEmailVerificationRequired) {
       debugPrint('📧 Email verification required');
       setState(() {
-        _isSubmitting = false; // Stop spinner on main screen so sheet can be used
+        _isSubmitting = false; // Stop spinner on main screen so we can navigate
       });
-      _showEmailOtpSheet(context, state.email, state.otpId);
+      _navigateToEmailVerification(state.email, state.otpId);
     } else if (state is OnboardingStepSubmitted) {
       debugPrint('✅ Step submitted successfully: ${state.message}');
       debugPrint('✅ NextStep from backend: ${state.nextStep}');
@@ -359,18 +365,22 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       debugPrint('❌ Onboarding error: ${state.message}');
       debugPrint('========================================');
 
-      // If the error is OTP related, we handle it inline in the OTP sheet.
-      // So we skip showing the global snackbar to avoid duplication/crashes.
-      if (state.message.contains('OTP')) {
-        debugPrint('🚫 Skipping global snackbar for OTP error (handled inline)');
+      // If the error is specifically "Invalid OTP" (verification error on the OTP screen),
+      // we handle it inline in the EmailVerificationScreen.
+      // We do NOT skip rate limit errors (429) or other general OTP-related errors.
+      if (state.message.contains('Invalid OTP')) {
+        debugPrint('🚫 Skipping global snackbar for Invalid OTP error (handled inline on verification screen)');
         return;
       }
 
       // Use post-frame callback to ensure widget is fully built before showing snackbar
+      // Capture messenger here to avoid 'deactivated widget' errors inside callback
+      final messenger = ScaffoldMessenger.of(context);
+      
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           try {
-            ScaffoldMessenger.of(context).showSnackBar(
+            messenger.showSnackBar(
               SnackBar(
                 content: Text(state.message),
                 backgroundColor: Colors.red,
@@ -380,7 +390,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
                   label: 'Dismiss',
                   textColor: Colors.white,
                   onPressed: () {
-                    ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                    messenger.hideCurrentSnackBar();
                   },
                 ),
               ),
@@ -467,59 +477,57 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
   }
 
-  void _showEmailOtpSheet(BuildContext context, String email, String otpId) async {
-    await showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      isDismissible: true,
-      enableDrag: true,
-      builder: (_) => BlocProvider.value(
-        value: _bloc,
-        child: BlocConsumer<OnboardingBloc, OnboardingState>(
-          listener: (context, state) {
-            if (state is OnboardingStepSubmitted || state is OnboardingCompleted) {
-              Navigator.pop(context); // Close sheet on success
-            }
-          },
-          builder: (context, state) {
-            String? errorText;
-            if (state is OnboardingError) {
-              errorText = state.message;
-            }
-            
-            return _EmailOtpSheet(
-              email: email,
-              otpId: otpId,
-              isLoading: state is OnboardingLoading,
-              errorText: errorText,
-              onVerify: (otp) {
-                // Don't close here, just dispatch
-                _bloc.add(VerifyEmailOtp(
-                  email: email,
-                  otpCode: otp,
-                  otpId: otpId,
-                ));
-              },
-            );
-          },
+  void _navigateToEmailVerification(String email, String otpId) async {
+    // Prevent duplicate navigation if screen is already open
+    if (_isEmailVerificationOpen) {
+      debugPrint('🚫 Email verification screen already open - skipping duplicate navigation');
+      return;
+    }
+
+    debugPrint('🚦 Navigating to Email Verification. _lastLoadedState answers count: ${_lastLoadedState?.answers.length}');
+    debugPrint('🚦 _lastLoadedState answers: ${_lastLoadedState?.answers}');
+
+    _isEmailVerificationOpen = true;
+
+    // We wait for the result of the push to determine if we need to restore state upon return
+    // (e.g. if user pressed back button without verifying)
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => EmailVerificationScreen(
+          email: email,
+          otpId: otpId,
+          onboardingBloc: _bloc,
         ),
       ),
     );
 
-    // When sheet is closed (dismissed), check if we need to restore state
-    // We restore if we are still in VerificationRequired state (meaning user cancelled)
-    // Or if we are in Error state (user failed verification and closed sheet)
-    // Actually, if active state is Error, we should probably restore to allow retry on main screen too?
-    // Let's keep existing restore logic but expand to Error state too if it has no data
-    if ((_bloc.state is OnboardingEmailVerificationRequired || _bloc.state is OnboardingError) && _lastLoadedState != null) {
-       // Check if current state has data, if not, restore
-       if (_bloc.state is OnboardingError && (_bloc.state as OnboardingError).previousState == null) {
-          debugPrint('🔙 OTP sheet dismissed (Error) - restoring form state');
-          _bloc.add(RestoreFormState(state: _lastLoadedState!));
-       } else if (_bloc.state is OnboardingEmailVerificationRequired && (_bloc.state as OnboardingEmailVerificationRequired).previousState == null) {
-          debugPrint('🔙 OTP sheet dismissed (Verify) - restoring form state');
-          _bloc.add(RestoreFormState(state: _lastLoadedState!));
+    _isEmailVerificationOpen = false;
+
+    // After returning from the screen:
+    // Check if we are still in a state that requires restoration (e.g. VerifyRequired or Error)
+    // and if we have a backup.
+    // After returning from the screen:
+    // Check if we are still in a state that requires restoration (e.g. VerifyRequired or Error)
+    final currentState = _bloc.state;
+    if (currentState is OnboardingEmailVerificationRequired || currentState is OnboardingError) {
+       debugPrint('🔙 Email Screen dismissed without completion - restoring form state');
+       
+       OnboardingStepLoaded? stateToRestore;
+       
+       if (currentState is OnboardingEmailVerificationRequired) {
+         stateToRestore = currentState.previousState;
+       } else if (currentState is OnboardingError) {
+         stateToRestore = currentState.previousState;
+       }
+       
+       // Fallback to _lastLoadedState if previousState is null
+       stateToRestore ??= _lastLoadedState;
+       
+       if (stateToRestore != null) {
+         debugPrint('🔄 Restoring state from backup');
+         _bloc.add(RestoreFormState(state: stateToRestore));
+       } else {
+         debugPrint('⚠️ No state to restore!');
        }
     }
   }
@@ -548,6 +556,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     debugPrint('🔘 Normal flow - returning "Next"');
     return 'Next';
   }
+
 
   Widget _buildScreen(BuildContext context, OnboardingState state) {
     Widget content;
@@ -670,101 +679,5 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else {
       return state.answers[question.slug];
     }
-  }
-}
-
-class _EmailOtpSheet extends StatefulWidget {
-  final String email;
-  final String otpId;
-  final Function(String) onVerify;
-  final bool isLoading;
-  final String? errorText;
-
-  const _EmailOtpSheet({
-    super.key,
-    required this.email,
-    required this.otpId,
-    required this.onVerify,
-    this.isLoading = false,
-    this.errorText,
-  });
-
-  @override
-  State<_EmailOtpSheet> createState() => _EmailOtpSheetState();
-}
-
-class _EmailOtpSheetState extends State<_EmailOtpSheet> {
-  String _otp = '';
-  bool _isValid = false;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.of(context).viewInsets.bottom,
-      ),
-      decoration: BoxDecoration(
-        color: Theme.of(context).scaffoldBackgroundColor,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      child: Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              'Verify Email',
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Enter the code sent to\n${widget.email}',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey,
-                  ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            OtpInputField(
-              length: 6,
-              onCompleted: (otp) {
-                setState(() {
-                  _otp = otp;
-                  _isValid = otp.length == 6;
-                });
-              },
-              onChanged: (otp) {
-                setState(() {
-                  _otp = otp;
-                  _isValid = otp.length == 6;
-                });
-              },
-            ),
-            const SizedBox(height: 32),
-            CustomButton(
-              text: 'Verify',
-              isLoading: widget.isLoading,
-              onPressed: (_isValid && !widget.isLoading) ? () => widget.onVerify(_otp) : null,
-              width: double.infinity,
-            ),
-            const SizedBox(height: 16),
-            if (widget.errorText != null) ...[
-              Text(
-                widget.errorText!,
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.red,
-                    ),
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-            ],
-          ],
-        ),
-      ),
-    );
   }
 }

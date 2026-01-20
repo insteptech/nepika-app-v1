@@ -32,6 +32,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<ResetOnboarding>(_onResetOnboarding);
     on<RestoreFormState>(_onRestoreFormState);
     on<VerifyEmailOtp>(_onVerifyEmailOtp);
+    on<ResendEmailOtp>(_onResendEmailOtp);
   }
 
   Future<void> _onLoadOnboardingStep(
@@ -695,5 +696,58 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
               })
           .toList(),
     };
+  }
+
+  Future<void> _onResendEmailOtp(
+    ResendEmailOtp event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    try {
+      debugPrint('📧 Resending email OTP to: ${event.email}');
+      
+      // Call the sendOtp method with email parameter
+      final result = await authRepository.sendOtp(email: event.email);
+      
+      result.fold(
+        (error) {
+          debugPrint('📧 Failed to resend email OTP: $error');
+          emit(OnboardingError(message: error.toString()));
+        },
+        (data) {
+          final newOtpId = data['otp_id'] ?? data['otpId'];
+          debugPrint('📧 Email OTP resent successfully. New OTP ID: $newOtpId');
+          
+          // Re-emit the verification required state with new OTP ID
+          // Capture current previousState if available
+          OnboardingStepLoaded? previousState;
+          OnboardingSubmissionResponseEntity? originalResponse;
+          
+          if (state is OnboardingEmailVerificationRequired) {
+            previousState = (state as OnboardingEmailVerificationRequired).previousState;
+            originalResponse = (state as OnboardingEmailVerificationRequired).originalResponse;
+          }
+          
+          // If originalResponse is missing (shouldn't happen if state was valid), create a dummy one or fail gracefully
+          // But to be safe, we reconstruct a minimal valid one if needed
+          final validResponse = originalResponse ?? OnboardingSubmissionResponseEntity(
+            message: 'Email verification required',
+            onboardingCompleted: false,
+            requireVerification: true,
+            email: event.email,
+            otpId: newOtpId,
+          );
+          
+          emit(OnboardingEmailVerificationRequired(
+            email: event.email,
+            otpId: newOtpId ?? '',
+            originalResponse: validResponse,
+            previousState: previousState,
+          ));
+        },
+      );
+    } catch (e) {
+      debugPrint('📧 Exception while resending email OTP: $e');
+      emit(OnboardingError(message: 'Failed to resend OTP. Please try again.'));
+    }
   }
 }

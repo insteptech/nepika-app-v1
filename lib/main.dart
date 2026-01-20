@@ -23,6 +23,7 @@ import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
 import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
 import 'package:nepika/features/settings/screens/face_scan_info_screen.dart';
 import 'package:nepika/features/dashboard/main.dart';
+import 'package:nepika/features/onboarding/bloc/onboarding_bloc.dart';
 import 'package:nepika/features/products/main.dart';
 import 'package:nepika/features/error_pricing/screens/pricing_screen.dart';
 import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';

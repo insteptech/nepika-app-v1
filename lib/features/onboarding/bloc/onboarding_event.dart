@@ -110,3 +110,12 @@ class RestoreFormState extends OnboardingEvent {
   @override
   List<Object?> get props => [state];
 }
+
+class ResendEmailOtp extends OnboardingEvent {
+  final String email;
+
+  const ResendEmailOtp({required this.email});
+
+  @override
+  List<Object?> get props => [email];
+}

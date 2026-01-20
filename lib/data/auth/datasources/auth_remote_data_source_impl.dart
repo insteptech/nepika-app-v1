@@ -17,9 +17,24 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     String? email,
     String? appSignature,
   }) async {
-    final data = <String, dynamic>{
-      'mobile_number': phone,
-    };
+    // Determine endpoint and payload based on whether it's email or phone OTP
+    String path;
+    Map<String, dynamic> data;
+
+    if (email != null && email.isNotEmpty) {
+      // Email OTP
+      path = '/auth/email/send-otp';
+      data = {'email': email};
+    } else {
+      // Mobile OTP
+      path = ApiEndpoints.sendOtp;
+      data = {'mobile_number': phone};
+    }
+    
+    // Add OTP ID if present (for resend scenarios)
+    if (otpId != null && otpId.isNotEmpty) {
+      data['otp_id'] = otpId;
+    }
     
     // Add app signature if available (for Android SMS auto-fill)
     if (appSignature != null && appSignature.isNotEmpty) {
@@ -27,7 +42,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
     }
     
     final result = await _apiClient.request(
-      path: ApiEndpoints.sendOtp,
+      path: path,
       method: 'POST',
       body: data,
     );

@@ -44,6 +44,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   bool _isLoading = false;
   bool _isAutoCapturing = false;
   bool _hasRequestedPermission = false;
+  bool _hasVerifiedSuccessfully = false;
 
   @override
   void initState() {
@@ -450,7 +451,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _performOtpVerification() {
-    if (_isLoading) return; // Prevent duplicate calls
+    if (_isLoading || _hasVerifiedSuccessfully) return; // Prevent duplicate calls
     
     setState(() {
       _isLoading = true;
@@ -596,6 +597,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         debugPrint('OTP verification successful');
         setState(() {
           _isLoading = false;
+          _hasVerifiedSuccessfully = true; // Prevent any further verification attempts
         });
 
         if (mounted) {

@@ -28,11 +28,7 @@ export 'bloc/dashboard_state.dart';
 export 'bloc/auth/auth_bloc.dart';
 export 'bloc/auth/auth_event.dart';
 export 'bloc/auth/auth_state.dart';
-export 'bloc/onboarding/onboarding_bloc.dart';
-export 'bloc/onboarding/onboarding_event.dart';
-export 'bloc/onboarding/onboarding_state.dart';
-export 'utils/onboarding_validator.dart';
-export 'utils/visibility_evaluator.dart';
+
 
 class Dashboard extends StatefulWidget {
   const Dashboard({super.key});
