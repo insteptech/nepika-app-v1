@@ -21,4 +21,11 @@ abstract class AuthRemoteDataSource {
     required String otp,
     required String otpId,
   });
+
+  /// Verify Email OTP (Inline)
+  Future<Map<String, dynamic>> verifyEmailOtp({
+    required String email,
+    required String otpCode,
+    required String otpId,
+  });
 }

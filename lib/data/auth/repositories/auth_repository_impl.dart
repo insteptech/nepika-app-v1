@@ -164,4 +164,55 @@ class AuthRepositoryImpl implements AuthRepository {
       return failure(AuthFailure(message: errorMessage));
     }
   }
+
+  @override
+  Future<Result<Map<String, dynamic>>> verifyEmailOtp({
+    required String email,
+    required String otpCode,
+    required String otpId,
+  }) async {
+    try {
+      final response = await remoteDataSource.verifyEmailOtp(
+        email: email,
+        otpCode: otpCode,
+        otpId: otpId,
+      );
+      return success(response);
+    } catch (e) {
+      debugPrint('========================================');
+      debugPrint('AuthRepository: Error during Email OTP verification');
+      debugPrint('Error type: ${e.runtimeType}');
+      debugPrint('Error: $e');
+
+      String errorMessage = 'Failed to verify OTP';
+      if (e is DioException) {
+        debugPrint('DioException status code: ${e.response?.statusCode}');
+        debugPrint('DioException response data: ${e.response?.data}');
+
+        final data = e.response?.data;
+        if (data is Map && data['detail'] != null) {
+          errorMessage = data['detail'].toString();
+        } else if (data is Map && data['message'] != null) {
+          errorMessage = data['message'].toString();
+        } else if (e.response?.statusCode == 400) {
+          errorMessage = 'Invalid OTP. Please check and try again.';
+        } else if (e.response?.statusCode == 401) {
+          errorMessage = 'OTP has expired. Please request a new one.';
+        } else if (e.response?.statusCode == 404) {
+          errorMessage = 'OTP session not found. Please restart the verification process.';
+        } else {
+          errorMessage = e.message ?? errorMessage;
+        }
+      } else if (e is Exception) {
+        errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.replaceFirst('Exception: ', '');
+        }
+      }
+
+      debugPrint('Final error message: $errorMessage');
+      debugPrint('========================================');
+      return failure(AuthFailure(message: errorMessage));
+    }
+  }
 }

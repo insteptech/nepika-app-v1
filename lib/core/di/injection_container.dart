@@ -83,6 +83,14 @@ import '../../domain/auth/usecases/get_delete_reasons_usecase.dart';
 import '../../domain/auth/usecases/delete_account_usecase.dart';
 import '../../features/settings/bloc/delete_account_bloc.dart';
 
+// Auth Core
+import '../../data/auth/datasources/auth_remote_data_source.dart';
+import '../../data/auth/datasources/auth_remote_data_source_impl.dart';
+import '../../data/auth/datasources/auth_local_data_source.dart';
+import '../../data/auth/datasources/auth_local_data_source_impl.dart';
+import '../../data/auth/repositories/auth_repository_impl.dart';
+import '../../domain/auth/repositories/auth_repository.dart';
+
 import '../../../../core/di/injection_container.dart' as di;
 import '../../data/support/datasources/faq_remote_data_source.dart';
 import '../../data/support/repositories/faq_repository_impl.dart';
@@ -466,6 +474,22 @@ class ServiceLocator {
     // Support (Feedback) - Bloc (Factory)
     _registerFactory<FeedbackBloc>(
       () => FeedbackBloc(submitFeedback: get<SubmitFeedback>()),
+    );
+
+    // Auth - Data sources
+    _registerLazySingleton<AuthRemoteDataSource>(
+      AuthRemoteDataSourceImpl(),
+    );
+    _registerLazySingleton<AuthLocalDataSource>(
+      AuthLocalDataSourceImpl(get<SharedPreferences>()),
+    );
+
+    // Auth - Repository
+    _registerLazySingleton<AuthRepository>(
+      AuthRepositoryImpl(
+        get<AuthRemoteDataSource>(),
+        get<AuthLocalDataSource>(),
+      ),
     );
     
     _fullyInitialized = true;

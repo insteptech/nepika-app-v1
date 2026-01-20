@@ -86,12 +86,14 @@ class OnboardingCompleted extends OnboardingState {
 class OnboardingError extends OnboardingState {
   final String message;
   final String? errorCode;
+  final OnboardingStepLoaded? previousState; // Add this field
 
   const OnboardingError({
     required this.message,
     this.errorCode,
+    this.previousState, // Add parameter
   });
 
   @override
-  List<Object?> get props => [message, errorCode];
+  List<Object?> get props => [message, errorCode, previousState];
 }

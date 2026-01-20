@@ -83,15 +83,34 @@ class OnboardingCompleted extends OnboardingState {
   const OnboardingCompleted();
 }
 
+class OnboardingEmailVerificationRequired extends OnboardingState {
+  final String email;
+  final String otpId;
+  final OnboardingSubmissionResponseEntity originalResponse;
+  final OnboardingStepLoaded? previousState;
+
+  const OnboardingEmailVerificationRequired({
+    required this.email,
+    required this.otpId,
+    required this.originalResponse,
+    this.previousState,
+  });
+
+  @override
+  List<Object?> get props => [email, otpId, originalResponse, previousState];
+}
+
 class OnboardingError extends OnboardingState {
   final String message;
   final String? errorCode;
+  final OnboardingStepLoaded? previousState;
 
   const OnboardingError({
     required this.message,
     this.errorCode,
+    this.previousState,
   });
 
   @override
-  List<Object?> get props => [message, errorCode];
+  List<Object?> get props => [message, errorCode, previousState];
 }

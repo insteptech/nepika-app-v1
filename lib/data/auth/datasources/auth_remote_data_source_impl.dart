@@ -106,4 +106,25 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       throw Exception(errorMessage);
     }
   }
+
+  @override
+  Future<Map<String, dynamic>> verifyEmailOtp({
+    required String email,
+    required String otpCode,
+    required String otpId,
+  }) async {
+    final result = await _apiClient.request(
+      path: '/auth/email/verify-otp',
+      method: 'POST',
+      body: {
+        'email': email,
+        'otp_code': otpCode,
+        'otp_id': otpId,
+      },
+    );
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Email verification failed');
+    }
+    return result.data as Map<String, dynamic>;
+  }
 }

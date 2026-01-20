@@ -86,8 +86,24 @@ class ResetOnboarding extends OnboardingEvent {
   const ResetOnboarding();
 }
 
+class VerifyEmailOtp extends OnboardingEvent {
+  final String email;
+  final String otpCode;
+  final String otpId;
+
+  const VerifyEmailOtp({
+    required this.email,
+    required this.otpCode,
+    required this.otpId,
+  });
+
+  @override
+  List<Object?> get props => [email, otpCode, otpId];
+}
+
 class RestoreFormState extends OnboardingEvent {
   final OnboardingStepLoaded state;
+// ... rest of the file
 
   const RestoreFormState({required this.state});
 

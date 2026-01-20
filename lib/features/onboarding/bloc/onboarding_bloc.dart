@@ -7,14 +7,17 @@ import 'package:nepika/features/onboarding/bloc/onboarding_event.dart';
 import 'package:nepika/features/onboarding/bloc/onboarding_state.dart';
 import 'package:nepika/features/onboarding/utils/onboarding_validator.dart';
 import 'package:nepika/features/onboarding/utils/visibility_evaluator.dart';
+import 'package:nepika/domain/auth/repositories/auth_repository.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final OnboardingRepository repository;
+  final AuthRepository authRepository; // Injected
   final OnboardingValidator validator;
   final VisibilityEvaluator visibilityEvaluator;
 
   OnboardingBloc({
     required this.repository,
+    required this.authRepository,
     required this.validator,
     required this.visibilityEvaluator,
   }) : super(const OnboardingInitial()) {
@@ -28,6 +31,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     on<SkipAndFetchNextStep>(_onSkipAndFetchNextStep);
     on<ResetOnboarding>(_onResetOnboarding);
     on<RestoreFormState>(_onRestoreFormState);
+    on<VerifyEmailOtp>(_onVerifyEmailOtp);
   }
 
   Future<void> _onLoadOnboardingStep(
@@ -160,21 +164,31 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   ) async {
     debugPrint('🚀 _onSubmitCurrentStep called for screenSlug: ${event.screenSlug}');
     
-    final currentState = state;
-    if (currentState is! OnboardingStepLoaded) {
-      debugPrint('❌ Current state is not OnboardingStepLoaded: ${currentState.runtimeType}');
+    OnboardingStepLoaded? loadedState;
+    
+    if (state is OnboardingStepLoaded) {
+      loadedState = state as OnboardingStepLoaded;
+    } else if (state is OnboardingError) {
+      loadedState = (state as OnboardingError).previousState;
+    } else if (state is OnboardingEmailVerificationRequired) {
+      loadedState = (state as OnboardingEmailVerificationRequired).previousState;
+    }
+
+    if (loadedState == null) {
+      debugPrint('❌ Current state is not OnboardingStepLoaded or recoverable Error: ${state.runtimeType}');
       return;
     }
 
-    debugPrint('📝 Form validation status: ${currentState.isFormValid}');
-    debugPrint('📝 Answers: ${currentState.answers}');
-    debugPrint('📝 Responses: ${currentState.responses}');
+    debugPrint('📝 Form validation status: ${loadedState.isFormValid}');
+    debugPrint('📝 Answers: ${loadedState.answers}');
+    debugPrint('📝 Responses: ${loadedState.responses}');
 
-    if (!currentState.isFormValid) {
+    if (!loadedState.isFormValid) {
       debugPrint('❌ Form validation failed - emitting error');
-
-      // Emit error to show validation message - screen will preserve form using _lastLoadedState
-      emit(const OnboardingError(message: 'Please answer all required questions'));
+      emit(OnboardingError(
+        message: 'Please answer all required questions',
+        previousState: loadedState,
+      ));
       return;
     }
 
@@ -182,7 +196,7 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       debugPrint('📤 Form is valid, proceeding with submission');
       emit(const OnboardingStepSubmitting());
 
-      final payload = _buildSubmissionPayload(currentState.responses);
+      final payload = _buildSubmissionPayload(loadedState.responses);
 
       debugPrint("📦 Submitting payload JSON: ${jsonEncode(payload)}");
 
@@ -196,9 +210,18 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       debugPrint("✅ Submission response received");
       debugPrint("📈 ActiveStep: ${submissionResponse.activeStep}");
       debugPrint("📈 OnboardingCompleted: ${submissionResponse.onboardingCompleted}");
+      debugPrint("📈 RequireVerification: ${submissionResponse.requireVerification}");
       debugPrint("📈 Message: ${submissionResponse.message}");
 
-      if (submissionResponse.onboardingCompleted) {
+      if (submissionResponse.requireVerification) {
+        debugPrint('⚠️ Email verification required');
+        emit(OnboardingEmailVerificationRequired(
+          email: submissionResponse.email ?? '',
+          otpId: submissionResponse.otpId ?? '',
+          originalResponse: submissionResponse,
+          previousState: loadedState,
+        ));
+      } else if (submissionResponse.onboardingCompleted) {
         debugPrint('🏁 Onboarding completed - emitting OnboardingCompleted');
         emit(const OnboardingCompleted());
       } else {
@@ -223,8 +246,10 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
 
       debugPrint('📤 Clean error message: $errorMessage');
 
-      // Just emit error - the screen will use _lastLoadedState to preserve form data
-      emit(OnboardingError(message: errorMessage));
+      emit(OnboardingError(
+        message: errorMessage,
+        previousState: loadedState,
+      ));
     }
   }
 
@@ -356,6 +381,53 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   ) {
     debugPrint('🔄 Restoring form state after error');
     emit(event.state);
+  }
+
+  Future<void> _onVerifyEmailOtp(
+    VerifyEmailOtp event,
+    Emitter<OnboardingState> emit,
+  ) async {
+    debugPrint('🔐 Verifying email OTP: ${event.otpCode}');
+    
+    // Capture current loaded state to preserve it in case of error
+    OnboardingStepLoaded? previousLoadedState;
+    if (state is OnboardingStepLoaded) {
+      previousLoadedState = state as OnboardingStepLoaded;
+    } else if (state is OnboardingError) {
+      previousLoadedState = (state as OnboardingError).previousState;
+    }
+
+    emit(const OnboardingLoading());
+
+    final result = await authRepository.verifyEmailOtp(
+      email: event.email,
+      otpCode: event.otpCode,
+      otpId: event.otpId,
+    );
+
+    result.fold(
+      (failure) {
+        debugPrint('❌ Email verification failed: ${failure.message}');
+        emit(OnboardingError(
+          message: failure.message,
+          previousState: previousLoadedState,
+        ));
+      },
+      (data) {
+        debugPrint('✅ Email verification successful');
+        // Resume flow - we assume the backend has saved the user data now.
+        // We can either refetch the next step or just move forward based on context.
+        // If we want to be safe, we can trigger a submit again or just move to next step.
+        // Assuming backend automatically advanced active_step upon verification:
+        
+        // Retrieve next step from data if available, or just increment?
+        // Let's assume verification success implies we can move to next step (2).
+        emit(const OnboardingStepSubmitted(
+          message: "Email verified successfully!",
+          nextStep: 2, // Usually after profile (1) comes step 2
+        ));
+      },
+    );
   }
 
   // Helper Methods

@@ -194,7 +194,17 @@ class MyApp extends StatelessWidget {
             case AppRoutes.userInfo:
               return MaterialPageRoute(builder: (_) => const OnboardingScreen());
             case AppRoutes.onboarding:
-              return MaterialPageRoute(builder: (_) => const OnboardingScreen());
+              return MaterialPageRoute(
+                builder: (_) => BlocProvider(
+                  create: (_) => OnboardingBloc(
+                    repository: di.sl(),
+                    authRepository: di.sl(),
+                    validator: di.sl(),
+                    visibilityEvaluator: di.sl(),
+                  ),
+                  child: const OnboardingScreen(),
+                ),
+              );
             case AppRoutes.cameraScanGuidence:
               return MaterialPageRoute(
                 builder: (_) => const FaceScanGuidanceScreen(),

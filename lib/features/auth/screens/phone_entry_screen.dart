@@ -350,6 +350,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to send OTP: ${state.message}'),
+          duration: const Duration(seconds: 2),
           backgroundColor: Theme.of(context).colorScheme.error,
         ),
       );

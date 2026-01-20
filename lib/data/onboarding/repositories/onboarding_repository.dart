@@ -51,10 +51,20 @@ class OnboardingRepositoryImpl implements OnboardingRepository {
       final onboardingCompleted = progress?['onboarding_completed'] as bool? ?? false;
       final message = responseData['message'] as String? ?? 'Data saved successfully!';
 
+      // Parse verification requirement
+      // The API structure for verification is:
+      // { "success": true, "message": "...", "data": { "otp_id": "...", "require_verification": true, "email": "..." } }
+      final requireVerification = data?['require_verification'] == true;
+      final otpId = data?['otp_id'] as String?;
+      final email = data?['email'] as String?;
+
       return OnboardingSubmissionResponseEntity(
         message: message,
         activeStep: activeStep,
         onboardingCompleted: onboardingCompleted,
+        requireVerification: requireVerification,
+        email: email,
+        otpId: otpId,
       );
     } catch (e) {
       // Extract clean error message from Exception

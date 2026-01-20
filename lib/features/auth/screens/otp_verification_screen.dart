@@ -442,6 +442,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
+          duration: const Duration(seconds: 2),
           backgroundColor: Colors.orange,
         ),
       );
@@ -480,6 +481,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('OTP sent again'),
+          duration: const Duration(seconds: 2),
           backgroundColor: Colors.green,
         ),
       );
@@ -628,7 +630,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   state.message.isNotEmpty ? state.message : 'Invalid or expired OTP. Please try again.',
                 ),
                 backgroundColor: Colors.red,
-                duration: const Duration(seconds: 4),
+                duration: const Duration(seconds: 2),
                 behavior: SnackBarBehavior.floating,
               ),
             );
@@ -660,7 +662,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             SnackBar(
               content: Text(state.message),
               backgroundColor: Colors.red,
-              duration: const Duration(seconds: 3),
+              duration: const Duration(seconds: 2),
             ),
           );
         }

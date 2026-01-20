@@ -106,10 +106,16 @@ class OnboardingSubmissionResponseEntity {
   final String message;
   final int? activeStep;
   final bool onboardingCompleted;
+  final bool requireVerification;
+  final String? email;
+  final String? otpId;
 
   OnboardingSubmissionResponseEntity({
     required this.message,
     this.activeStep,
     required this.onboardingCompleted,
+    this.requireVerification = false,
+    this.email,
+    this.otpId,
   });
 }

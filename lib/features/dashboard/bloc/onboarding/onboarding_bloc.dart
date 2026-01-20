@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../../../domain/onboarding/entities/onboarding_entites.dart';
 import '../../../../domain/onboarding/repositories/onboarding_repositories.dart';
+import '../../../../domain/auth/repositories/auth_repository.dart';
 import 'onboarding_event.dart';
 import 'onboarding_state.dart';
 import '../../utils/onboarding_validator.dart';
@@ -10,11 +11,13 @@ import '../../utils/visibility_evaluator.dart';
 
 class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
   final OnboardingRepository repository;
+  final AuthRepository authRepository;
   final OnboardingValidator validator;
   final VisibilityEvaluator visibilityEvaluator;
 
   OnboardingBloc({
     required this.repository,
+    required this.authRepository,
     required this.validator,
     required this.visibilityEvaluator,
   }) : super(const OnboardingInitial()) {
@@ -157,18 +160,28 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
     SubmitCurrentStep event,
     Emitter<OnboardingState> emit,
   ) async {
-    final currentState = state;
-    if (currentState is! OnboardingStepLoaded) return;
+    OnboardingStepLoaded? loadedState;
+    
+    if (state is OnboardingStepLoaded) {
+      loadedState = state as OnboardingStepLoaded;
+    } else if (state is OnboardingError) {
+      loadedState = (state as OnboardingError).previousState;
+    }
 
-    if (!currentState.isFormValid) {
-      emit(const OnboardingError(message: 'Please answer all required questions'));
+    if (loadedState == null) return;
+
+    if (!loadedState.isFormValid) {
+      emit(OnboardingError(
+        message: 'Please answer all required questions',
+        previousState: loadedState, // Preserve state
+      ));
       return;
     }
 
     try {
       emit(const OnboardingStepSubmitting());
 
-      final payload = _buildSubmissionPayload(currentState.responses);
+      final payload = _buildSubmissionPayload(loadedState.responses);
 
       debugPrint("Submitting payload JSON: ${jsonEncode(payload)}");
 
@@ -190,7 +203,10 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
         ));
       }
     } catch (e) {
-      emit(OnboardingError(message: 'Failed to submit answers: $e'));
+      emit(OnboardingError(
+        message: 'Failed to submit answers: $e',
+        previousState: loadedState, // Preserve state on error
+      ));
     }
   }
 
