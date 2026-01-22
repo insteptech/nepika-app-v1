@@ -33,6 +33,9 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
   // Expanded state for accordion sections per condition
   final Map<String, Set<String>> _expandedSections = {};
 
+  // Flag to prevent scroll listener from updating selected tab during programmatic scroll
+  bool _isProgrammaticScroll = false;
+
   @override
   void initState() {
     super.initState();
@@ -112,6 +115,9 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
 
   void _onScroll() {
     if (!mounted) return;
+    
+    // Don't update selected tab during programmatic scrolling to avoid flickering
+    if (_isProgrammaticScroll) return;
 
     final conditions = _getDetectedConditions();
     if (conditions.isEmpty) return;
@@ -171,30 +177,43 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     }
   }
 
-  void _scrollToSection(String conditionName) {
+  Future<void> _scrollToSection(String conditionName) async {
     final key = _sectionKeys[conditionName];
     if (key?.currentContext != null) {
       try {
+        _isProgrammaticScroll = true;
         // Use a small delay to ensure layout is complete
-        Future.delayed(const Duration(milliseconds: 50), () {
-          if (!mounted) return;
-          Scrollable.ensureVisible(
-            key!.currentContext!,
-            duration: const Duration(milliseconds: 400),
-            curve: Curves.easeInOut,
-            alignment: 0.0, // Scroll to top of section
-          );
-        });
+        await Future.delayed(const Duration(milliseconds: 50));
+        
+        if (!mounted) {
+           _isProgrammaticScroll = false;
+           return;
+        }
+
+        await Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 400),
+          curve: Curves.easeInOut,
+          alignment: 0.0, // Scroll to top of section
+        );
+        
+        // Add a small buffer after animation to ensure it settled
+        await Future.delayed(const Duration(milliseconds: 100));
+        if (mounted) _isProgrammaticScroll = false;
+        
       } catch (e) {
         debugPrint('Error scrolling to section: $e');
+        if (mounted) _isProgrammaticScroll = false;
       }
     } else {
       // If section key not found, scroll to top as default
-      _scrollController.animateTo(
+      _isProgrammaticScroll = true;
+      await _scrollController.animateTo(
         0,
         duration: const Duration(milliseconds: 400),
         curve: Curves.easeInOut,
       );
+      if (mounted) _isProgrammaticScroll = false;
     }
   }
 
@@ -339,6 +358,7 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
                   setState(() {
                     selectedCondition = condition.name;
                   });
+                  // This is a programmatic scroll, so the listener handles the logic via the updated _scrollToSection
                   _scrollToSection(condition.name);
                   if (_chipKeys[condition.name]?.currentContext != null) {
                     try {

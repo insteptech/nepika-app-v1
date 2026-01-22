@@ -1,3 +1,4 @@
+import 'dart:developer' as developer;
 import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:camera/camera.dart';
@@ -18,20 +19,15 @@ class FaceScanApiHandler {
   /// Send image to API for analysis
   Future<FaceScanApiResult> analyzeImage(XFile imageFile) async {
     try {
-      // final secureStorage = SecureStorage();
-      // final userId = await secureStorage.getUserId();
-
       // Create FormData for multipart upload
       final formData = FormData.fromMap({
         'file': await MultipartFile.fromFile(
           imageFile.path,
           filename: 'face_image.jpg',
         ),
-        // 'include_annotated_image': 'true',
-        // 'user_id': userId,
       });
 
-      debugPrint('Sending image to this ghkjhkhkh API: $_apiEndpoint');
+      debugPrint('Sending image to API: $_apiEndpoint');
 
       // Use SecureApiClient for authenticated requests with multipart data
       final response = await SecureApiClient.instance.request(
@@ -54,6 +50,23 @@ class FaceScanApiHandler {
           debugPrint('📝 Report ID: $reportId');
           debugPrint('📝 API Version: ${responseData['api_version']}');
           debugPrint('📝 Processing time: ${responseData['processing_time_seconds']}s');
+          
+          // Log full response without truncation
+          developer.log(
+            'Full Analysis Response',
+            name: 'face_scan_api',
+            error: responseData.toString(), 
+          );
+          
+          // Log full response in chunks to ensure visibility
+          final jsonString = responseData.toString();
+          const chunkSize = 800; // Size safe for most consoles
+          debugPrint('📝 --- FULL ANALYSIS RESPONSE START ---');
+          for (var i = 0; i < jsonString.length; i += chunkSize) {
+            debugPrint(jsonString.substring(i, 
+              (i + chunkSize < jsonString.length) ? i + chunkSize : jsonString.length));
+          }
+          debugPrint('📝 --- FULL ANALYSIS RESPONSE END ---');
 
           return FaceScanApiResult.success(
             analysisResults: responseData,

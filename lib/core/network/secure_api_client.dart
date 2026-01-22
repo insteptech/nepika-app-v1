@@ -59,6 +59,13 @@ class SecureApiClient {
   }
 
   Future<void> _addAuthToken(RequestOptions options) async {
+    // Check if auth should be skipped (via extra options or specific endpoints)
+    debugPrint('🔍 _addAuthToken: extra=${options.extra}');
+    if (options.extra['skipAuth'] == true) {
+      debugPrint('🚫 Skipping auth token injection');
+      return;
+    }
+
     // Skip adding token for auth endpoints
     final authEndpoints = ['/auth/users/send-otp', '/auth/users/verify-otp', '/auth/users/resend-otp'];
     final isAuthEndpoint = authEndpoints.any((endpoint) => options.path.contains(endpoint));
@@ -113,6 +120,7 @@ class SecureApiClient {
     dynamic body, // Changed from Map<String, dynamic>? to dynamic for FormData support
     Map<String, String>? headers,
     Map<String, dynamic>? query,
+    bool skipAuth = false,
   }) async {
     debugPrint('🚀🚀  Requesting: $method ${Env.baseUrl}$path 🚀🚀');
     
@@ -131,6 +139,7 @@ class SecureApiClient {
         options: Options(
           method: method.toUpperCase(),
           headers: mergedHeaders,
+          extra: {'skipAuth': skipAuth},
         ),
       );
       

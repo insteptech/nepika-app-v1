@@ -890,6 +890,12 @@ class UnifiedFcmService {
       final String? userId = data['user_id'];
       final String? postId = data['post_id'];
       
+      // Check if this is a reminder notification
+      if (screen != null && screen.startsWith('reminder:')) {
+        AppLogger.info('Reminder notification tapped - ignoring navigation as per user preference', tag: 'FCM');
+        return;
+      }
+
       // Navigate based on notification data
       switch (screen) {
         case 'dashboard':

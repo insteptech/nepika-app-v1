@@ -231,11 +231,17 @@ class AuthRepositoryImpl implements AuthRepository {
       
       String errorMessage = 'Failed to send OTP';
       if (e is DioException) {
+        debugPrint('🚨 AuthRepository: Dio Error in sendUpdateMobileOtp');
+        debugPrint('🚨 Status: ${e.response?.statusCode}');
+        debugPrint('🚨 Data: ${e.response?.data}');
+        
         final data = e.response?.data;
         if (data is Map && data['detail'] != null) {
           errorMessage = data['detail'].toString();
         } else if (data is Map && data['message'] != null) {
           errorMessage = data['message'].toString();
+        } else if (data is Map && data['error'] != null) {
+           errorMessage = data['error'].toString();
         } else {
           errorMessage = e.message ?? errorMessage;
         }

@@ -18,6 +18,13 @@ class TokenRefreshInterceptor extends Interceptor {
     debugPrint('🔍 Request URL: ${err.requestOptions.uri}');
     debugPrint('🔍 Request Headers: ${err.requestOptions.headers}');
     
+    // Check if auth should be skipped
+    if (err.requestOptions.extra['skipAuth'] == true) {
+      debugPrint('🚫 TokenRefreshInterceptor: Skipping error handling due to skipAuth=true');
+      handler.next(err);
+      return;
+    }
+
     // Special logging for validation endpoint
     if (err.requestOptions.path.contains('/auth/users/validate')) {
       debugPrint('🔐 TokenRefreshInterceptor: This is a token validation request from splash screen');

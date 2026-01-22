@@ -148,9 +148,16 @@ class _ScanReportLoaderScreenState extends State<ScanReportLoaderScreen> {
     final sortedPredictions = <ConditionPrediction>[];
     if (conditionResult != null) {
       conditionResult.forEach((condition, confidence) {
+        // Handle both String and num types from backend
+        double confidenceValue = 0.0;
+        if (confidence is num) {
+          confidenceValue = confidence.toDouble();
+        } else if (confidence is String) {
+          confidenceValue = double.tryParse(confidence) ?? 0.0;
+        }
         sortedPredictions.add(ConditionPrediction(
           name: condition,
-          confidence: (confidence as num).toDouble(),
+          confidence: confidenceValue,
         ));
       });
       // Sort by confidence descending

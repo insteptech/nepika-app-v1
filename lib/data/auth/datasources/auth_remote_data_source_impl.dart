@@ -162,6 +162,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'new_mobile_number': newMobileNumber,
       },
       headers: headers.isNotEmpty ? headers : null,
+      skipAuth: recoveryToken != null,
     );
 
     if (result.statusCode != 200 || result.data['success'] != true) {
@@ -194,6 +195,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'otp_id': otpId,
       },
       headers: headers.isNotEmpty ? headers : null,
+      skipAuth: recoveryToken != null,
     );
 
     if (result.statusCode != 200 || result.data['success'] != true) {
@@ -213,6 +215,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
       body: {
         'email': email,
       },
+      skipAuth: true,
     );
 
     if (result.statusCode != 200 || result.data['success'] != true) {
@@ -236,6 +239,7 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
         'otp_code': otpCode,
         'otp_id': otpId,
       },
+      skipAuth: true,
     );
 
     if (result.statusCode != 200 || result.data['success'] != true) {

@@ -172,7 +172,7 @@ class _MobileRecoveryScreenState extends State<MobileRecoveryScreen> {
           _otpCode = ''; // Reset OTP
         });
         _startTimer();
-        _showMessage('OTP sent to new mobile number');
+        _showMessage('Verification code sent to $_fullMobileNumber');
       },
     );
   }
@@ -208,8 +208,18 @@ class _MobileRecoveryScreenState extends State<MobileRecoveryScreen> {
 
   void _showError(String message) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message), backgroundColor: Colors.red),
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Error'),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -230,20 +240,7 @@ class _MobileRecoveryScreenState extends State<MobileRecoveryScreen> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            if (_currentStep == RecoveryStep.emailVerification) {
-               setState(() => _currentStep = RecoveryStep.emailInput);
-            } else if (_currentStep == RecoveryStep.mobileInput) {
-               // Security choice: maybe don't allow going back to email once verified? 
-               // Or allow but clear token. Let's allow clearing token.
-               setState(() {
-                 _currentStep = RecoveryStep.emailVerification;
-                 _recoveryToken = null;
-               });
-            } else if (_currentStep == RecoveryStep.mobileVerification) {
-               setState(() => _currentStep = RecoveryStep.mobileInput);
-            } else {
-               Navigator.of(context).pop();
-            }
+             Navigator.of(context).pop();
           },
         ),
       ),
