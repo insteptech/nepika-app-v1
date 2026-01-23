@@ -403,6 +403,9 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
     CreatePost event,
     Emitter<PostsState> emit,
   ) async {
+    // Capture current state to restore later
+    final currentState = state;
+    
     try {
       emit(const PostOperationLoading('create'));
       
@@ -416,13 +419,7 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         // Main post - add to beginning
         _allPosts.insert(0, newPost);
         
-        // Update posts state immediately to reflect new post
-        emit(PostsLoaded(
-          posts: List.from(_allPosts),
-          hasMorePosts: _hasMorePosts,
-          currentPage: _currentPage,
-          isLoadingMore: false,
-        ));
+        // We will emit PostsLoaded after Success
       } else {
         // Comment - update comments cache
         final parentId = event.postData.parentPostId!;
@@ -441,10 +438,22 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         message: 'Post created successfully',
       ));
       
-      // Update main posts if needed
-      if (state is PostsLoaded && event.postData.parentPostId == null) {
-        final currentState = state as PostsLoaded;
-        emit(currentState.copyWith(posts: List.from(_allPosts)));
+      // Restore PostsLoaded state with updated data to ensure feed refreshes
+      // We check if we *were* in a loaded state or if we have posts to show
+      if (currentState is PostsLoaded || _allPosts.isNotEmpty) {
+        emit(PostsLoaded(
+          posts: List.from(_allPosts),
+          hasMorePosts: _hasMorePosts,
+          currentPage: _currentPage,
+          isLoadingMore: false,
+        ));
+      } else {
+        // If we weren't loaded before, try to establish loaded state
+        emit(PostsLoaded(
+          posts: List.from(_allPosts),
+          hasMorePosts: _hasMorePosts,
+          currentPage: _currentPage,
+        ));
       }
     } catch (e, stackTrace) {
       debugPrint('PostsBloc: Error in _onCreatePost: $e');
@@ -452,6 +461,14 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         operationType: 'create',
         message: e.toString(),
       ));
+      
+      // Restoration on error is optional, usually we want to show the error
+      // But if we want to keep the list visible behind the error:
+      if (currentState is PostsLoaded) {
+         // emit(currentState); // Optional: Restore state after error? 
+         // For now, let the Error state persist so UI can handle it/show snackbar
+         // In many apps, you might want to emit Error then immediately restore Loaded.
+      }
     }
   }
   

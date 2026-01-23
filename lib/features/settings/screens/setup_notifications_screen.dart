@@ -14,45 +14,68 @@ class SetupNotificationsScreen extends StatefulWidget {
 }
 
 class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
-  
+  // Toggle states
+  bool _reminderEnabled = false;
+  bool _communityEnabled = false;
+  bool _allChannelEnabled = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  Future<void> _loadSettings() async {
+    final helper = SharedPrefsHelper();
+    
+    // Load saved values
+    final reminder = await helper.getBool('Reminder notification');
+    final community = await helper.getBool('Community notification');
+    final allChannel = await helper.getBool('Turn on all channel notification');
+
+    if (mounted) {
+      setState(() {
+        _reminderEnabled = reminder;
+        _communityEnabled = community;
+        _allChannelEnabled = allChannel;
+        _isLoading = false;
+      });
+    }
+  }
+
   List<SettingsOptionData> _buildOptions() {
+    if (_isLoading) return [];
+
     return [
       SettingsOptionData.toggle(
-        'Pop up notification',
-        toggleValue: false,
+        'Reminder notification',
+        toggleValue: _reminderEnabled,
         onToggle: (value) async {
-          await SharedPrefsHelper().setBool('Pop up notification', value);
+          setState(() {
+            _reminderEnabled = value;
+          });
+          await SharedPrefsHelper().setBool('Reminder notification', value);
         },
       ),
       SettingsOptionData.toggle(
-        'Turn on all channel notification',
-        toggleValue: false,
+        'Community notification',
+        toggleValue: _communityEnabled,
         onToggle: (value) async {
-          await SharedPrefsHelper().setBool(
-            'Turn on all channel notification',
-            value,
-          );
+          setState(() {
+            _communityEnabled = value;
+          });
+          await SharedPrefsHelper().setBool('Community notification', value);
         },
       ),
       SettingsOptionData.toggle(
-        'Turn on product recommendations',
-        toggleValue: false,
+        'All Channel Notification',
+        toggleValue: _allChannelEnabled,
         onToggle: (value) async {
-          await SharedPrefsHelper().setBool(
-            'Turn on product recommendations',
-            value,
-          );
-        },
-      ),
-      // Note: The original had a duplicate option, preserving for compatibility
-      SettingsOptionData.toggle(
-        'Turn on all channel notification',
-        toggleValue: false,
-        onToggle: (value) async {
-          await SharedPrefsHelper().setBool(
-            'Turn on all channel notification',
-            value,
-          );
+          setState(() {
+            _allChannelEnabled = value;
+          });
+          await SharedPrefsHelper().setBool('Turn on all channel notification', value);
         },
       ),
     ];
@@ -66,20 +89,22 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       body: SafeArea(
-        child: CustomScrollView(
-          slivers: [
-            const SettingsHeader(
-              title: 'Notifications & Settings',
-              showBackButton: true,
-            ),
-            SliverToBoxAdapter(
-              child: SettingsOptionsList(options: options),
-            ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
-          ],
-        ),
+        child: _isLoading 
+            ? const Center(child: CircularProgressIndicator())
+            : CustomScrollView(
+                slivers: [
+                  const SettingsHeader(
+                    title: 'Notifications & Settings',
+                    showBackButton: true,
+                  ),
+                  SliverToBoxAdapter(
+                    child: SettingsOptionsList(options: options),
+                  ),
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 100),
+                  ),
+                ],
+              ),
       ),
     );
   }

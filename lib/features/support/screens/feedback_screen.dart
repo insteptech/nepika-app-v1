@@ -73,13 +73,7 @@ class _FeedbackScreenState extends State<FeedbackScreen> {
         body: BlocConsumer<FeedbackBloc, FeedbackState>(
           listener: (context, state) {
             if (state is FeedbackSuccess) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: const Text('Thank you for your feedback!'),
-                  backgroundColor: theme.colorScheme.primary,
-                ),
-              );
-              Navigator.pop(context);
+              Navigator.pop(context, true);
             } else if (state is FeedbackError) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(

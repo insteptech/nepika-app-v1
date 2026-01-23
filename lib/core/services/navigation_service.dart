@@ -6,6 +6,58 @@ class NavigationService {
   
   static NavigatorState? get navigator => navigatorKey.currentState;
 
+  // Pending navigation storage for when navigator isn't ready yet
+  static String? _pendingRoute;
+  static Object? _pendingArguments;
+  
+  // Duplicate navigation prevention
+  static String? _lastNavigatedRoute;
+  static DateTime? _lastNavigationTime;
+  static const Duration _navigationCooldown = Duration(seconds: 2);
+
+  /// Check if we should skip this navigation to prevent duplicates
+  static bool _shouldSkipDuplicateNavigation(String routeName) {
+    if (_lastNavigatedRoute == routeName && _lastNavigationTime != null) {
+      final elapsed = DateTime.now().difference(_lastNavigationTime!);
+      if (elapsed < _navigationCooldown) {
+        debugPrint('⚠️ NavigationService: Skipping duplicate navigation to $routeName (last: ${elapsed.inMilliseconds}ms ago)');
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /// Record that we navigated to a route
+  static void _recordNavigation(String routeName) {
+    _lastNavigatedRoute = routeName;
+    _lastNavigationTime = DateTime.now();
+    debugPrint('📍 NavigationService: Recorded navigation to $routeName');
+  }
+
+  /// Check and execute any pending navigation (call this from dashboard init)
+  static void executePendingNavigation() {
+    if (_pendingRoute != null && navigator != null) {
+      final route = _pendingRoute!;
+      final args = _pendingArguments;
+      
+      // Clear pending before navigation to prevent re-execution
+      _pendingRoute = null;
+      _pendingArguments = null;
+      
+      // Check for duplicate
+      if (_shouldSkipDuplicateNavigation(route)) {
+        return;
+      }
+      
+      debugPrint('🚀 NavigationService: Executing pending navigation to $route');
+      _recordNavigation(route);
+      navigator!.pushNamed(route, arguments: args);
+    }
+  }
+
+  /// Check if there's pending navigation
+  static bool get hasPendingNavigation => _pendingRoute != null;
+
   static void navigateCameraScam() {
     if (navigator == null) {
       debugPrint('❌ NavigationService: Navigator not available');
@@ -48,10 +100,19 @@ class NavigationService {
 
   static Future<T?> navigateTo<T extends Object?>(String routeName, {Object? arguments}) {
     if (navigator == null) {
-      debugPrint('❌ NavigationService: Navigator not available');
+      debugPrint('⏳ NavigationService: Navigator not available, storing pending navigation to $routeName');
+      // Store for later execution when navigator becomes available
+      _pendingRoute = routeName;
+      _pendingArguments = arguments;
+      return Future.value(null);
+    }
+    
+    // Check for duplicate navigation
+    if (_shouldSkipDuplicateNavigation(routeName)) {
       return Future.value(null);
     }
 
+    _recordNavigation(routeName);
     return navigator!.pushNamed<T>(routeName, arguments: arguments);
   }
 

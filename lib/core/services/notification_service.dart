@@ -43,57 +43,82 @@ class NotificationService {
   bool get isConnected => _isConnected;
 
   /// Connect to SSE stream
-  // Future<void> connect() async {
-  //   return;
-  //   if (_isConnected || _httpClient != null) {
-  //     debugPrint('🔔 NotificationService: Already connected or connecting');
-  //     return;
-  //   }
+  Future<void> connect() async {
+    debugPrint('🔔 NotificationService: Connect method called');
+    debugPrint('🔔 NotificationService: _isConnected = $_isConnected, _httpClient != null = ${_httpClient != null}');
+    
+    if (_isConnected || _httpClient != null) {
+      debugPrint('🔔 NotificationService: Already connected or connecting');
+      return;
+    }
 
-  //   try {
-  //     final accessToken = await _getAccessToken();
-  //     if (accessToken == null) {
-  //       debugPrint('❌ NotificationService: No access token available');
-  //       return;
-  //     }
-
-  //     final url = '${Env.baseUrl}${ApiEndpoints.notificationStream}';
-  //     debugPrint('🔔 NotificationService: Connecting to SSE at $url');
-
-  //     _httpClient = http.Client();
-  //     final request = http.Request('GET', Uri.parse(url));
-  //     request.headers.addAll({
-  //       'Authorization': 'Bearer $accessToken',
-  //       'Accept': 'text/event-stream',
-  //       'Cache-Control': 'no-cache',
-  //       'Connection': 'keep-alive',
-  //     });
-
-  //     final response = await _httpClient!.send(request);
+    try {
+      debugPrint('🔔 NotificationService: Retrieving access token...');
+      final accessToken = await _getAccessToken();
       
-  //     if (response.statusCode == 200) {
-  //       _sseStream = response.stream
-  //           .transform(const Utf8Decoder())
-  //           .transform(const LineSplitter())
-  //           .where((line) => line.isNotEmpty);
-
-  //       _sseStream!.listen(
-  //         _handleSSELine,
-  //         onError: _handleSSEError,
-  //         onDone: _handleSSEDone,
-  //       );
-
-  //       debugPrint('✅ NotificationService: SSE connection established');
-  //       _handleConnectionEvent();
-  //     } else {
-  //       throw HttpException('Failed to connect: ${response.statusCode}');
-  //     }
+      if (accessToken == null) {
+        debugPrint('❌ NotificationService: No access token available');
+        return;
+      }
       
-  //   } catch (e) {
-  //     debugPrint('❌ NotificationService: Failed to connect to SSE: $e');
-  //     _handleConnectionFailure();
-  //   }
-  // }
+      debugPrint('🔔 NotificationService: ✅ Access token retrieved: ${accessToken.substring(0, 20)}...');
+
+      final url = '${Env.baseUrl}${ApiEndpoints.notificationStream}';
+      debugPrint('🔔 NotificationService: SSE URL: $url');
+      debugPrint('🔔 NotificationService: Env.baseUrl: ${Env.baseUrl}');
+      debugPrint('🔔 NotificationService: ApiEndpoints.notificationStream: ${ApiEndpoints.notificationStream}');
+
+      debugPrint('🔔 NotificationService: Creating HTTP client and request...');
+      _httpClient = http.Client();
+      final request = http.Request('GET', Uri.parse(url));
+      request.headers.addAll({
+        'Authorization': 'Bearer $accessToken',
+        'Accept': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+      });
+      
+      debugPrint('🔔 NotificationService: Request headers: ${request.headers}');
+      debugPrint('🔔 NotificationService: Sending SSE request...');
+
+      final response = await _httpClient!.send(request);
+      debugPrint('🔔 NotificationService: Response status code: ${response.statusCode}');
+      debugPrint('🔔 NotificationService: Response headers: ${response.headers}');
+      
+      if (response.statusCode == 200) {
+        debugPrint('✅ NotificationService: SSE connection successful, status: ${response.statusCode}');
+        _sseStream = response.stream
+            .transform(const Utf8Decoder())
+            .transform(const LineSplitter())
+            .where((line) => line.isNotEmpty);
+
+        debugPrint('🔔 NotificationService: SSE stream transformed, attaching listener...');
+        _sseStream!.listen(
+          _handleSSELine,
+          onError: _handleSSEError,
+          onDone: _handleSSEDone,
+        );
+
+        debugPrint('✅ NotificationService: SSE stream listener attached');
+        debugPrint('✅ NotificationService: SSE connection established');
+        _handleConnectionEvent();
+      } else {
+        debugPrint('❌ NotificationService: SSE connection failed with status: ${response.statusCode}');
+        try {
+          final responseBody = await response.stream.bytesToString();
+          debugPrint('❌ NotificationService: Response body: $responseBody');
+        } catch (e) {
+          debugPrint('❌ NotificationService: Could not read response body: $e');
+        }
+        throw HttpException('Failed to connect: ${response.statusCode}');
+      }
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ NotificationService: Failed to connect to SSE: $e');
+      debugPrint('❌ NotificationService: Stack trace: $stackTrace');
+      _handleConnectionFailure();
+    }
+  }
 
   /// Disconnect from SSE stream
   Future<void> disconnect() async {
@@ -116,11 +141,18 @@ class NotificationService {
         return;
       }
 
+      // Log all non-heartbeat lines for debugging
+      debugPrint('🔔 NotificationService: SSE line received: $line');
+
       // Handle data lines
       if (line.startsWith('data:')) {
         final jsonString = line.substring(5).trim(); // Remove 'data:' prefix
-        if (jsonString.isEmpty) return;
+        if (jsonString.isEmpty) {
+          debugPrint('⚠️ NotificationService: Empty JSON data');
+          return;
+        }
         
+        debugPrint('🔔 NotificationService: Parsing JSON: $jsonString');
         final data = jsonDecode(jsonString) as Map<String, dynamic>;
         final sseEvent = SSEEventEntity.fromJson(data);
         
@@ -134,13 +166,29 @@ class NotificationService {
           case 'reply':
           case 'follow':
           case 'mention':
+          case 'comment':
+          case 'follow_request':
             _handleNotificationEvent(sseEvent);
             break;
           case 'notification_deleted':
             _handleNotificationDeletedEvent(sseEvent);
             break;
+          case 'unread_count':
+            // Handle explicit unread count updates
+            if (sseEvent.data != null && sseEvent.data!.containsKey('count')) {
+              _unreadCount = sseEvent.data!['count'] as int;
+              _unreadCountController.add(_unreadCount);
+              debugPrint('🔔 NotificationService: Unread count updated: $_unreadCount');
+            }
+            break;
           default:
             debugPrint('🔔 NotificationService: Unknown event type: ${sseEvent.type}');
+            // Try to extract unread count from any event data
+            if (sseEvent.data != null && sseEvent.data!.containsKey('unreadCount')) {
+              _unreadCount = sseEvent.data!['unreadCount'] as int;
+              _unreadCountController.add(_unreadCount);
+              debugPrint('🔔 NotificationService: Extracted unread count from event: $_unreadCount');
+            }
         }
       }
     } catch (e) {
@@ -191,10 +239,12 @@ class NotificationService {
     
     // Update unread count
     _unreadCount = notification.unreadCount;
+    debugPrint('🔔 NotificationService: Updated unread count: $_unreadCount (from notification.unreadCount: ${notification.unreadCount})');
     
     // Emit updates
     _notificationController.add(notification);
     _unreadCountController.add(_unreadCount);
+    debugPrint('🔔 NotificationService: Emitted unread count: $_unreadCount');
     
     debugPrint('🔔 NotificationService: New ${notification.type.name} notification from ${notification.actor.username}');
   }
@@ -316,6 +366,14 @@ class NotificationService {
     _notifications.clear();
     _unreadCount = 0;
     _unreadCountController.add(0);
+  }
+
+  /// Update unread count (called after marking all as seen)
+  /// This syncs the count across all NotificationBloc instances
+  void setUnreadCount(int count) {
+    _unreadCount = count;
+    _unreadCountController.add(count);
+    debugPrint('🔔 NotificationService: Unread count set to $count');
   }
 
   /// Add a test notification (for debugging)

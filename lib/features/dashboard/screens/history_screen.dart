@@ -139,7 +139,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
   }
 
   void _openScanDetails(ScanHistoryItem scan) {
-    Navigator.of(context).push(
+    // Use rootNavigator to push outside Dashboard's nested navigator
+    Navigator.of(context, rootNavigator: true).push(
       MaterialPageRoute(
         builder: (context) => ScanRecommendationsLoaderScreen(
           reportId: scan.id,

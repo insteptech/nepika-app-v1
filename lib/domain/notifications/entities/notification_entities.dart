@@ -170,14 +170,14 @@ class NotificationEntity extends Equatable {
 
   factory NotificationEntity.fromJson(Map<String, dynamic> json) {
     return NotificationEntity(
-      id: json['notification_id']?.toString() ?? '',
+      id: json['notification_id']?.toString() ?? json['id']?.toString() ?? '',
       type: NotificationType.fromString(json['type']?.toString() ?? ''),
       message: json['message']?.toString() ?? '',
       actor: NotificationActorEntity.fromJson(json['actor'] ?? {}),
-      postId: json['post_id']?.toString(),
+      postId: json['post_id']?.toString() ?? json['postId']?.toString(),
       post: json['post'] != null ? NotificationPostEntity.fromApiJson(json['post']) : null,
       createdAt: _parseDateTime(json['created_at']?.toString()),
-      unreadCount: (json['unread_count'] as num?)?.toInt() ?? 0,
+      unreadCount: (json['unread_count'] as num?)?.toInt() ?? (json['unreadCount'] as num?)?.toInt() ?? 0,
       isRead: json['is_read'] == true,
     );
   }

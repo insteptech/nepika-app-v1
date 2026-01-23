@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/api_base.dart';
 import '../../../domain/notifications/repositories/notification_repository.dart';
@@ -78,6 +79,7 @@ class NotificationRepositoryImpl implements NotificationRepository {
   @override
   Future<bool> markAllNotificationsAsSeen() async {
     try {
+      debugPrint('🔔 NotificationRepositoryImpl: Marking all notifications as seen...');
       final token = await _getToken();
       
       final response = await _apiBase.request(
@@ -89,8 +91,17 @@ class NotificationRepositoryImpl implements NotificationRepository {
         },
       );
 
-      return response.statusCode == 200;
+      debugPrint('🔔 NotificationRepositoryImpl: Mark as seen API response: ${response.statusCode}');
+      if (response.statusCode == 200) {
+        debugPrint('✅ NotificationRepositoryImpl: All notifications marked as seen successfully');
+        debugPrint('🔔 NotificationRepositoryImpl: Response: ${response.data}');
+        return true;
+      } else {
+        debugPrint('❌ NotificationRepositoryImpl: Mark as seen failed with status: ${response.statusCode}');
+        return false;
+      }
     } catch (e) {
+      debugPrint('❌ NotificationRepositoryImpl: Error marking notifications as seen: $e');
       throw Exception('Error marking notifications as seen: $e');
     }
   }

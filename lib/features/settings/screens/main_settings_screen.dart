@@ -25,12 +25,24 @@ import '../../community/screens/edit_profile_screen.dart';
 import '../../../domain/community/repositories/community_repository.dart';
 import '../../community/bloc/blocs/profile_bloc.dart';
 import 'update_mobile_number_screen.dart';
+import 'package:nepika/core/services/unified_fcm_service.dart';
 
-class MainSettingsScreen extends StatelessWidget {
+class MainSettingsScreen extends StatefulWidget {
   const MainSettingsScreen({super.key});
 
+  @override
+  State<MainSettingsScreen> createState() => _MainSettingsScreenState();
+}
+
+class _MainSettingsScreenState extends State<MainSettingsScreen> {
   Future<void> _logout(BuildContext context) async {
+    // Capture navigator reference before async gap to prevent 'deactivated widget' errors
+    final navigator = Navigator.of(context, rootNavigator: true);
+    
     try {
+      // Clear FCM token first to stop notifications
+      await UnifiedFcmService.instance.logout();
+      
       final sharedPrefs = await SharedPreferences.getInstance();
 
       // Clear all authentication data
@@ -41,25 +53,17 @@ class MainSettingsScreen extends StatelessWidget {
       await sharedPrefs.remove(AppConstants.onboardingKey);
 
       // Navigate to welcome screen and clear navigation stack
-      if (context.mounted) {
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushNamedAndRemoveUntil(
-          AppRoutes.welcome,
-          (route) => false,
-        );
-      }
+      // Use the captured navigator
+      navigator.pushNamedAndRemoveUntil(
+        AppRoutes.welcome,
+        (route) => false,
+      );
     } catch (e) {
-      if (context.mounted) {
-        Navigator.of(
-          context,
-          rootNavigator: true,
-        ).pushNamedAndRemoveUntil(
-          AppRoutes.welcome,
-          (route) => false,
-        );
-      }
+      // Even on error, force logout navigation
+      navigator.pushNamedAndRemoveUntil(
+        AppRoutes.welcome,
+        (route) => false,
+      );
     }
   }
 
@@ -72,10 +76,6 @@ class MainSettingsScreen extends StatelessWidget {
     );
   }
 
-
-
-
-
   Future<void> _showDeleteAccountDialog(BuildContext context) async {
     try {
       // Ensure services are initialized
@@ -84,14 +84,14 @@ class MainSettingsScreen extends StatelessWidget {
       // Test if the service is available
       di.ServiceLocator.get<DeleteAccountBloc>();
       
-      if (context.mounted) {
+      if (mounted) {
         showDialog(
           context: context,
           builder: (context) => const DeleteAccountConfirmationDialog(),
         );
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Delete account service not available: ${e.toString()}'),
@@ -386,9 +386,9 @@ class MainSettingsScreen extends StatelessWidget {
                     },
                   ),
                   SettingsOptionData.option(
-                    'Feedback & Rate Us',
-                    onTap: () {
-                      Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.feedback);
+                    'Feedback',
+                    onTap: () async {
+                      await Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.feedback);
                     },
                   ),
                 ],

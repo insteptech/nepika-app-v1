@@ -309,12 +309,6 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               listenWhen: (previous, current) => current is PostOperationState,
               listener: (context, state) {
                 if (state is PostOperationSuccess && state.operationType == 'create') {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Post created successfully!'),
-                      backgroundColor: Colors.green,
-                    ),
-                  );
                   Navigator.of(context).pop(true);
                 } else if (state is PostOperationError && state.operationType == 'create') {
                   ScaffoldMessenger.of(context).showSnackBar(

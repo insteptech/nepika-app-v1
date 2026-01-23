@@ -22,6 +22,7 @@ import '../../features/routine/main.dart';
 import '../../data/fcm/repositories/fcm_token_repository_impl.dart';
 import '../../domain/fcm/repositories/fcm_token_repository.dart';
 import '../../domain/fcm/usecases/save_fcm_token_usecase.dart';
+import '../../domain/fcm/usecases/delete_fcm_token_usecase.dart';
 
 // Reminders
 import '../../data/reminders/datasources/reminder_remote_data_source.dart';
@@ -217,6 +218,9 @@ class ServiceLocator {
     // FCM - Use cases
     _registerLazySingleton<SaveFcmTokenUseCase>(
       SaveFcmTokenUseCase(get<FcmTokenRepository>()),
+    );
+    _registerLazySingleton<DeleteFcmTokenUseCase>(
+      DeleteFcmTokenUseCase(get<FcmTokenRepository>()),
     );
 
     // Note: UnifiedFcmService is a singleton accessed via UnifiedFcmService.instance

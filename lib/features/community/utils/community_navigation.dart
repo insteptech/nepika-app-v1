@@ -203,7 +203,7 @@ class CommunityNavigation {
     }
     
     try {
-      await Navigator.of(context).push(
+      final result = await Navigator.of(context).push(
         MaterialPageRoute(
           builder: (newContext) => MultiBlocProvider(
             providers: [
@@ -219,6 +219,10 @@ class CommunityNavigation {
           settings: const RouteSettings(name: '/community/create-post'),
         ),
       );
+      
+      if (result == true) {
+        // Success handled by waiting for pop
+      }
     } catch (e) {
       debugPrint('CommunityNavigation: Error navigating to create post: $e');
       if (context.mounted) {

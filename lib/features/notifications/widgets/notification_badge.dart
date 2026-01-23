@@ -24,21 +24,22 @@ class NotificationBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return BlocBuilder<NotificationBloc, NotificationState>(
-      builder: (context, state) {
-        int unreadCount = 0;
-        
-        if (state is NotificationLoaded) {
-          unreadCount = state.unreadCount;
-        } else if (state is NotificationError) {
-          unreadCount = state.unreadCount;
-        } else if (state is NotificationConnecting) {
-          unreadCount = state.unreadCount;
-        } else if (state is NotificationDisconnected) {
-          unreadCount = state.unreadCount;
+      buildWhen: (previous, current) {
+        // Rebuild whenever unread count changes
+        int prevCount = _getUnreadCount(previous);
+        int currCount = _getUnreadCount(current);
+        if (prevCount != currCount) {
+          debugPrint('🔔 NotificationBadge: Rebuild triggered - count changed from $prevCount to $currCount');
         }
-
+        return true; // Always rebuild to ensure badge updates
+      },
+      builder: (context, state) {
+        int unreadCount = _getUnreadCount(state);
+        debugPrint('🔔 NotificationBadge: Building with unreadCount=$unreadCount, state=${state.runtimeType}');
+        
         return IconButton(
           onPressed: () {
+            debugPrint('🔔 NotificationBadge: Bell icon tapped - marking all as seen and navigating...');
             onTap?.call();
             // Navigate to notifications screen and mark as seen
             context.read<NotificationBloc>().add(const MarkAllNotificationsAsSeen());
@@ -98,6 +99,19 @@ class NotificationBadge extends StatelessWidget {
         );
       },
     );
+  }
+
+  int _getUnreadCount(NotificationState state) {
+    if (state is NotificationLoaded) {
+      return state.unreadCount;
+    } else if (state is NotificationError) {
+      return state.unreadCount;
+    } else if (state is NotificationConnecting) {
+      return state.unreadCount;
+    } else if (state is NotificationDisconnected) {
+      return state.unreadCount;
+    }
+    return 0;
   }
 }
 

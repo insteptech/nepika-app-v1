@@ -1,15 +1,60 @@
 import 'package:flutter/material.dart';
 import '../../../domain/notifications/entities/notification_entities.dart';
 
-class NotificationItem extends StatelessWidget {
+class NotificationItem extends StatefulWidget {
   final NotificationEntity notification;
   final VoidCallback? onTap;
+  final bool isHighlighted;
 
   const NotificationItem({
     super.key,
     required this.notification,
     this.onTap,
+    this.isHighlighted = false,
   });
+
+  @override
+  State<NotificationItem> createState() => _NotificationItemState();
+}
+
+class _NotificationItemState extends State<NotificationItem>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _highlightController;
+  late Animation<Color?> _highlightColorAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeHighlightAnimation();
+  }
+
+  @override
+  void didUpdateWidget(NotificationItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isHighlighted && !oldWidget.isHighlighted) {
+      _highlightController.forward(from: 0.0);
+    }
+  }
+
+  @override
+  void dispose() {
+    _highlightController.dispose();
+    super.dispose();
+  }
+
+  void _initializeHighlightAnimation() {
+    _highlightController = AnimationController(
+      duration: const Duration(seconds: 2),
+      vsync: this,
+    );
+
+    _highlightColorAnimation = ColorTween(
+      begin: Colors.yellow.withValues(alpha: 0.3),
+      end: Colors.transparent,
+    ).animate(
+      CurvedAnimation(parent: _highlightController, curve: Curves.easeOut),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -25,166 +70,178 @@ class NotificationItem extends StatelessWidget {
     final verticalPadding = isSmallScreen ? 12.0 : 16.0;
     final contentSpacing = isSmallScreen ? 12.0 : 16.0;
 
-    return InkWell(
-      onTap: onTap,
-      child: Container(
-        padding: EdgeInsets.symmetric(
-          horizontal: horizontalPadding,
-          vertical: verticalPadding,
-        ),
-        decoration: BoxDecoration(
-          // Add blue background for unread notifications
-          color: !notification.isRead
-              ? Colors.blue.withValues(alpha: 0.05)
-              : null,
-          border: Border(
-            bottom: BorderSide(
-              color: theme.dividerColor.withValues(alpha: 0.2),
-              width: 1,
+    return AnimatedBuilder(
+      animation: _highlightColorAnimation,
+      builder: (context, child) {
+        return InkWell(
+          onTap: widget.onTap,
+          child: Container(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: verticalPadding,
             ),
-          ),
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Profile picture with notification type overlay
-            Stack(
+            decoration: BoxDecoration(
+              // Add highlight background animation when notification is newly received
+              color: widget.isHighlighted
+                  ? _highlightColorAnimation.value ??
+                      Colors.yellow.withValues(alpha: 0.3)
+                  : (!widget.notification.isRead
+                      ? Colors.blue.withValues(alpha: 0.05)
+                      : null),
+              border: Border(
+                bottom: BorderSide(
+                  color: theme.dividerColor.withValues(alpha: 0.2),
+                  width: 1,
+                ),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // User avatar
-                Container(
-                  width: avatarSize,
-                  height: avatarSize,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: theme.dividerColor.withValues(alpha: 0.3),
-                      width: 1,
-                    ),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(avatarSize / 2),
-                    child: notification.actor.profileImageUrl != null &&
-                            notification.actor.profileImageUrl!.isNotEmpty
-                        ? Image.network(
-                            notification.actor.profileImageUrl!,
-                            fit: BoxFit.cover,
-                            errorBuilder: (context, error, stackTrace) {
-                              return _buildDefaultAvatar(avatarSize);
-                            },
-                          )
-                        : _buildDefaultAvatar(avatarSize),
-                  ),
-                ),
-
-                // Notification type icon overlay
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: Container(
-                    width: iconSize,
-                    height: iconSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: _getNotificationIconBackground(),
-                      border: Border.all(
-                        color: theme.scaffoldBackgroundColor,
-                        width: 2,
-                      ),
-                    ),
-                    child: Icon(
-                      _getNotificationIcon(),
-                      size: iconContentSize,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            SizedBox(width: contentSpacing),
-
-            // Notification content
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  // User name, verification badge, and timestamp
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Full name (as per API structure)
-                      Expanded(
-                        child: Text(
-                          notification.actor.fullName.isNotEmpty
-                              ? notification.actor.fullName
-                              : notification.actor.username,
-                          style: TextStyle(
-                            fontSize: isSmallScreen ? 14 : 16,
-                            fontWeight: FontWeight.w600,
-                            color: theme.textTheme.bodyLarge?.color,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                // Profile picture with notification type overlay
+                Stack(
+                  children: [
+                    // User avatar
+                    Container(
+                      width: avatarSize,
+                      height: avatarSize,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: theme.dividerColor.withValues(alpha: 0.3),
+                          width: 1,
                         ),
                       ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(avatarSize / 2),
+                        child: widget.notification.actor.profileImageUrl !=
+                                    null &&
+                                widget.notification.actor.profileImageUrl!
+                                    .isNotEmpty
+                            ? Image.network(
+                                widget.notification.actor.profileImageUrl!,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildDefaultAvatar(avatarSize);
+                                },
+                              )
+                            : _buildDefaultAvatar(avatarSize),
+                      ),
+                    ),
 
-                      const SizedBox(width: 8),
+                    // Notification type icon overlay
+                    Positioned(
+                      right: 0,
+                      bottom: 0,
+                      child: Container(
+                        width: iconSize,
+                        height: iconSize,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: _getNotificationIconBackground(),
+                          border: Border.all(
+                            color: theme.scaffoldBackgroundColor,
+                            width: 2,
+                          ),
+                        ),
+                        child: Icon(
+                          _getNotificationIcon(),
+                          size: iconContentSize,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
 
-                      // Timestamp
-                      Text(
-                        _formatTimestamp(notification.createdAt),
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 11 : 12,
-                          color: theme.textTheme.bodySmall?.color
-                              ?.withValues(alpha: 0.6),
+                SizedBox(width: contentSpacing),
+
+                // Notification content
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // User name, verification badge, and timestamp
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Full name (as per API structure)
+                          Expanded(
+                            child: Text(
+                              widget.notification.actor.fullName.isNotEmpty
+                                  ? widget.notification.actor.fullName
+                                  : widget.notification.actor.username,
+                              style: TextStyle(
+                                fontSize: isSmallScreen ? 14 : 16,
+                                fontWeight: FontWeight.w600,
+                                color: theme.textTheme.bodyLarge?.color,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+
+                          const SizedBox(width: 8),
+
+                          // Timestamp
+                          Text(
+                            _formatTimestamp(
+                                widget.notification.createdAt),
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 11 : 12,
+                              color: theme.textTheme.bodySmall?.color
+                                  ?.withValues(alpha: 0.6),
+                            ),
+                          ),
+                        ],
+                      ),
+
+                      const SizedBox(height: 4),
+
+                      // Notification message with post content if available
+                      Flexible(
+                        child: RichText(
+                          maxLines: 3,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: isSmallScreen ? 14 : 15,
+                              color: theme.textTheme.bodyMedium?.color,
+                              height: 1.4,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: _getNotificationMessage(),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.normal,
+                                  color: theme.textTheme.bodyMedium?.color
+                                      ?.withValues(alpha: 0.6),
+                                ),
+                              ),
+                              if (widget.notification.post != null &&
+                                  widget.notification.post!.content.isNotEmpty)
+                                TextSpan(
+                                  text:
+                                      ' "${widget.notification.post!.content.characters.take(30).toString()}${widget.notification.post!.content.length > 30 ? '...' : ''}"',
+                                  style: TextStyle(
+                                    fontStyle: FontStyle.italic,
+                                    color:
+                                        theme.textTheme.bodySmall?.color,
+                                  ),
+                                ),
+                            ],
+                          ),
                         ),
                       ),
                     ],
                   ),
-
-                  const SizedBox(height: 4),
-
-                  // Notification message with post content if available
-                  Flexible(
-                    child: RichText(
-                      maxLines: 3,
-                      overflow: TextOverflow.ellipsis,
-                      text: TextSpan(
-                        style: TextStyle(
-                          fontSize: isSmallScreen ? 14 : 15,
-                          color: theme.textTheme.bodyMedium?.color,
-                          height: 1.4,
-                        ),
-                        children: [
-                          TextSpan(
-                            text: _getNotificationMessage(),
-                            style: TextStyle(
-                              fontWeight: FontWeight.normal,
-                              color: theme.textTheme.bodyMedium?.color
-                                  ?.withValues(alpha: 0.6),
-                            ),
-                          ),
-                          if (notification.post != null &&
-                              notification.post!.content.isNotEmpty)
-                            TextSpan(
-                              text:
-                                  ' "${notification.post!.content.characters.take(30).toString()}${notification.post!.content.length > 30 ? '...' : ''}"',
-                              style: TextStyle(
-                                fontStyle: FontStyle.italic,
-                                color: theme.textTheme.bodySmall?.color,
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -210,7 +267,7 @@ class NotificationItem extends StatelessWidget {
   }
 
   IconData _getNotificationIcon() {
-    switch (notification.type) {
+    switch (widget.notification.type) {
       case NotificationType.like:
         return Icons.favorite;
       case NotificationType.reply:
@@ -229,7 +286,7 @@ class NotificationItem extends StatelessWidget {
   }
 
   Color _getNotificationIconBackground() {
-    switch (notification.type) {
+    switch (widget.notification.type) {
       case NotificationType.like:
         return const Color(0xFFFF016B); // Pink from Figma
       case NotificationType.reply:
@@ -248,7 +305,7 @@ class NotificationItem extends StatelessWidget {
   }
 
   String _getNotificationMessage() {
-    switch (notification.type) {
+    switch (widget.notification.type) {
       case NotificationType.like:
         return 'liked your post';
       case NotificationType.reply:

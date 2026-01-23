@@ -10,7 +10,7 @@ import 'notification_state.dart';
 class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   final NotificationService _notificationService;
   final NotificationRepository _notificationRepository;
-  late final StreamSubscription _notificationSubscription;
+  StreamSubscription? _notificationSubscription;
   late final StreamSubscription _deletedNotificationSubscription;
   late final StreamSubscription _unreadCountSubscription;
   late final StreamSubscription _connectionStatusSubscription;
@@ -19,6 +19,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   int _unreadCount = 0;
   bool _isConnected = false;  
   NotificationFilter _currentFilter = NotificationFilter.all;
+  bool _justMarkedAsSeen = false;  // Prevent fetch from overwriting 0 count
 
   NotificationBloc({
     NotificationService? notificationService,
@@ -26,6 +27,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   }) : _notificationService = notificationService ?? NotificationService.instance,
        _notificationRepository = notificationRepository,
        super(const NotificationInitial()) {
+    
+    debugPrint('🔔 NotificationBloc: INITIALIZED - Ready to receive events');
     
     // Set up event handlers
     on<ConnectToNotificationStream>(_onConnectToNotificationStream);
@@ -99,13 +102,16 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     try {
+      debugPrint('🔔 NotificationBloc: ConnectToNotificationStream event received');
       emit(NotificationConnecting(
         notifications: _notifications,
         unreadCount: _unreadCount,
         currentFilter: _currentFilter,
       ));
 
-      // await _notificationService.connect();
+      debugPrint('🔔 NotificationBloc: Calling _notificationService.connect()...');
+      await _notificationService.connect();
+      debugPrint('🔔 NotificationBloc: _notificationService.connect() completed');
       
       // The connection status will be updated via the stream listener
     } catch (e) {
@@ -177,6 +183,12 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) {
     _currentFilter = event.filter;
 
+    // Skip fetch if we just marked notifications as seen to avoid overwriting unreadCount=0
+    if (_justMarkedAsSeen) {
+      debugPrint('🔔 NotificationBloc: Skipping filter fetch - just marked as seen');
+      return;
+    }
+
     // Fetch notifications based on new filter
     if (_currentFilter == NotificationFilter.all) {
       add(const FetchAllNotifications(limit: 20, offset: 0));
@@ -193,6 +205,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     UnreadCountUpdated event,
     Emitter<NotificationState> emit,
   ) {
+    debugPrint('🔔 NotificationBloc: UnreadCountUpdated event received with count: ${event.count}');
     _unreadCount = event.count;
 
     emit(NotificationLoaded(
@@ -202,6 +215,8 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
       isConnected: _isConnected,
       currentFilter: _currentFilter,
     ));
+    
+    debugPrint('🔔 NotificationBloc: Emitted NotificationLoaded state with unreadCount: $_unreadCount');
   }
 
   Future<void> _onFetchUnreadCount(
@@ -220,8 +235,16 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     try {
+      debugPrint('🔔 NotificationBloc: MarkAllNotificationsAsSeen event received');
+      
+      // Set flag to prevent filter change from triggering fetch
+      _justMarkedAsSeen = true;
+      
       final success = await _notificationRepository.markAllNotificationsAsSeen();
+      
       if (!success) {
+        debugPrint('❌ NotificationBloc: markAllNotificationsAsSeen returned false');
+        _justMarkedAsSeen = false;  // Clear flag on failure
         emit(NotificationError(
           message: 'Failed to mark notifications as seen',
           notifications: _notifications,
@@ -231,7 +254,10 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         ));
       } else {
         // Reset unread count to 0
+        debugPrint('✅ NotificationBloc: Marked all notifications as seen successfully');
         _unreadCount = 0;
+        // Sync to NotificationService so all Bloc instances get the update
+        _notificationService.setUnreadCount(0);
         emit(NotificationLoaded(
           notifications: _notifications,
           filteredNotifications: _getFilteredNotifications(),
@@ -239,9 +265,17 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
           isConnected: _isConnected,
           currentFilter: _currentFilter,
         ));
+        debugPrint('✅ NotificationBloc: Emitted NotificationLoaded with unreadCount=0');
+        
+        // Clear the flag after 3 seconds to allow normal filter changes
+        Future.delayed(const Duration(seconds: 3), () {
+          _justMarkedAsSeen = false;
+          debugPrint('🔔 NotificationBloc: Cleared _justMarkedAsSeen flag');
+        });
       }
     } catch (e) {
       debugPrint('❌ NotificationBloc: Failed to mark as seen: $e');
+      _justMarkedAsSeen = false;  // Clear flag on error
       emit(NotificationError(
         message: 'Failed to mark notifications as seen: $e',
         notifications: _notifications,
@@ -321,6 +355,13 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         isConnected: _isConnected,
         currentFilter: _currentFilter,
       ));
+      
+      // Automatically connect to SSE after first fetch
+      debugPrint('🔔 NotificationBloc: Fetched notifications, now connecting to SSE stream...');
+      if (!_isConnected && _notificationService.isConnected == false) {
+        add(const ConnectToNotificationStream());
+      }
+      
     } catch (e) {
       debugPrint('❌ NotificationBloc: Failed to fetch notifications: $e');
       emit(NotificationError(
@@ -390,7 +431,7 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
 
   @override
   Future<void> close() {
-    _notificationSubscription.cancel();
+    _notificationSubscription?.cancel();
     _deletedNotificationSubscription.cancel();
     _unreadCountSubscription.cancel();
     _connectionStatusSubscription.cancel();

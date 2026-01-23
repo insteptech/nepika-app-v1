@@ -11,6 +11,7 @@ import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/face_scan/screens/scan_recommendations_loader_screen.dart';
 import 'package:nepika/features/community/main.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
+import 'package:nepika/core/services/navigation_service.dart';
 
 import 'screens/dashboard_screen.dart';
 import 'screens/image_gallery_screen.dart';
@@ -363,6 +364,11 @@ class _DashboardState extends State<Dashboard>
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _initializeNavBarAnimation();
+    
+    // Execute any pending navigation from notification taps during app launch
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      NavigationService.executePendingNavigation();
+    });
   }
 
   void _initializeNavBarAnimation() {
@@ -400,19 +406,23 @@ class _DashboardState extends State<Dashboard>
       switch (state) {
         case AppLifecycleState.resumed:
           // App is in foreground - connect to SSE
+          debugPrint('🔔 DashboardMain: App resumed - Sending ConnectToNotificationStream event');
           notificationBloc.add(const ConnectToNotificationStream());
           break;
         case AppLifecycleState.paused:
         case AppLifecycleState.inactive:
           // App is in background or inactive - disconnect to save battery
+          debugPrint('🔔 DashboardMain: App paused/inactive - Sending DisconnectFromNotificationStream event');
           notificationBloc.add(const DisconnectFromNotificationStream());
           break;
         case AppLifecycleState.detached:
           // App is being terminated
+          debugPrint('🔔 DashboardMain: App detached - Sending DisconnectFromNotificationStream event');
           notificationBloc.add(const DisconnectFromNotificationStream());
           break;
         case AppLifecycleState.hidden:
           // App is hidden - disconnect to save battery
+          debugPrint('🔔 DashboardMain: App hidden - Sending DisconnectFromNotificationStream event');
           notificationBloc.add(const DisconnectFromNotificationStream());
           break;
       }

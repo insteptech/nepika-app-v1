@@ -7,6 +7,9 @@ abstract class FcmTokenRepository {
     String? fcmRefreshToken,
   });
 
+  /// Delete FCM token from backend
+  Future<void> deleteFcmToken(String fcmToken);
+
   /// Get current FCM token from device
   Future<String?> getCurrentFcmToken();
 

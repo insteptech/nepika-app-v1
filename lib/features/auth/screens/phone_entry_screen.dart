@@ -57,7 +57,9 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
   @override
   void dispose() {
     // Unfocus keyboard when screen is disposed
-    FocusScope.of(context).unfocus();
+    // Note: Do NOT call FocusScope.of(context).unfocus() here as it causes
+    // "Looking up a deactivated widget's ancestor is unsafe" errors when the
+    // context is already deactivated (e.g. during logout navigation)
     super.dispose();
   }
 

@@ -4,6 +4,7 @@ import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/features/dashboard/widgets/dashboard_navbar.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:async';
 
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_state.dart';
@@ -14,6 +15,7 @@ import '../../../domain/notifications/entities/notification_entities.dart';
 import '../../../core/widgets/back_button.dart';
 import '../../../core/config/constants/app_constants.dart';
 import '../../community/utils/community_navigation.dart';
+import '../../../core/services/notification_highlight_service.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -30,6 +32,16 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
   String? _token;
   String? _userId;
+
+  // ------------------------------------------------------------
+  // HIGHLIGHT TRACKING
+  // ------------------------------------------------------------
+
+  String? _highlightedNotificationId;
+  late StreamSubscription<NotificationHighlightEvent> _highlightSubscription;
+  
+  // Track if we've already marked notifications as seen on this screen load
+  bool _hasMarkedAsSeen = false;
 
   // ------------------------------------------------------------
   // NAVBAR ANIMATION
@@ -62,26 +74,62 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
     _scrollController.addListener(_onScroll);
 
-    
+    // Listen for highlight events from notification highlight service
+    _highlightSubscription = NotificationHighlightService.instance.highlightStream.listen(
+      (event) {
+        if (mounted) {
+          setState(() {
+            _highlightedNotificationId = event.notificationId;
+          });
+          
+          // Clear highlight after the animation duration (2 seconds by default)
+          Future.delayed(event.duration, () {
+            if (mounted) {
+              setState(() {
+                _highlightedNotificationId = null;
+              });
+            }
+          });
+        }
+      },
+    );
+
+    // Check if this screen was opened from a notification tap
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+
+      // Get route arguments if navigated from notification
+      final args = ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+      if (args != null) {
+        final highlightId = args['highlightNotificationId'];
+        if (highlightId != null) {
+          // Trigger highlight animation
+          NotificationHighlightService.instance.highlightNotification(
+            notificationId: highlightId,
+            notificationType: args['notificationType'] ?? 'notification',
+          );
+        }
+      }
       
       try {
         final bloc = context.read<NotificationBloc>();
         final state = bloc.state;
-
-
 
         int unread = 0;
 
         if (state is NotificationLoaded) unread = state.unreadCount;
         if (state is NotificationDisconnected) unread = state.unreadCount;
 
+        debugPrint('📱 NotificationsScreen: Screen loaded, current unread count: $unread');
+        
         if (unread > 0) {
+          debugPrint('📱 NotificationsScreen: Marking all $unread notifications as seen...');
           bloc.add(const MarkAllNotificationsAsSeen());
+        } else {
+          debugPrint('📱 NotificationsScreen: No unread notifications to mark as seen');
         }
       } catch (e) {
-        debugPrint('Error marking notifications as seen: $e');
+        debugPrint('❌ NotificationsScreen: Error marking notifications as seen: $e');
       }
     });
   }
@@ -90,6 +138,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   void dispose() {
     _navBarAnimationController.dispose();
     _scrollController.dispose();
+    _highlightSubscription.cancel();
+    _hasMarkedAsSeen = false; // Reset flag for next screen open
     super.dispose();
   }
 
@@ -201,37 +251,47 @@ class _NotificationsScreenState extends State<NotificationsScreen>
     return Scaffold(
       backgroundColor: theme.scaffoldBackgroundColor,
       bottomNavigationBar: _buildAnimatedNavBar(),
-      body: SafeArea(
-        child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+      body: BlocListener<NotificationBloc, NotificationState>(
+        listener: (context, state) {
+          // Mark as seen when page is built/displayed - but only once per navigation
+          if (state is NotificationLoaded && state.unreadCount > 0 && !_hasMarkedAsSeen) {
+            debugPrint('📱 NotificationsScreen: BlocListener detected unread count: ${state.unreadCount}');
+            debugPrint('📱 NotificationsScreen: Marking all notifications as seen via BlocListener');
+            _hasMarkedAsSeen = true;
+            context.read<NotificationBloc>().add(const MarkAllNotificationsAsSeen());
+          }
+        },
+        child: SafeArea(
+          child: CustomScrollView(
+            controller: _scrollController,
+            slivers: [
+              const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // Sticky Activity Header
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _ActivityHeaderDelegate(
-                minHeight: 50,
-                maxHeight: 70,
-                theme: theme,
+              // Sticky Activity Header
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _ActivityHeaderDelegate(
+                  minHeight: 50,
+                  maxHeight: 70,
+                  theme: theme,
+                ),
               ),
-            ),
 
-            // Filter Tabs
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _FilterTabsDelegate(
-                height: 60,
-                theme: theme,
+              // Filter Tabs
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _FilterTabsDelegate(
+                  height: 60,
+                  theme: theme,
+                ),
               ),
-            ),
 
-            // NOTIFICATIONS LIST
-            BlocBuilder<NotificationBloc, NotificationState>(
-              builder: (context, state) {
-                if (state is NotificationLoading ||
-                    state is NotificationConnecting) {
-                  return const SliverFillRemaining(
+              // NOTIFICATIONS LIST
+              BlocBuilder<NotificationBloc, NotificationState>(
+                builder: (context, state) {
+                  if (state is NotificationLoading ||
+                      state is NotificationConnecting) {
+                    return const SliverFillRemaining(
                     hasScrollBody: false,
                     child: Center(child: CircularProgressIndicator()),
                   );
@@ -262,9 +322,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 return SliverList.builder(
                   itemCount: list.length,
                   itemBuilder: (context, i) {
+                    final notification = list[i];
+                    final isHighlighted = _highlightedNotificationId == notification.id;
+                    
                     return NotificationItem(
-                      notification: list[i],
-                      onTap: () => _handleNotificationTap(list[i]),
+                      notification: notification,
+                      onTap: () => _handleNotificationTap(notification),
+                      isHighlighted: isHighlighted,
                     );
                   },
                 );
@@ -273,6 +337,7 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
             const SliverToBoxAdapter(child: SizedBox(height: 120)),
           ],
+          ),
         ),
       ),
     );

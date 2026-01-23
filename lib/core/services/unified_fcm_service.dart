@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -10,9 +11,12 @@ import '../utils/app_logger.dart';
 import '../api_base.dart';
 import '../di/injection_container.dart';
 import '../../domain/fcm/usecases/save_fcm_token_usecase.dart';
+import '../../domain/fcm/usecases/delete_fcm_token_usecase.dart';
 import '../../firebase_options.dart';
 import '../services/navigation_service.dart';
+import '../config/constants/routes.dart';
 import 'local_notification_service.dart';
+import 'notification_service.dart';
 
 /// Unified FCM Service
 /// Handles all Firebase Cloud Messaging functionality including:
@@ -364,10 +368,13 @@ class UnifiedFcmService {
   }
 
 
-  /// Handle background notification response
+  /// Handle background notification response (static for terminated state)
   @pragma('vm:entry-point')
   static void _handleBackgroundNotificationTap(NotificationResponse response) {
-    AppLogger.info('Background notification tapped: ${response.payload}', tag: 'FCM');
+    AppLogger.info('🔔🔔 STATIC BACKGROUND NOTIFICATION TAP - app was terminated!', tag: 'FCM');
+    AppLogger.info('🔔🔔 Notification ID: ${response.id}', tag: 'FCM');
+    AppLogger.info('🔔🔔 Payload: ${response.payload}', tag: 'FCM');
+    // Note: Cannot navigate in static context - must use getInitialMessage or pending navigation
   }
 
   /// Set up message handlers for different app states
@@ -384,7 +391,12 @@ class UnifiedFcmService {
 
     // Background tap messages
     _onMessageOpenedAppSubscription = FirebaseMessaging.onMessageOpenedApp.listen(
-      _handleBackgroundTap,
+      (RemoteMessage message) {
+        AppLogger.info('🔔🔔 onMessageOpenedApp FIRED - notification tapped from background!', tag: 'FCM');
+        AppLogger.info('🔔🔔 Message ID: ${message.messageId}', tag: 'FCM');
+        AppLogger.info('🔔🔔 Message data: ${message.data}', tag: 'FCM');
+        _handleBackgroundTap(message);
+      },
       onError: (error) => AppLogger.error(
         'Background tap handler error',
         tag: 'FCM',
@@ -396,8 +408,12 @@ class UnifiedFcmService {
     final RemoteMessage? initialMessage = 
         await FirebaseMessaging.instance.getInitialMessage();
     if (initialMessage != null) {
-      AppLogger.info('App launched via notification', tag: 'FCM');
+      AppLogger.info('🚀🚀 App launched via notification (TERMINATED STATE)!', tag: 'FCM');
+      AppLogger.info('🚀🚀 Initial message ID: ${initialMessage.messageId}', tag: 'FCM');
+      AppLogger.info('🚀🚀 Initial message data: ${initialMessage.data}', tag: 'FCM');
       _handleNotificationNavigation(initialMessage.data);
+    } else {
+      AppLogger.info('ℹ️ App NOT launched via notification (no initial message)', tag: 'FCM');
     }
 
     AppLogger.success('Message handlers configured', tag: 'FCM');
@@ -757,6 +773,45 @@ class UnifiedFcmService {
   }
 
 
+  /// Logout and clean up FCM resources
+  Future<void> logout() async {
+    try {
+      AppLogger.info('Logging out from FCM service...', tag: 'FCM');
+      
+      // 0. Delete token from backend FIRST
+      if (_currentToken != null) {
+        try {
+          final deleteTokenUseCase = ServiceLocator.get<DeleteFcmTokenUseCase>();
+          await deleteTokenUseCase.call(fcmToken: _currentToken!);
+          AppLogger.success('FCM token deleted from backend', tag: 'FCM');
+        } catch (e) {
+          AppLogger.warning('Failed to delete token from backend during logout: $e', tag: 'FCM');
+          // Continue with local cleanup anyway
+        }
+      }
+
+      // 1. Delete token from Firebase (invalidates it on backend)
+      await FirebaseMessaging.instance.deleteToken();
+      
+      // 2. Clear internal state
+      _currentToken = null;
+      // Note: We don't reset _isInitialized because the service instance 
+      // is still valid, we just want to clear user-specific data
+      
+      // 3. Clear local prefs (cached token)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('stored_fcm_token');
+      await prefs.remove('last_save_timestamp');
+      
+      // 4. Cancel all local notifications
+      await _localNotifications.cancelAll();
+      
+      AppLogger.success('FCM service logged out successfully', tag: 'FCM');
+    } catch (e) {
+      AppLogger.error('FCM logout failed', tag: 'FCM', error: e);
+    }
+  }
+
   /// FIXED: Use proper clean architecture for 100% success rate
   Future<void> _saveTokenToBackendOptimized(String token) async {
     if (_isTokenSaving) {
@@ -864,35 +919,73 @@ class UnifiedFcmService {
 
   /// Handle background tap
   void _handleBackgroundTap(RemoteMessage message) {
-    AppLogger.info('Background notification tapped', tag: 'FCM');
+    AppLogger.info('🔔 Background notification tapped - entering handler', tag: 'FCM');
+    AppLogger.info('🔔 Message data: ${message.data}', tag: 'FCM');
+    AppLogger.info('🔔 Message notification: ${message.notification?.title}', tag: 'FCM');
     _handleNotificationNavigation(message.data);
   }
 
   /// Handle notification tap
   void _handleNotificationTap(NotificationResponse response) {
-    AppLogger.info('Local notification tapped', tag: 'FCM');
+    AppLogger.info('🔔🔔 LOCAL NOTIFICATION TAPPED!', tag: 'FCM');
+    AppLogger.info('🔔🔔 Notification ID: ${response.id}', tag: 'FCM');
+    AppLogger.info('🔔🔔 Payload: ${response.payload}', tag: 'FCM');
+    AppLogger.info('🔔🔔 Action ID: ${response.actionId}', tag: 'FCM');
     
     if (response.payload != null) {
       try {
-        // Parse payload as notification data
-        // You can implement custom payload parsing here
-        _handleNotificationNavigation({'screen': response.payload});
+        // Parse payload as JSON to get notification data
+        Map<String, dynamic> payloadData;
+        try {
+          payloadData = jsonDecode(response.payload!);
+        } catch (e) {
+          // If JSON parsing fails, treat as simple string payload
+          AppLogger.warning('Payload is not JSON, treating as simple string: ${response.payload}', tag: 'FCM');
+          payloadData = {'screen': response.payload};
+        }
+        
+        _handleNotificationNavigation(payloadData);
       } catch (e) {
         AppLogger.error('Failed to parse notification payload', tag: 'FCM', error: e);
       }
+    } else {
+      AppLogger.warning('🔔🔔 Payload is null - cannot navigate', tag: 'FCM');
     }
   }
 
   /// Handle notification navigation
   void _handleNotificationNavigation(Map<String, dynamic> data) {
     try {
+      AppLogger.info('🚀 _handleNotificationNavigation called with data: $data', tag: 'FCM');
+      
       final String? screen = data['screen'];
       final String? userId = data['user_id'];
       final String? postId = data['post_id'];
+      final String? type = data['type'];
+      
+      AppLogger.info('🚀 Parsed - screen: $screen, userId: $userId, postId: $postId, type: $type', tag: 'FCM');
       
       // Check if this is a reminder notification
       if (screen != null && screen.startsWith('reminder:')) {
         AppLogger.info('Reminder notification tapped - ignoring navigation as per user preference', tag: 'FCM');
+        return;
+      }
+
+      // Check for community activity notifications
+      // User requested to navigate to Activity Page for these types
+      final communityTypes = ['like', 'comment', 'reply', 'mention', 'follow', 'follow_request'];
+      if (type != null && communityTypes.contains(type.toLowerCase())) {
+        AppLogger.info('Community notification ($type) tapped - navigating to Activity Page', tag: 'FCM');
+        // Pass the notification data including ID to highlight the newly received notification
+        NavigationService.navigateTo(
+          AppRoutes.notifications,
+          arguments: {
+            'highlightNotificationId': data['notification_id'],
+            'notificationType': type,
+          },
+        );
+        // Mark all notifications as seen when navigating via push notification
+        NotificationService.instance.markAllAsSeen();
         return;
       }
 
@@ -915,7 +1008,15 @@ class UnifiedFcmService {
           }
           break;
         case 'notifications':
-          NavigationService.navigateTo('/notifications');
+          NavigationService.navigateTo(
+            AppRoutes.notifications,
+            arguments: {
+              'highlightNotificationId': data['notification_id'],
+              'notificationType': type,
+            },
+          );
+          // Mark all notifications as seen when navigating via push notification
+          NotificationService.instance.markAllAsSeen();
           break;
         default:
           // Default to dashboard
@@ -990,35 +1091,30 @@ class UnifiedFcmService {
         macOS: iosDetails,
       );
 
-      AppLogger.info('  - Showing notification via LocalNotificationService...', tag: 'FCM');
+      AppLogger.info('  - Showing notification via local notifications plugin...', tag: 'FCM');
       
-      // Try to use LocalNotificationService first (if available)
-      try {
-        final localNotificationService = LocalNotificationService.instance;
-        final success = await localNotificationService.showImmediateNotification(
-          title: title,
-          body: body,
-        );
-        
-        if (success) {
-          AppLogger.success('✅ Local notification displayed via LocalNotificationService!', tag: 'FCM');
-          return;
-        } else {
-          AppLogger.warning('LocalNotificationService failed, falling back to FCM plugin...', tag: 'FCM');
-        }
-      } catch (e) {
-        AppLogger.warning('LocalNotificationService unavailable, using FCM plugin: $e', tag: 'FCM');
-      }
+      // Build a comprehensive payload including all necessary navigation data
+      // This ensures the notification can navigate correctly when tapped
+      final Map<String, String> payloadMap = {
+        'type': data['type'] ?? 'notification',
+        'screen': data['screen'] ?? 'notifications',
+        'user_id': data['user_id'] ?? '',
+        'post_id': data['post_id'] ?? '',
+        'notification_id': data['notification_id'] ?? '',
+      };
       
-      // Fallback to own local notification plugin
-      AppLogger.info('  - Calling _localNotifications.show() as fallback...', tag: 'FCM');
+      // Convert payload to JSON string for passing through notification
+      final String payloadJson = jsonEncode(payloadMap);
       
+      AppLogger.info('  - Notification payload: $payloadJson', tag: 'FCM');
+      
+      // Use local notifications plugin directly with comprehensive payload
       await _localNotifications.show(
         notificationId,
         title,
         body,
         platformDetails,
-        payload: data['screen'], // Pass screen for navigation
+        payload: payloadJson, // Pass complete navigation data as JSON
       );
 
       AppLogger.success('✅ Local notification displayed successfully!', tag: 'FCM');

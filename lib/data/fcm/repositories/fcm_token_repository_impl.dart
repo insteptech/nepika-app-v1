@@ -4,6 +4,7 @@ import 'package:nepika/core/utils/app_logger.dart';
 import 'package:nepika/domain/fcm/entities/fcm_token_entity.dart';
 import 'package:nepika/domain/fcm/repositories/fcm_token_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nepika/core/config/constants/app_constants.dart';
 
 class FcmTokenRepositoryImpl implements FcmTokenRepository {
   final ApiBase apiBase;
@@ -36,6 +37,24 @@ class FcmTokenRepositoryImpl implements FcmTokenRepository {
       final validatedToken = _validateToken(fcmToken);
       if (validatedToken == null) {
         throw Exception('Invalid FCM token format');
+      }
+
+      // Check if user is logged in
+      final prefs = await _prefs;
+      final authToken = prefs.getString(AppConstants.accessTokenKey);
+      
+      if (authToken == null || authToken.isEmpty) {
+        AppLogger.warning('User not logged in, skipping backend token save', tag: 'FCM_REPO');
+        
+        // Still store locally so we have it
+        await storeTokenLocally(validatedToken);
+        
+        return FcmTokenEntity(
+          fcmToken: validatedToken,
+          fcmRefreshToken: fcmRefreshToken,
+          lastUpdated: DateTime.now(),
+          isActive: true,
+        );
       }
 
       AppLogger.info('Saving FCM token to backend...', tag: 'FCM_REPO');
@@ -84,6 +103,31 @@ class FcmTokenRepositoryImpl implements FcmTokenRepository {
         stackTrace: stackTrace,
       );
       rethrow;
+    }
+  }
+
+  @override
+  Future<void> deleteFcmToken(String fcmToken) async {
+    try {
+      AppLogger.info('Deleting FCM token from backend...', tag: 'FCM_REPO');
+      
+      final response = await apiBase.request(
+        path: '/auth/users/delete-fcm-token',
+        method: 'POST', // Usually POST for such actions, or DELETE with body if supported
+        body: {
+          'fcm_token': fcmToken,
+        },
+      );
+      
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        AppLogger.success('FCM token deleted from backend', tag: 'FCM_REPO');
+      } else {
+        AppLogger.warning('Backend failed to delete FCM token: ${response.data}', tag: 'FCM_REPO');
+        // We generally don't throw here to allow logout to proceed
+      }
+    } catch (e) {
+      AppLogger.error('Error deleting FCM token from backend', tag: 'FCM_REPO', error: e);
+      // Swallow error so logout isn't blocked by network issues
     }
   }
 
