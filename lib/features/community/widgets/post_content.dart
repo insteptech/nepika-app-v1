@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../domain/community/entities/community_entities.dart';
 import '../utils/community_navigation.dart';
 import '../bloc/blocs/posts_bloc.dart';
+import '../../../../domain/community/repositories/community_repository.dart';
+import '../../../../core/di/injection_container.dart';
 import '../bloc/events/posts_event.dart';
 
 /// Post content widget handling text display with clickable links and hashtags
@@ -117,14 +119,16 @@ class PostContent extends StatelessWidget {
   List<TextSpan> _buildClickableTextSpans(BuildContext context, String text, TextStyle? baseStyle) {
     final List<TextSpan> spans = [];
     
-    // Regex patterns for URLs and hashtags
+    // Regex patterns for URLs, hashtags, and mentions
     final urlPattern = RegExp(r'https?://[^\s]+|www\.[^\s]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?');
     final hashtagPattern = RegExp(r'#[a-zA-Z0-9_-]+');
+    final mentionPattern = RegExp(r'@[a-zA-Z0-9._]+'); // Basic username pattern
     
-    // Find all matches (URLs and hashtags)
+    // Find all matches
     final allMatches = <Match>[];
     allMatches.addAll(urlPattern.allMatches(text));
     allMatches.addAll(hashtagPattern.allMatches(text));
+    allMatches.addAll(mentionPattern.allMatches(text));
     
     // Sort matches by start position
     allMatches.sort((a, b) => a.start.compareTo(b.start));
@@ -142,9 +146,9 @@ class PostContent extends StatelessWidget {
       
       final matchText = match.group(0)!;
       
-      if (urlPattern.hasMatch(matchText)) {
-        // Handle URL
-        spans.add(TextSpan(
+      if (urlPattern.hasMatch(matchText) && !matchText.startsWith('@') && !matchText.startsWith('#')) {
+        // Handle URL (ensure it's not a mention or hashtag caught by loose url regex)
+         spans.add(TextSpan(
           text: matchText,
           style: baseStyle?.copyWith(
             color: Theme.of(context).colorScheme.primary,
@@ -163,6 +167,17 @@ class PostContent extends StatelessWidget {
           ),
           recognizer: TapGestureRecognizer()
             ..onTap = () => _handleHashtagTap(context, matchText),
+        ));
+      } else if (mentionPattern.hasMatch(matchText)) {
+        // Handle Mention
+        spans.add(TextSpan(
+          text: matchText,
+          style: baseStyle?.copyWith(
+            color: Colors.blue, // Explicitly blue as requested
+            fontWeight: FontWeight.w500,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () => _handleMentionTap(context, matchText),
         ));
       }
       
@@ -226,6 +241,68 @@ class PostContent extends StatelessWidget {
       ),
     );
     // TODO: Navigate to hashtag search or trending page
+  }
+
+  void _handleMentionTap(BuildContext context, String mention) async {
+    // 1. Extract username (remove @)
+    final username = mention.substring(1);
+    
+    // 2. Show feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening $username...'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      // 3. Search for user to get ID
+      final communityRepository = sl<CommunityRepository>();
+      
+      // Perform search (using V2 or V1 depending on what's better, V2 seems newer)
+      // Since we just need to resolve one user, we search for the exact username
+      final searchResult = await communityRepository.searchUsers(
+        token: token,
+        query: username,
+      );
+      
+      // 4. Find exact match
+      // API returns List<Map<String, dynamic>>, so we need to convert to Entity first
+      final matchedUser = searchResult.users
+          .map((userMap) => SearchUserEntity.fromJson(userMap))
+          .cast<SearchUserEntity?>()
+          .firstWhere(
+            (user) => user?.username.toLowerCase() == username.toLowerCase(),
+            orElse: () => null,
+          );
+
+      if (matchedUser != null && context.mounted) {
+        // 5. Navigate
+        CommunityNavigation.navigateToUserProfile(
+          context,
+          userId: matchedUser.userId,
+        );
+      } else {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('User @$username not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error resolving mention: $e');
+      if (context.mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open profile'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   void _showErrorSnackBar(BuildContext context, String message) {

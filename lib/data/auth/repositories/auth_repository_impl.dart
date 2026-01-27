@@ -6,6 +6,9 @@ import '../../../core/utils/either.dart';
 import '../../../core/error/failures.dart';
 import '../../../domain/auth/entities/user.dart';
 import '../models/user_model.dart';
+import '../../../domain/auth/entities/notification_settings.dart';
+import '../models/notification_settings_model.dart';
+import 'package:nepika/domain/auth/repositories/auth_repository.dart';
 import 'package:nepika/domain/auth/repositories/auth_repository.dart';
 import '../datasources/auth_local_data_source.dart';
 import '../datasources/auth_remote_data_source.dart';
@@ -358,5 +361,32 @@ class AuthRepositoryImpl implements AuthRepository {
       }
     }
     return errorMessage;
+  }
+  @override
+  Future<Result<NotificationSettings>> getNotificationSettings() async {
+    try {
+      final response = await remoteDataSource.getNotificationSettings();
+      return success(NotificationSettingsModel.fromJson(response));
+    } catch (e) {
+      debugPrint('AuthRepository: Error getting notification settings');
+      return failure(ServerFailure(message: _getErrorMessage(e)));
+    }
+  }
+
+  @override
+  Future<Result<NotificationSettings>> updateNotificationSettings(NotificationSettings settings) async {
+    try {
+      final model = NotificationSettingsModel(
+        remindersEnabled: settings.remindersEnabled,
+        communityEnabled: settings.communityEnabled,
+        marketingEnabled: settings.marketingEnabled,
+      );
+      
+      final response = await remoteDataSource.updateNotificationSettings(model.toJson());
+      return success(NotificationSettingsModel.fromJson(response));
+    } catch (e) {
+      debugPrint('AuthRepository: Error updating notification settings');
+      return failure(ServerFailure(message: _getErrorMessage(e)));
+    }
   }
 }

@@ -1099,8 +1099,11 @@ class CommunityRepositoryImpl implements CommunityRepository {
       );
       
       if (response.statusCode == 200 && response.data['success'] == true) {
+        final data = response.data['data'];
+        final List<dynamic> usersList = data is List ? data : (data['users'] ?? []);
+        
         return UserSearchEntity(
-          users: List<Map<String, dynamic>>.from(response.data['data'])
+          users: List<Map<String, dynamic>>.from(usersList)
         );
       } else {
         throw Exception(response.data['message'] ?? 'Failed to search users');

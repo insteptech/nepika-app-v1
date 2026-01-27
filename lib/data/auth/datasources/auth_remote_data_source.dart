@@ -54,4 +54,11 @@ abstract class AuthRemoteDataSource {
     required String otpCode,
     required String otpId,
   });
+
+  /// Get Notification Settings
+  Future<Map<String, dynamic>> getNotificationSettings();
+
+  /// Update Notification Settings
+  Future<Map<String, dynamic>> updateNotificationSettings(Map<String, dynamic> settings);
 }
+

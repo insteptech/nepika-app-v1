@@ -1,5 +1,6 @@
 import '../../../core/utils/either.dart';
 import '../entities/user.dart';
+import '../entities/notification_settings.dart';
 
 abstract class AuthRepository {
   Future<Result<Map<String, dynamic>>> sendOtp({String? phone, String? email, String? otpId, String? appSignature});
@@ -12,4 +13,8 @@ abstract class AuthRepository {
   // Recovery methods
   Future<Result<Map<String, dynamic>>> recoverSendEmailOtp({required String email});
   Future<Result<Map<String, dynamic>>> recoverVerifyEmailOtp({required String email, required String otpCode, required String otpId});
+
+  // Notification Settings
+  Future<Result<NotificationSettings>> getNotificationSettings();
+  Future<Result<NotificationSettings>> updateNotificationSettings(NotificationSettings settings);
 }

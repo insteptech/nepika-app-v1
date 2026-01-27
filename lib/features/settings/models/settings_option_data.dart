@@ -9,6 +9,7 @@ class SettingsOptionData {
   final bool toggleValue;
   final ValueChanged<bool>? onToggle;
   final Color? textColor;
+  final bool isEnabled;
 
   const SettingsOptionData(
     this.text, {
@@ -17,6 +18,7 @@ class SettingsOptionData {
     this.toggleValue = false,
     this.onToggle,
     this.textColor,
+    this.isEnabled = true,
   });
 
   /// Creates a regular option without toggle functionality
@@ -24,6 +26,7 @@ class SettingsOptionData {
     this.text, {
     required this.onTap,
     this.textColor,
+    this.isEnabled = true,
   })  : showToggle = false,
         toggleValue = false,
         onToggle = null;
@@ -34,6 +37,7 @@ class SettingsOptionData {
     this.toggleValue = false,
     required this.onToggle,
     this.textColor,
+    this.isEnabled = true,
   })  : showToggle = true,
         onTap = null;
 
@@ -44,5 +48,6 @@ class SettingsOptionData {
     this.toggleValue = false,
     this.onToggle,
     this.textColor,
+    this.isEnabled = true,
   }) : showToggle = true;
 }

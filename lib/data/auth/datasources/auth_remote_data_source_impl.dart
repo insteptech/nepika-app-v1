@@ -248,4 +248,38 @@ class AuthRemoteDataSourceImpl implements AuthRemoteDataSource {
 
     return result.data['data'] as Map<String, dynamic>;
   }
+
+  @override
+  Future<Map<String, dynamic>> getNotificationSettings() async {
+    final result = await _apiClient.request(
+      path: '/auth/users/me/notification-settings',
+      method: 'GET',
+    );
+
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to get notification settings');
+    }
+
+    return result.data['data'] as Map<String, dynamic>;
+  }
+
+  @override
+  Future<Map<String, dynamic>> updateNotificationSettings(Map<String, dynamic> settings) async {
+    final result = await _apiClient.request(
+      path: '/auth/users/me/notification-settings',
+      method: 'PATCH',
+      body: settings,
+    );
+
+    if (result.statusCode != 200 || result.data['success'] != true) {
+      throw Exception(result.data['message'] ?? 'Failed to update notification settings');
+    }
+
+    // Return updated settings or success message
+    if (result.data['data'] != null) {
+      return result.data['data'] as Map<String, dynamic>;
+    } else {
+       return settings; // Optimistic return if backend doesn't return full object
+    }
+  }
 }

@@ -95,7 +95,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void dispose() {
     _mainScrollController.dispose();
-    _profileBloc?.close();
+    // Do not close _profileBloc as it is provided by parent context
     super.dispose();
   }
 
@@ -859,15 +859,15 @@ Join the conversation: $profileUrl''';
         // Trigger initialization now that we have the ProfileBloc
         if (profileUserId != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
+            if (mounted && !profileBloc.isClosed) {
               profileBloc.add(GetCommunityProfile(token: _token!, userId: profileUserId!));
+            }
               
               if (_currentUserId != profileUserId && _currentUserId != null) {
                 debugPrint('ProfilePage: Loading stored follow status for user: $profileUserId');
                 _loadStoredFollowStatus();
                 // Note: Backend now provides follow status in profile response, no need for separate API call
               }
-            }
           });
         }
       }

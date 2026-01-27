@@ -19,6 +19,7 @@ class SettingsOptionTile extends StatefulWidget {
   final bool showToggle;
   final bool? toggleValue;
   final ValueChanged<bool>? onToggleChanged;
+  final bool isEnabled;
 
   // Storage
   final String? toggleStorageKey;
@@ -37,6 +38,7 @@ class SettingsOptionTile extends StatefulWidget {
     this.showToggle = false,
     this.toggleValue,
     this.onToggleChanged,
+    this.isEnabled = true,
     this.toggleStorageKey,
   });
 
@@ -85,6 +87,8 @@ class _SettingsOptionTileState extends State<SettingsOptionTile> {
   }
 
   Future<void> _handleToggleChange(bool value) async {
+    if (!widget.isEnabled) return; // Ignore if disabled
+
     setState(() {
       _localToggleValue = value;
     });
@@ -109,55 +113,61 @@ class _SettingsOptionTileState extends State<SettingsOptionTile> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Material(
-          color: widget.backgroundColor ?? Colors.transparent,
-          child: InkWell(
-            onTap: widget.showToggle ? null : widget.onTap,
-            child: Container(
-              height: 55,
-              padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 20),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      widget.text,
-                      style: Theme.of(context).textTheme.headlineMedium,
+    return Opacity(
+      opacity: widget.isEnabled ? 1.0 : 0.5,
+      child: Column(
+        children: [
+          Material(
+            color: widget.backgroundColor ?? Colors.transparent,
+            child: InkWell(
+              onTap: (!widget.isEnabled || widget.showToggle) ? null : widget.onTap,
+              child: Container(
+                height: 55,
+                padding: widget.padding ?? const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        widget.text,
+                        style: Theme.of(context).textTheme.headlineMedium,
+                      ),
                     ),
-                  ),
-                  if (widget.showToggle)
-                    ToggleSwitch(
-                      value: _localToggleValue ?? false,
-                      onChanged: _handleToggleChange,
-                    )
-                  else
-                    widget.rightIcon ??
-                        Image.asset(
-                          'assets/icons/chevron_right.png',
-                          width: 14,
-                          height: 14,
-                          color: Theme.of(context)
-                              .textTheme
-                              .headlineMedium!
-                              .secondary(context)
-                              .color,
+                    if (widget.showToggle)
+                      IgnorePointer(
+                        ignoring: !widget.isEnabled,
+                        child: ToggleSwitch(
+                          value: _localToggleValue ?? false,
+                          onChanged: _handleToggleChange,
                         ),
-                ],
+                      )
+                    else
+                      widget.rightIcon ??
+                          Image.asset(
+                            'assets/icons/chevron_right.png',
+                            width: 14,
+                            height: 14,
+                            color: Theme.of(context)
+                                .textTheme
+                                .headlineMedium!
+                                .secondary(context)
+                                .color,
+                          ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-        if (widget.showDivider)
-          Padding(
-            padding: const EdgeInsets.only(left: 24),
-            child: Divider(
-              height: 1,
-              thickness: 1,
-              color: Theme.of(context).dividerColor,
+          if (widget.showDivider)
+            Padding(
+              padding: const EdgeInsets.only(left: 24),
+              child: Divider(
+                height: 1,
+                thickness: 1,
+                color: Theme.of(context).dividerColor,
+              ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -1,5 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
+import 'package:nepika/core/services/local_notification_service.dart';
+import 'package:nepika/core/di/injection_container.dart';
+import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
+import 'package:nepika/features/reminders/bloc/reminder_event.dart';
+
+import 'package:nepika/domain/auth/usecases/get_notification_settings.dart';
+import 'package:nepika/domain/auth/usecases/update_notification_settings.dart';
+import 'package:nepika/domain/auth/entities/notification_settings.dart';
 
 import '../components/settings_options_list.dart';
 import '../models/settings_option_data.dart';
@@ -17,7 +25,7 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
   // Toggle states
   bool _reminderEnabled = false;
   bool _communityEnabled = false;
-  bool _allChannelEnabled = false;
+  bool _marketingEnabled = true;
   bool _isLoading = true;
 
   @override
@@ -29,19 +37,97 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
   Future<void> _loadSettings() async {
     final helper = SharedPrefsHelper();
     
-    // Load saved values
+    // 1. Optimistic load from local prefs
     final reminder = await helper.getBool('Reminder notification');
     final community = await helper.getBool('Community notification');
-    final allChannel = await helper.getBool('Turn on all channel notification');
 
     if (mounted) {
       setState(() {
         _reminderEnabled = reminder;
         _communityEnabled = community;
-        _allChannelEnabled = allChannel;
-        _isLoading = false;
+        // Keep loading true until API responds
       });
     }
+
+    // 2. Fetch from API
+    try {
+      final result = await sl<GetNotificationSettings>().call();
+      result.fold(
+        (failure) {
+          if (mounted) setState(() => _isLoading = false);
+        },
+        (settings) {
+          if (mounted) {
+            setState(() {
+              _reminderEnabled = settings.remindersEnabled;
+              _communityEnabled = settings.communityEnabled;
+              _marketingEnabled = settings.marketingEnabled;
+              _isLoading = false;
+            });
+            // Sync local prefs
+            helper.setBool('Reminder notification', settings.remindersEnabled);
+            helper.setBool('Community notification', settings.communityEnabled);
+          }
+        },
+      );
+    } catch (e) {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _updateSettings({bool? reminder, bool? community}) async {
+    final oldReminder = _reminderEnabled;
+    final oldCommunity = _communityEnabled;
+
+    // 1. Optimistic UI Update
+    setState(() {
+      if (reminder != null) _reminderEnabled = reminder;
+      if (community != null) _communityEnabled = community;
+    });
+
+    // 2. Handle Local Side Effects
+    if (reminder != null) {
+      await SharedPrefsHelper().setBool('Reminder notification', reminder);
+      if (reminder) {
+        sl<ReminderBloc>().add(const GetAllRemindersEvent(forceRefresh: true));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Reminders scheduled')),
+          );
+        }
+      } else {
+        await LocalNotificationService.instance.cancelAllReminders();
+      }
+    }
+    if (community != null) {
+      await SharedPrefsHelper().setBool('Community notification', community);
+    }
+
+    // 3. Call API
+    final settings = NotificationSettings(
+      remindersEnabled: _reminderEnabled,
+      communityEnabled: _communityEnabled,
+      marketingEnabled: _marketingEnabled,
+    );
+
+    final result = await sl<UpdateNotificationSettings>().call(settings);
+    result.fold(
+      (failure) {
+        // Revert on failure
+        if (mounted) {
+          setState(() {
+            _reminderEnabled = oldReminder;
+            _communityEnabled = oldCommunity;
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to sync settings')),
+          );
+        }
+      },
+      (success) {
+        // Success - already updated locally
+      },
+    );
   }
 
   List<SettingsOptionData> _buildOptions() {
@@ -51,32 +137,12 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
       SettingsOptionData.toggle(
         'Reminder notification',
         toggleValue: _reminderEnabled,
-        onToggle: (value) async {
-          setState(() {
-            _reminderEnabled = value;
-          });
-          await SharedPrefsHelper().setBool('Reminder notification', value);
-        },
+        onToggle: (value) => _updateSettings(reminder: value),
       ),
       SettingsOptionData.toggle(
         'Community notification',
         toggleValue: _communityEnabled,
-        onToggle: (value) async {
-          setState(() {
-            _communityEnabled = value;
-          });
-          await SharedPrefsHelper().setBool('Community notification', value);
-        },
-      ),
-      SettingsOptionData.toggle(
-        'All Channel Notification',
-        toggleValue: _allChannelEnabled,
-        onToggle: (value) async {
-          setState(() {
-            _allChannelEnabled = value;
-          });
-          await SharedPrefsHelper().setBool('Turn on all channel notification', value);
-        },
+        onToggle: (value) => _updateSettings(community: value),
       ),
     ];
   }

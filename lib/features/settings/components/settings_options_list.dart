@@ -38,6 +38,7 @@ class SettingsOptionsList extends StatelessWidget {
           fontWeight: FontWeight.w400,
           textColor: option.textColor ?? colorScheme.onSurface,
           showDivider: false,
+          isEnabled: option.isEnabled,
         );
       }).toList(),
     );
@@ -64,6 +65,7 @@ class _ToggleOptionTile extends StatelessWidget {
       fontWeight: FontWeight.w400,
       textColor: option.textColor ?? Theme.of(context).textTheme.bodyLarge?.color,
       showDivider: false,
+      isEnabled: option.isEnabled,
     );
   }
 }

@@ -6,16 +6,24 @@ import '../../../core/services/local_notification_service.dart';
 import '../../../core/utils/app_logger.dart';
 import 'reminder_event.dart';
 import 'reminder_state.dart';
+import 'package:nepika/domain/auth/usecases/get_notification_settings.dart';
+import 'package:nepika/domain/auth/usecases/update_notification_settings.dart';
+import 'package:nepika/domain/auth/entities/notification_settings.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
 
 class ReminderBloc extends Bloc<ReminderEvent, ReminderState> {
   final AddReminder addReminderUseCase;
   final ReminderRepository reminderRepository;
   final LocalNotificationService localNotificationService;
+  final UpdateNotificationSettings updateNotificationSettings;
+  final GetNotificationSettings getNotificationSettings;
 
   ReminderBloc({
     required this.addReminderUseCase,
     required this.reminderRepository,
     required this.localNotificationService,
+    required this.updateNotificationSettings,
+    required this.getNotificationSettings,
   }) : super(ReminderInitial()) {
     on<AddReminderEvent>(_onAddReminder);
     on<GetAllRemindersEvent>(_onGetAllReminders);

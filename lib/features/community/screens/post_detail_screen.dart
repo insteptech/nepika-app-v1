@@ -21,6 +21,9 @@ import '../widgets/user_post_widget.dart';
 import '../widgets/user_icon.dart';
 import '../widgets/user_name.dart';
 import '../utils/community_state_recovery_mixin.dart';
+import '../../../../domain/community/repositories/community_repository.dart';
+import '../../../../core/di/injection_container.dart';
+import '../utils/community_navigation.dart';
 
 class PostDetailScreen extends StatefulWidget {
   final String? token;
@@ -387,18 +390,20 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     }
   }
 
-  // Helper method to create clickable text spans with links and hashtags
+  // Helper method to create clickable text spans with links, hashtags, and mentions
   List<TextSpan> _buildClickableTextSpans(String text, TextStyle? baseStyle) {
     final List<TextSpan> spans = [];
     
-    // Regex patterns for URLs and hashtags
+    // Regex patterns for URLs, hashtags, and mentions
     final urlPattern = RegExp(r'https?://[^\s]+|www\.[^\s]+|[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}(?:/[^\s]*)?');
     final hashtagPattern = RegExp(r'#[a-zA-Z0-9_-]+');
+    final mentionPattern = RegExp(r'@[a-zA-Z0-9._]+'); // Basic username pattern
     
-    // Find all matches (URLs and hashtags)
+    // Find all matches
     final allMatches = <Match>[];
     allMatches.addAll(urlPattern.allMatches(text));
     allMatches.addAll(hashtagPattern.allMatches(text));
+    allMatches.addAll(mentionPattern.allMatches(text));
     
     // Sort matches by start position
     allMatches.sort((a, b) => a.start.compareTo(b.start));
@@ -416,7 +421,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
       
       final matchText = match.group(0)!;
       
-      if (urlPattern.hasMatch(matchText)) {
+      if (urlPattern.hasMatch(matchText) && !matchText.startsWith('@') && !matchText.startsWith('#')) {
         // Handle URL
         spans.add(TextSpan(
           text: matchText,
@@ -438,6 +443,17 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
           ),
           recognizer: TapGestureRecognizer()
             ..onTap = () => _handleHashtagTap(matchText),
+        ));
+      } else if (mentionPattern.hasMatch(matchText)) {
+        // Handle Mention
+        spans.add(TextSpan(
+          text: matchText,
+          style: baseStyle?.copyWith(
+            color: Colors.blue, // Explicitly blue
+            fontWeight: FontWeight.w500,
+          ),
+          recognizer: TapGestureRecognizer()
+            ..onTap = () => _handleMentionTap(matchText),
         ));
       }
       
@@ -500,6 +516,69 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
       );
       // TODO: Navigate to hashtag search or trending page
       // Navigator.pushNamed(context, AppRoutes.hashtagSearch, arguments: hashtag);
+    }
+  }
+
+  // Handle mention tap
+  void _handleMentionTap(String mention) async {
+    if (!mounted) return;
+    
+    // 1. Extract username (remove @)
+    final username = mention.substring(1);
+    
+    // 2. Show feedback
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Opening $username...'),
+        duration: const Duration(seconds: 1),
+      ),
+    );
+
+    try {
+      // 3. Search for user to get ID
+      final communityRepository = sl<CommunityRepository>();
+      
+      // Perform search
+      final searchResult = await communityRepository.searchUsers(
+        token: _token!,
+        query: username,
+      );
+      
+      // 4. Find exact match
+      final matchedUser = searchResult.users
+          .map((userMap) => SearchUserEntity.fromJson(userMap))
+          .cast<SearchUserEntity?>()
+          .firstWhere(
+        (user) => user?.username.toLowerCase() == username.toLowerCase(),
+        orElse: () => null,
+      );
+
+      if (matchedUser != null && mounted) {
+        // 5. Navigate
+        CommunityNavigation.navigateToUserProfile(
+          context,
+          userId: matchedUser.userId,
+        );
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('User @$username not found'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error resolving mention: $e');
+      if (mounted) {
+         ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Could not open profile'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
   

@@ -4,7 +4,10 @@ import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:timezone/timezone.dart' as tz;
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:permission_handler/permission_handler.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../utils/app_logger.dart';
+import '../utils/shared_prefs_helper.dart';
 
 /// Local Notification Service for scheduling reminder notifications
 /// Handles timezone conversion, recurring notifications, and notification management
@@ -344,12 +347,24 @@ class LocalNotificationService {
     required bool isEnabled,
   }) async {
     if (!_isInitialized) {
-      AppLogger.warning('LocalNotificationService not initialized', tag: 'Notifications');
-      return false;
+      AppLogger.warning('LocalNotificationService not initialized, attempting auto-init...', tag: 'Notifications');
+      try {
+        await initialize();
+      } catch (e) {
+        AppLogger.error('Auto-initialization failed: $e', tag: 'Notifications');
+        return false;
+      }
     }
 
     if (!isEnabled) {
       AppLogger.info('Reminder is disabled, skipping notification scheduling', tag: 'Notifications');
+      return true;
+    }
+
+    // Check global preference
+    final globalEnabled = await SharedPrefsHelper().getBool('Reminder notification');
+    if (!globalEnabled) {
+      AppLogger.info('Global reminder notifications disabled, skipping scheduling', tag: 'Notifications');
       return true;
     }
 
@@ -666,8 +681,8 @@ class LocalNotificationService {
   Map<String, dynamic> getStatus() {
     return {
       'isInitialized': _isInitialized,
-      'localTimeZone': tz.local.name,
-      'currentTime': tz.TZDateTime.now(tz.local).toString(),
+      'localTimeZone': _isInitialized ? tz.local.name : 'not_initialized',
+      'currentTime': _isInitialized ? tz.TZDateTime.now(tz.local).toString() : 'not_initialized',
       'deviceTimeZoneName': DateTime.now().timeZoneName,
       'deviceTimeZoneOffset': DateTime.now().timeZoneOffset.toString(),
     };
@@ -745,8 +760,8 @@ class LocalNotificationService {
       // Basic service status
       diagnostics['serviceInitialized'] = _isInitialized;
       diagnostics['platform'] = Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown';
-      diagnostics['timezone'] = tz.local.name;
-      diagnostics['currentTime'] = tz.TZDateTime.now(tz.local).toString();
+      diagnostics['timezone'] = _isInitialized ? tz.local.name : 'not_initialized';
+      diagnostics['currentTime'] = _isInitialized ? tz.TZDateTime.now(tz.local).toString() : 'not_initialized';
       
       // Permission checks
       if (Platform.isAndroid) {

@@ -12,6 +12,8 @@ import '../api_base.dart';
 import '../di/injection_container.dart';
 import '../../domain/fcm/usecases/save_fcm_token_usecase.dart';
 import '../../domain/fcm/usecases/delete_fcm_token_usecase.dart';
+import '../utils/shared_prefs_helper.dart';
+import '../utils/secure_storage.dart';
 import '../../firebase_options.dart';
 import '../services/navigation_service.dart';
 import '../config/constants/routes.dart';
@@ -889,7 +891,7 @@ class UnifiedFcmService {
 
 
   /// Handle foreground messages
-  void _handleForegroundMessage(RemoteMessage message) {
+  Future<void> _handleForegroundMessage(RemoteMessage message) async {
     AppLogger.info(
       'Foreground message received: ${message.notification?.title}',
       tag: 'FCM',
@@ -900,6 +902,35 @@ class UnifiedFcmService {
     AppLogger.info('  - Notification Title: ${message.notification?.title}', tag: 'FCM');
     AppLogger.info('  - Notification Body: ${message.notification?.body}', tag: 'FCM');
     AppLogger.info('  - Data: ${message.data}', tag: 'FCM');
+
+    // 1. Validate Recipient (Cross-User Check)
+    final recipientId = message.data['recipient_id'];
+    if (recipientId != null) {
+      try {
+        final secureStorage = ServiceLocator.get<SecureStorage>();
+        final currentUserId = await secureStorage.getUserId();
+        
+        if (currentUserId != null && currentUserId.toString() != recipientId.toString()) {
+           AppLogger.warning(
+             '🚫 Suppressing notification for wrong user (Expected: $recipientId, Current: $currentUserId)', 
+             tag: 'FCM'
+           );
+           return;
+        }
+      } catch (e) {
+         AppLogger.warning('Failed to validate recipient: $e', tag: 'FCM');
+      }
+    }
+
+    // 2. Check community notification preferences
+    final isCommunity = _isCommunityNotification(message);
+    if (isCommunity) {
+      final communityEnabled = await SharedPrefsHelper().getBool('Community notification');
+      if (!communityEnabled) {
+        AppLogger.info('🚫 Suppressing COMMUNITY notification due to user preference', tag: 'FCM');
+        return;
+      }
+    }
     
     // Check for duplicate messages
     if (message.messageId != null) {
@@ -1032,10 +1063,41 @@ class UnifiedFcmService {
   /// Show local notification
   Future<void> _showLocalNotification(RemoteMessage message) async {
     try {
+      final data = message.data;
+      final type = data['type']?.toString().toLowerCase();
+      final screen = data['screen']?.toString().toLowerCase();
+
+      // Check User Preferences for Notification Suppression
+      final prefs = SharedPrefsHelper();
+      
+      // 1. Check Reminder Notifications
+      // Identify reminders by type or screen
+      final isReminder = (type == 'reminder') || 
+                        (screen != null && screen.startsWith('reminder'));
+      
+      if (isReminder) {
+        final remindersEnabled = await prefs.getBool('Reminder notification');
+        if (!remindersEnabled) {
+          AppLogger.info('🚫 Suppressing REMINDER notification due to user preference', tag: 'FCM');
+          return;
+        }
+      }
+
+      // 2. Check Community Notifications
+      final communityTypes = ['like', 'comment', 'reply', 'mention', 'follow', 'follow_request'];
+      final isCommunity = type != null && communityTypes.contains(type);
+      
+      if (isCommunity) {
+        final communityEnabled = await prefs.getBool('Community notification');
+        if (!communityEnabled) {
+          AppLogger.info('🚫 Suppressing COMMUNITY notification due to user preference', tag: 'FCM');
+          return;
+        }
+      }
+
       AppLogger.info('📱 SHOWING LOCAL NOTIFICATION:', tag: 'FCM');
       
       final notification = message.notification;
-      final data = message.data;
 
       String title = notification?.title ?? 
                     data['title'] ?? 
@@ -1681,5 +1743,16 @@ class UnifiedFcmService {
     } catch (e) {
       AppLogger.error('Failed to print debug info: $e', tag: 'FCM');
     }
+  }
+
+
+  bool _isCommunityNotification(RemoteMessage message) {
+    if (message.data['type'] == null) return false;
+    final type = message.data['type'].toString().toLowerCase();
+    return type == 'community_activity' || 
+           type == 'like' || 
+           type == 'comment' || 
+           type == 'follow' ||
+           type == 'post';
   }
 }

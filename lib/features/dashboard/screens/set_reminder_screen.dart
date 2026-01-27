@@ -10,6 +10,7 @@ import 'package:nepika/core/widgets/selection_button.dart';
 import 'package:nepika/core/widgets/back_button.dart';
 import 'package:nepika/core/di/injection_container.dart';
 import 'package:nepika/core/services/local_notification_service.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/reminders/bloc/reminder_event.dart';
 import 'package:nepika/features/reminders/bloc/reminder_state.dart';
@@ -17,6 +18,9 @@ import 'package:nepika/features/settings/widgets/settings_option_tile.dart';
 import 'package:nepika/features/routine/widgets/sticky_header_delegate.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:nepika/domain/reminders/entities/reminder.dart';
+import 'package:nepika/domain/auth/usecases/get_notification_settings.dart';
+import 'package:nepika/domain/auth/usecases/update_notification_settings.dart';
+import 'package:nepika/domain/auth/entities/notification_settings.dart';
 
 enum ReminderDays { daily, weekdays, weekends }
 enum ReminderType { morning, night }
@@ -126,6 +130,82 @@ bool get _isFormValid {
     _permissionCheckTimer = Timer.periodic(const Duration(seconds: 1), (_) {
       _checkNotificationPermission();
     });
+
+    // Check if reminder notifications are disabled locally
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkReminderToggle();
+    });
+  }
+
+  Future<void> _checkReminderToggle() async {
+    final prefs = SharedPrefsHelper();
+    final enabled = await prefs.getBool('Reminder notification');
+    
+    // Only warn if not manually disabled by user in this session (optional refinement)
+    // But user asked to be warned if valid.
+    if (!enabled && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reminders Disabled'),
+          content: const Text(
+            'You have disabled reminder notifications in settings. You won\'t receive alerts for this reminder.\n\nWould you like to enable them?'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('No'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Update Backend
+                try {
+                  final updateSettings = sl<UpdateNotificationSettings>();
+                  final getSettings = sl<GetNotificationSettings>();
+                  
+                  // Get current to preserve other values
+                  final currentResult = await getSettings();
+                  
+                  await currentResult.fold(
+                    (failure) async {
+                       // Fallback
+                       await updateSettings(const NotificationSettings(
+                         remindersEnabled: true,
+                         communityEnabled: false, 
+                         marketingEnabled: true,
+                       ));
+                    },
+                    (settings) async {
+                      await updateSettings(NotificationSettings(
+                        remindersEnabled: true,
+                        communityEnabled: settings.communityEnabled,
+                        marketingEnabled: settings.marketingEnabled,
+                      ));
+                    },
+                  );
+                } catch (e) {
+                  debugPrint('Failed to sync global settings in modal: $e');
+                }
+
+                // Update Local
+                await prefs.setBool('Reminder notification', true);
+                
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reminder notifications enabled'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override

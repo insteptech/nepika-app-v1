@@ -10,6 +10,10 @@ import 'package:nepika/features/reminders/bloc/reminder_event.dart';
 import 'package:nepika/features/reminders/bloc/reminder_state.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:nepika/features/routine/widgets/sticky_header_delegate.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
+import 'package:nepika/domain/auth/usecases/get_notification_settings.dart';
+import 'package:nepika/domain/auth/usecases/update_notification_settings.dart';
+import 'package:nepika/domain/auth/entities/notification_settings.dart';
 
 class ScheduledRemindersScreen extends StatefulWidget {
   const ScheduledRemindersScreen({super.key});
@@ -31,6 +35,80 @@ class _ScheduledRemindersScreenState extends State<ScheduledRemindersScreen> {
     _reminderBloc = sl<ReminderBloc>();
     _reminderBloc.add(GetAllRemindersEvent());
     _scrollController.addListener(_onScroll);
+    
+    // Check if reminder notifications are disabled
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _checkReminderToggle();
+    });
+  }
+
+  Future<void> _checkReminderToggle() async {
+    final prefs = SharedPrefsHelper();
+    final enabled = await prefs.getBool('Reminder notification');
+    
+    if (!enabled && mounted) {
+      showDialog(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('Reminders Disabled'),
+          content: const Text(
+            'You have disabled reminder notifications in settings. You might miss your scheduled routines.\n\nWould you like to enable them?'
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('No, Keep Off'),
+            ),
+            TextButton(
+              onPressed: () async {
+                // Update Backend
+                try {
+                  final updateSettings = sl<UpdateNotificationSettings>();
+                  final getSettings = sl<GetNotificationSettings>();
+                  
+                  // Get current to preserve other values
+                  final currentResult = await getSettings();
+                  
+                  await currentResult.fold(
+                    (failure) async {
+                       // Fallback: just enable reminder, assume others default
+                       await updateSettings(const NotificationSettings(
+                         remindersEnabled: true,
+                         communityEnabled: false, 
+                         marketingEnabled: true,
+                       ));
+                    },
+                    (settings) async {
+                      await updateSettings(NotificationSettings(
+                        remindersEnabled: true,
+                        communityEnabled: settings.communityEnabled,
+                        marketingEnabled: settings.marketingEnabled,
+                      ));
+                    },
+                  );
+                } catch (e) {
+                  debugPrint('Failed to sync global settings in modal: $e');
+                }
+
+                // Update Local
+                await prefs.setBool('Reminder notification', true);
+                
+                if (context.mounted) {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Reminder notifications enabled'),
+                      backgroundColor: Colors.green,
+                    ),
+                  );
+                }
+              },
+              child: const Text('Enable'),
+            ),
+          ],
+        ),
+      );
+    }
   }
 
   @override

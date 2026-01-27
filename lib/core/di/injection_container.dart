@@ -91,6 +91,8 @@ import '../../data/auth/datasources/auth_local_data_source.dart';
 import '../../data/auth/datasources/auth_local_data_source_impl.dart';
 import '../../data/auth/repositories/auth_repository_impl.dart';
 import '../../domain/auth/repositories/auth_repository.dart';
+import '../../domain/auth/usecases/get_notification_settings.dart';
+import '../../domain/auth/usecases/update_notification_settings.dart';
 
 import '../../../../core/di/injection_container.dart' as di;
 import '../../data/support/datasources/faq_remote_data_source.dart';
@@ -258,6 +260,8 @@ class ServiceLocator {
         addReminderUseCase: get<AddReminder>(),
         reminderRepository: get<ReminderRepository>(),
         localNotificationService: get<LocalNotificationService>(),
+        updateNotificationSettings: get<UpdateNotificationSettings>(),
+        getNotificationSettings: get<GetNotificationSettings>(),
       ),
     );
 
@@ -494,6 +498,14 @@ class ServiceLocator {
         get<AuthRemoteDataSource>(),
         get<AuthLocalDataSource>(),
       ),
+    );
+
+    // Auth - Notification Settings
+    _registerLazySingleton<GetNotificationSettings>(
+      GetNotificationSettings(get<AuthRepository>()),
+    );
+    _registerLazySingleton<UpdateNotificationSettings>(
+      UpdateNotificationSettings(get<AuthRepository>()),
     );
     
     _fullyInitialized = true;
