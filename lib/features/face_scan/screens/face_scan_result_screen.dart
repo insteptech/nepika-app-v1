@@ -1046,9 +1046,8 @@ Widget _buildNavigatingBackView() {
         GestureDetector(
           onTap: () async {
             debugPrint('Face scan: Close button pressed, disposing camera...');
-            final navigator = Navigator.of(context);
             await _cameraManager.dispose();
-            if (mounted) navigator.pop();
+            if (mounted) Navigator.of(context).pop();
           },
           child: Transform.rotate(
             angle: 45 * 3.1416 / 180,

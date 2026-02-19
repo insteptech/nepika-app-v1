@@ -43,6 +43,16 @@ class FaceDetectorService {
       final input = _convertCameraImage(image, camera);
       if (input != null) {
         final faces = await _faceDetector.processImage(input);
+        
+        // Sort faces by bounding box area (largest first) to prioritize the main subject
+        if (faces.isNotEmpty) {
+          faces.sort((a, b) {
+            final areaA = a.boundingBox.width * a.boundingBox.height;
+            final areaB = b.boundingBox.width * b.boundingBox.height;
+            return areaB.compareTo(areaA);
+          });
+        }
+        
         _detectedFaces = faces;
         return faces;
       }
