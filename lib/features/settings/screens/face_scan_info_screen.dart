@@ -71,14 +71,14 @@ class FaceScanInfoScreen extends StatelessWidget {
                     _buildInfoCard(
                       context,
                       title: 'How Your Skin Score Is Calculated',
-                      content: 'Your face image is analyzed across multiple skin concerns, such as:\n• Acne\n• Enlarged pores\n• Dark spots or pigmentation\n• Wrinkles\n• Redness or similar issues\n\nEach concern gets a "severity percentage."\nExample: Acne = 25%, Pores = 40%, Wrinkles = 15%, etc.\n\nWe add up all the detected severity percentages. This gives a total "skin issues score."\n\nYour final Skin Score is calculated as:\nSkin Score = 100 – (Total severity of all detected issues)\n\n• If your total issues are low → your score goes higher\n• If your issues are high → your score goes lower\n\nWe make sure the final score never goes below 0.',
+                      content: 'Your face image is analyzed across multiple skin concerns, such as:\n• Acne\n• Enlarged pores\n• Dark spots or pigmentation\n• Wrinkles\n• Redness or similar issues\n\nEach concern is assigned a severity score based on its visibility and intensity.\nExample: Acne = Mild, Pores = Moderate, etc.\n\nWe aggregate these severity scores to calculate your total "skin health."\n\nYour final Skin Score is calculated as:\nSkin Score = 100 – (Total severity impact)\n\n• If your total severity is low → your score goes higher\n• If your severity is high → your score goes lower\n\nWe make sure the final score never goes below 0.',
                       theme: theme,
                     ),
                     const SizedBox(height: 16),
                     _buildInfoCard(
                       context,
-                      title: 'Understanding Confidence Scores',
-                      content: 'A confidence score shows how sure the AI is about each detection.\n\nScore Meaning:\n\n80–100% → Very High Confidence\nStrong match to the condition. Likely accurate.\n\n60–79% → Moderate Confidence\nGood match, but lighting/angle may influence accuracy.\n\n40–59% → Low Confidence\nPossible presence, but not certain. Treat as a caution.\n\n10–39% → Very Low Confidence\nWeak pattern. Consider re-scanning with better lighting.\n\nBelow 10%\nAutomatically ignored for area detection.\n\nConfidence exists because skin features can change based on lighting, angles, dryness, or makeup.',
+                      title: 'Understanding Severity Levels',
+                      content: 'We classify each condition into 5 severity bands:\n\nSevere (81–100)\nIndicates a highly visible or pronounced concern that may require attention.\n\nHigh (61–80)\nIndicates a clearly visible concern.\n\nModerate (36–60)\nIndicates a noticeable concern.\n\nMild (16–35)\nIndicates a slight or early-stage concern.\n\nClear (0–15)\nIndicates minimal or no detection of this concern.\n\nThese levels help you track improvement over time.',
                       theme: theme,
                     ),
                     const SizedBox(height: 16),

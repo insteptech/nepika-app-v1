@@ -236,6 +236,50 @@ class DetectionResults {
 
     return BoundingBox(x1: minX, y1: minY, x2: maxX, y2: maxY);
   }
+
+  /// Filter detections to only include those within an oval area
+  DetectionResults filterByOval({
+    required Size imageSize,
+    double ovalWidthFactor = 0.8,
+    double ovalHeightFactor = 0.55,
+  }) {
+    final cx = imageSize.width / 2;
+    final cy = imageSize.height / 2;
+    final rx = (imageSize.width * ovalWidthFactor) / 2;
+    final ry = (imageSize.height * ovalHeightFactor) / 2;
+
+    debugPrint('🛡️ Filtering detections by oval: center=($cx, $cy), rx=$rx, ry=$ry');
+
+    final filteredDetections = detections.where((detection) {
+      final center = detection.bbox.center;
+      final dx = center.dx - cx;
+      final dy = center.dy - cy;
+      
+      // Ellipse equation: (dx/rx)^2 + (dy/ry)^2 <= 1
+      // We use a small buffer (1.05) to be slightly more lenient at the edges
+      final isInside = (dx * dx) / (rx * rx) + (dy * dy) / (ry * ry) <= 1.05;
+      
+      if (!isInside) {
+        debugPrint('🚫 Filtering out detection outside oval: ${detection.className} at ${detection.bbox.center}');
+      }
+      
+      return isInside;
+    }).toList();
+
+    final newClassesFound = filteredDetections.map((d) => d.className).toSet().toList();
+    final Map<String, int> newClassCounts = {};
+    for (final detection in filteredDetections) {
+      newClassCounts[detection.className] = (newClassCounts[detection.className] ?? 0) + 1;
+    }
+
+    debugPrint('🛡️ Filtered ${detections.length - filteredDetections.length} detections. Remaining: ${filteredDetections.length}');
+
+    return DetectionResults(
+      detections: filteredDetections,
+      classesFound: newClassesFound,
+      classCounts: newClassCounts,
+    );
+  }
 }
 
 /// Color mapping for different detection classes

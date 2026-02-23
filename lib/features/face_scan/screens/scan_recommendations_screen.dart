@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/severity_analyzer.dart';
 import 'dart:math' as math;
 import '../models/scan_analysis_models.dart';
 
@@ -642,9 +643,10 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
         ? const Color(0xFF2E2E2E)
         : const Color(0xFFE5E5E5);
 
-    final severity = widget.scanResponse.recommendations.personalizedFor
-        .getSeverity(condition.name);
-    final severityColor = _getSeverityColor(severity);
+    // Use SeverityAnalyzer for consistent 0-100 score mapping
+    final severityLabel = SeverityAnalyzer.getLabelFromScore(condition.confidence);
+    final severityColor = SeverityAnalyzer.getColorFromScore(condition.confidence);
+    final severityIcon = SeverityAnalyzer.getIconFromScore(condition.confidence);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -693,35 +695,14 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
               color: textPrimary,
             ),
           ),
-          const SizedBox(height: 10),
-          Row(
-            children: [
-              Text(
-                'Confidence Level',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  color: textSecondary,
-                ),
-              ),
-              const Spacer(),
-              Text(
-                '${condition.confidence.toStringAsFixed(0)}%',
-                style: theme.textTheme.bodyLarge?.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: severityColor,
-                ),
-              ),
-            ],
-          ),
+          // const SizedBox(height: 10),
+          // Confidence percentage row removed as per previous request
+
           const SizedBox(height: 8),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: condition.confidence / 100,
-              minHeight: 8,
-              backgroundColor: borderColor,
-              valueColor: AlwaysStoppedAnimation<Color>(severityColor),
-            ),
-          ),
+          // We can show a progress bar if desired, or remove it.
+          // The previous task removed the explicit "Confidence Level" text and percentage.
+          // Keeping consistent with "Removed Confidence Percentage" task.
+
           const SizedBox(height: 20),
           Row(
             children: [
@@ -732,7 +713,7 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'Severity: ${_capitalizeFirst(severity)}',
+                  'Severity: $severityLabel $severityIcon',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: severityColor,
@@ -1790,23 +1771,6 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
         ),
       ),
     );
-  }
-
-  Color _getSeverityColor(String severity) {
-    switch (severity.toLowerCase()) {
-      case 'severe':
-        return AppTheme.errorColor;
-      case 'moderate':
-        return AppTheme.warningColor;
-      case 'mild':
-      default:
-        return AppTheme.successColor;
-    }
-  }
-
-  String _capitalizeFirst(String text) {
-    if (text.isEmpty) return text;
-    return text[0].toUpperCase() + text.substring(1).toLowerCase();
   }
 
   IconData _getIconForCause(String? iconName) {

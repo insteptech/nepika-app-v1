@@ -1,5 +1,4 @@
-import 'package:flutter/material.dart';
-// import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/severity_analyzer.dart';
 
 class ConditionCard extends StatelessWidget {
   final String conditionName;
@@ -46,6 +45,10 @@ class ConditionCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final formattedName = _formatConditionName(conditionName);
+    final severityColor = SeverityAnalyzer.getColorFromScore(percentage);
+    final severityLabel = SeverityAnalyzer.getLabelFromScore(percentage);
+
+    final severityIcon = SeverityAnalyzer.getIconFromScore(percentage);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -70,33 +73,33 @@ class ConditionCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 // mainAxisSize: MainAxisSize.min,         
                 children: [
-                  // Condition name - can wrap to 2 lines
-                  Text(
-                    formattedName,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onTertiary,
-                      fontSize: 13,
-                      height: 1.2,
-                    ),
-                    textAlign: TextAlign.start,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  // const SizedBox(height: 6),
-                  Column(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        '${percentage.toStringAsFixed(0)}%',
-                        style: Theme.of(context).textTheme.headlineLarge
-                            ?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: Theme.of(context).colorScheme.onTertiary,
-                              fontSize: 24,
-                              height: 1.1,
-                            ),
-                      ),
+                   // Condition name - can wrap to 2 lines
+                   Text(
+                     formattedName,
+                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                       color: Theme.of(context).colorScheme.onTertiary,
+                       fontSize: 13,
+                       height: 1.2,
+                     ),
+                     textAlign: TextAlign.start,
+                     maxLines: 2,
+                     overflow: TextOverflow.ellipsis,
+                   ),
+                   // const SizedBox(height: 6),
+                   Column(
+                     mainAxisAlignment: MainAxisAlignment.end,
+                     crossAxisAlignment: CrossAxisAlignment.start,
+                     children: [
+                       Text(
+                         '$severityLabel $severityIcon',
+                         style: Theme.of(context).textTheme.headlineLarge
+                             ?.copyWith(
+                               fontWeight: FontWeight.w600,
+                               color: severityColor, // Use dynamic color
+                               fontSize: 20, // Reduced from 24 to fit text
+                               height: 1.1,
+                             ),
+                       ),
                       const SizedBox(height: 6),
                       // View details link
                       GestureDetector(
@@ -128,3 +131,4 @@ class ConditionCard extends StatelessWidget {
     );
   }
 }
+

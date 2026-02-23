@@ -190,24 +190,26 @@ class _PhoneInputWidgetState extends State<PhoneInputWidget> {
           ),
         ),
         // const SizedBox(width: 8),
-        IntrinsicWidth(
-          child: UnderlinedTextField(
-            key: ValueKey(_selectedCountry.hint),
-            hint: _selectedCountry.hint,
-            controller: _phoneController,
-            keyboardType: TextInputType.phone,
-            textAlign: TextAlign.start,
-            contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 5),
-            inputFormatters: [
-              PhoneNumberFormatter(_selectedCountry.format),
-              LengthLimitingTextInputFormatter(_selectedCountry.format.length),
-            ],
-            onChanged: _onPhoneChanged,
-            textStyle: Theme.of(context).textTheme.displaySmall,
-            hintStyle: Theme.of(context).textTheme.displaySmall?.copyWith(
-              color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+        Flexible(
+          child: IntrinsicWidth(
+            child: UnderlinedTextField(
+              key: ValueKey(_selectedCountry.hint),
+              hint: _selectedCountry.hint,
+              controller: _phoneController,
+              keyboardType: TextInputType.phone,
+              textAlign: TextAlign.start,
+              contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 5),
+              inputFormatters: [
+                PhoneNumberFormatter(_selectedCountry.format),
+                LengthLimitingTextInputFormatter(_selectedCountry.format.length),
+              ],
+              onChanged: _onPhoneChanged,
+              textStyle: Theme.of(context).textTheme.displaySmall,
+              hintStyle: Theme.of(context).textTheme.displaySmall?.copyWith(
+                color: Theme.of(context).textTheme.bodySmall?.color?.withValues(alpha: 0.6),
+              ),
+              validator: _validatePhone,
             ),
-            validator: _validatePhone,
           ),
         )
       ],

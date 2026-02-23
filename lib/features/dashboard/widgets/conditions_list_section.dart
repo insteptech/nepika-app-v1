@@ -1,6 +1,7 @@
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/severity_analyzer.dart';
 
 /// A widget that displays skin condition results in a vertical list format.
 /// Each row shows: [Condition Name] [Percentage] [Details button]
@@ -229,6 +230,10 @@ class _ConditionRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final severityColor = SeverityAnalyzer.getColorFromScore(percentage);
+    final severityLabel = SeverityAnalyzer.getLabelFromScore(percentage);
+    final severityIcon = SeverityAnalyzer.getIconFromScore(percentage);
+
     return InkWell(
       onTap: onDetailsTap,
       borderRadius: BorderRadius.circular(12),
@@ -247,16 +252,17 @@ class _ConditionRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Percentage
+            // Severity Label
             SizedBox(
-              width: 60,
+              width: 80, // Increased width for text labels
               child: Text(
-                '${percentage.toStringAsFixed(0)}%',
+                '$severityLabel $severityIcon',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
-                      color: _getPercentageColor(percentage, context),
+                      color: severityColor,
+                      fontSize: 13,
                     ),
-                textAlign: TextAlign.center,
+                textAlign: TextAlign.center, // Align to end like the screenshot numbers
               ),
             ),
             const SizedBox(width: 12),
@@ -297,15 +303,5 @@ class _ConditionRow extends StatelessWidget {
         ),
       ),
     );
-  }
-
-  Color _getPercentageColor(double percentage, BuildContext context) {
-    if (percentage >= 70) {
-      return const Color(0xFFF44336); // Red for high severity
-    } else if (percentage >= 40) {
-      return const Color(0xFFFF9800); // Orange for medium
-    } else {
-      return const Color(0xFF4CAF50); // Green for low
-    }
   }
 }

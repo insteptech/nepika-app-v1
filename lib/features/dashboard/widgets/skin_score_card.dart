@@ -101,7 +101,7 @@ class SkinScoreCard extends StatelessWidget {
             _buildInfoPoint(
               context,
               'Severity',
-              'Each concern gets a severity percentage (e.g., Acne = 25%, Pores = 40%)',
+              'Each concern is assigned a severity level: Clear, Mild, Moderate, High, or Severe',
             ),
             const SizedBox(height: 10),
             _buildInfoPoint(

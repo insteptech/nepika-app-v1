@@ -108,7 +108,7 @@ class FaceScanCard extends StatelessWidget {
               ),
               clipBehavior: Clip.antiAlias,
               child: Image.asset(
-                'assets/images/camera_guide_3_image.png',
+                'assets/images/camera_guide_3_new.jpg',
                 fit: BoxFit.contain,
               ),
             ),

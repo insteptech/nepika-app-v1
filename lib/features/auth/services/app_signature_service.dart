@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:sms_autofill/sms_autofill.dart';
 
@@ -13,8 +14,9 @@ class AppSignatureService {
   /// Get the app signature for SMS auto-fill
   Future<String?> getAppSignature() async {
     debugPrint('AppSignatureService: getAppSignature() called');
-    debugPrint('AppSignatureService: Platform.isAndroid = ${Platform.isAndroid}');
-    debugPrint('AppSignatureService: Platform.isIOS = ${Platform.isIOS}');
+    debugPrint('AppSignatureService: kIsWeb = $kIsWeb');
+    debugPrint('AppSignatureService: Platform.isAndroid = ${!kIsWeb && Platform.isAndroid}');
+    debugPrint('AppSignatureService: Platform.isIOS = ${!kIsWeb && Platform.isIOS}');
     
     if (_cachedSignature != null) {
       debugPrint('AppSignatureService: Using cached signature: $_cachedSignature');
@@ -22,7 +24,7 @@ class AppSignatureService {
     }
     
     try {
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         debugPrint('AppSignatureService: Calling SmsAutoFill().getAppSignature...');
         final signature = await SmsAutoFill().getAppSignature;
         debugPrint('AppSignatureService: SmsAutoFill().getAppSignature returned: "$signature"');
@@ -49,10 +51,11 @@ class AppSignatureService {
   }
   
   /// Check if app signature is available for current platform
-  bool get isSignatureSupported => Platform.isAndroid;
+  bool get isSignatureSupported => !kIsWeb && Platform.isAndroid;
   
   /// Get platform-specific information
   String get platformInfo {
+    if (kIsWeb) return 'Web - No SMS autofill';
     if (Platform.isAndroid) {
       return _cachedSignature != null 
           ? 'Android - Signature: $_cachedSignature'

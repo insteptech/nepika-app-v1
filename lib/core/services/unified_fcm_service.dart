@@ -3,6 +3,7 @@ import 'dart:io';
 import 'dart:convert';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
@@ -173,7 +174,7 @@ class UnifiedFcmService {
 
         // Request system notification permission (Android 13+)
         bool systemPermissionGranted = true;
-        if (Platform.isAndroid) {
+        if (!kIsWeb && Platform.isAndroid) {
           // Check current status first
           final PermissionStatus currentStatus = await Permission.notification.status;
           AppLogger.info('Current notification permission status: $currentStatus', tag: 'FCM');
@@ -276,13 +277,13 @@ class UnifiedFcmService {
     );
 
     // CRITICAL: Create Android notification channel first (before any notifications)
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       await _createAndroidNotificationChannel();
       AppLogger.info('Android notification channel created with max importance', tag: 'FCM');
     }
 
     // CRITICAL: Configure iOS foreground notification presentation
-    if (Platform.isIOS) {
+    if (!kIsWeb && Platform.isIOS) {
       await _configureIOSForegroundNotifications();
     }
 
@@ -1194,12 +1195,12 @@ class UnifiedFcmService {
 
   /// Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
-    if (Platform.isAndroid) {
+    if (!kIsWeb && Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
           _localNotifications.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       return await androidPlugin?.areNotificationsEnabled() ?? false;
-    } else if (Platform.isIOS) {
+    } else if (!kIsWeb && Platform.isIOS) {
       final NotificationSettings settings = 
           await FirebaseMessaging.instance.getNotificationSettings();
       return settings.authorizationStatus == AuthorizationStatus.authorized ||
@@ -1216,7 +1217,7 @@ class UnifiedFcmService {
       AppLogger.info('Generating FCM token with guaranteed backend save...', tag: 'FCM');
       
       // For iOS, ensure permissions are granted before token generation
-      if (Platform.isIOS) {
+      if (!kIsWeb && Platform.isIOS) {
         final hasPermission = await _ensureIOSPermissions();
         if (!hasPermission) {
           AppLogger.warning('iOS notification permissions not granted, skipping token generation', tag: 'FCM');

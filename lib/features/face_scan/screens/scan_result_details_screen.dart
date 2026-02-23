@@ -2,16 +2,12 @@ import 'package:flutter/material.dart';
 import 'dart:math' as math;
 import 'package:nepika/features/dashboard/widgets/progress_summary_chart.dart';
 import '../models/scan_analysis_models.dart';
+import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/utils/severity_analyzer.dart';
 import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 
-class SeverityData {
-  final String label;
-  final double percentage;
-  final Color color;
 
-  const SeverityData(this.label, this.percentage, this.color);
-}
 
 class ScanResultDetailsScreen extends StatefulWidget {
   final String reportId;
@@ -386,7 +382,6 @@ class _ScanResultDetailsScreenState extends State<ScanResultDetailsScreen> {
         child: Column(
           children: [
             _buildHeader(context, isDark),
-            _buildConditionFilters(isDark),
             Expanded(
               child: SingleChildScrollView(
                 controller: _scrollController,

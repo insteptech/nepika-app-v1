@@ -72,7 +72,7 @@ class LocalNotificationService {
   Future<String> _getLocalTimeZone() async {
     try {
       // For mobile platforms, we can use the system timezone
-      if (Platform.isAndroid || Platform.isIOS) {
+      if (!kIsWeb && (Platform.isAndroid || Platform.isIOS)) {
         final DateTime now = DateTime.now();
         final String timeZoneName = now.timeZoneName;
         final int offsetHours = now.timeZoneOffset.inHours;
@@ -189,13 +189,13 @@ class LocalNotificationService {
       onDidReceiveBackgroundNotificationResponse: _handleBackgroundNotificationTap,
     );
 
-    // Create Android notification channel
-    if (Platform.isAndroid) {
+    // Create notification channel for Android O+
+    if (!kIsWeb && Platform.isAndroid) {
       await _createAndroidNotificationChannel();
-    }
-
-    // Set up foreground notification presentation for iOS
-    if (Platform.isIOS) {
+    } else if (!kIsWeb && Platform.isIOS) {
+      // Assuming _configureIOS() is a placeholder for iOS specific setup
+      // and _setupForegroundNotificationPresentation() is part of it or called separately.
+      // For now, keeping the existing _setupForegroundNotificationPresentation.
       await _setupForegroundNotificationPresentation();
     }
 
@@ -245,11 +245,16 @@ class LocalNotificationService {
     try {
       bool permissionsGranted = true;
 
-      if (Platform.isAndroid) {
+      if (kIsWeb) {
+        // Web notification permission request logic (if needed) or skip
+        return true; 
+      }
+
+      if (!kIsWeb && Platform.isAndroid) {
         final status = await Permission.notification.request();
         permissionsGranted = status.isGranted;
         AppLogger.info('Android notification permission: $status', tag: 'Notifications');
-      } else if (Platform.isIOS) {
+      } else if (!kIsWeb && Platform.isIOS) {
         final bool? result = await _localNotifications
             .resolvePlatformSpecificImplementation<
                 IOSFlutterLocalNotificationsPlugin>()
@@ -275,8 +280,8 @@ class LocalNotificationService {
 
   /// Request exact alarm permission (Android 12+)
   Future<bool> requestExactAlarmPermission() async {
-    if (!Platform.isAndroid) {
-      return true; // iOS doesn't need this permission
+    if (kIsWeb || !Platform.isAndroid) {
+      return true; // Web/iOS doesn't need this permission
     }
 
     try {
@@ -372,14 +377,14 @@ class LocalNotificationService {
       AppLogger.info('Scheduling reminder: $reminderName at $time24Hour', tag: 'Notifications');
 
       // Check for notification permission on Android
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
             _localNotifications.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
 
         if (androidPlugin != null) {
-          final bool canNotify = await androidPlugin.areNotificationsEnabled() ?? false;
-          if (!canNotify) {
+          final bool? granted = await androidPlugin.requestNotificationsPermission();
+          if (!(granted ?? false)) {
             AppLogger.error('Cannot schedule notifications - permission not granted', tag: 'Notifications');
             throw Exception('notifications_not_permitted');
           }
@@ -638,13 +643,14 @@ class LocalNotificationService {
 
   /// Check if notifications are enabled
   Future<bool> areNotificationsEnabled() async {
-    if (Platform.isAndroid) {
+    if (kIsWeb) return true; // Assume enabled or handle separately for web
+    if (!kIsWeb && Platform.isAndroid) {
       final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
           _localNotifications.resolvePlatformSpecificImplementation<
               AndroidFlutterLocalNotificationsPlugin>();
       return await androidPlugin?.areNotificationsEnabled() ?? false;
-    } else if (Platform.isIOS) {
-      // For iOS, we'll assume notifications are enabled if we can initialize
+    } else if (!kIsWeb && Platform.isIOS) {
+      final IOSFlutterLocalNotificationsPlugin? iosPlugin = _localNotifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
       // A more robust check would require additional iOS-specific implementation
       return true;
     }
@@ -655,7 +661,8 @@ class LocalNotificationService {
   /// This checks only basic notification permission, not exact alarms
   Future<bool> canScheduleNotifications() async {
     try {
-      if (Platform.isAndroid) {
+      if (kIsWeb) return true;
+      if (!kIsWeb && Platform.isAndroid) {
         final AndroidFlutterLocalNotificationsPlugin? androidPlugin =
             _localNotifications.resolvePlatformSpecificImplementation<
                 AndroidFlutterLocalNotificationsPlugin>();
@@ -666,7 +673,7 @@ class LocalNotificationService {
           return notificationsEnabled;
         }
         return false;
-      } else if (Platform.isIOS) {
+      } else if (!kIsWeb && Platform.isIOS) {
         // For iOS, we'll assume notifications are enabled if we can initialize
         return true;
       }
@@ -759,12 +766,12 @@ class LocalNotificationService {
     try {
       // Basic service status
       diagnostics['serviceInitialized'] = _isInitialized;
-      diagnostics['platform'] = Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown';
+      diagnostics['platform'] = kIsWeb ? 'Web' : (Platform.isAndroid ? 'Android' : Platform.isIOS ? 'iOS' : 'Unknown');
       diagnostics['timezone'] = _isInitialized ? tz.local.name : 'not_initialized';
       diagnostics['currentTime'] = _isInitialized ? tz.TZDateTime.now(tz.local).toString() : 'not_initialized';
       
       // Permission checks
-      if (Platform.isAndroid) {
+      if (!kIsWeb && Platform.isAndroid) {
         diagnostics['androidNotificationsEnabled'] = await areNotificationsEnabled();
         try {
           final exactAlarmPermission = await requestExactAlarmPermission();
@@ -774,7 +781,7 @@ class LocalNotificationService {
         }
       }
       
-      if (Platform.isIOS) {
+      if (!kIsWeb && Platform.isIOS) {
         try {
           final iosPlugin = _localNotifications.resolvePlatformSpecificImplementation<IOSFlutterLocalNotificationsPlugin>();
           if (iosPlugin != null) {

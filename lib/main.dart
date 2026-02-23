@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_stripe/flutter_stripe.dart';
@@ -74,7 +75,13 @@ void main() async {
   di.ServiceLocator.initializeCore(sharedPreferences);
   
   // Set Stripe key synchronously (no await needed)
-  Stripe.publishableKey = AppConstants.stripePublishableKey;
+  // Set Stripe key (only on mobile for now, or use conditional import)
+  // For web, Stripe.js in index.html handles the library, but flutter_stripe might need specific web init.
+  // However, the error Platform._operatingSystem suggests it's trying mobile code on web.
+  // Let's wrap it to see if that unblocks the app.
+  if (!kIsWeb) {
+    Stripe.publishableKey = AppConstants.stripePublishableKey;
+  }
   
   // Set up background message handler early
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);

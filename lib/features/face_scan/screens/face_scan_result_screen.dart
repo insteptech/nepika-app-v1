@@ -256,13 +256,19 @@ class _FaceScanResultScreenState extends State<FaceScanResultScreen>
     if (!mounted) return;
 
     if (result.isSuccess) {
+      // Get image size asynchronously before updating state
+      final imageSize = await _getImageSize();
+      
       // First, trigger completion animation
       setState(() {
         _analysisResults = result.analysisResults;
         _reportId = result.reportId;
         _showShimmerCompletion = true;
-        // Parse detection results from API response
-        _detectionResults = _parseDetectionResults(result.analysisResults);
+        
+        // Parse and filter detection results from API response
+        final rawDetections = _parseDetectionResults(result.analysisResults);
+        _detectionResults = rawDetections?.filterByOval(imageSize: imageSize);
+        
         // Parse complete scan analysis response
         _scanAnalysisResponse = ScanAnalysisResponse.fromJson(result.analysisResults ?? {});
         // Keep _isProcessingAPI = true until completion animation finishes
