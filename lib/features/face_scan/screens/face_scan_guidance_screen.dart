@@ -459,7 +459,7 @@ class _FaceScanGuidanceScreenState extends State<FaceScanGuidanceScreen>
       case 2:
         return 'assets/images/camera_guide_2_new.jpeg';
       case 3:
-        return 'assets/images/camera_guide_3_new.jpeg';
+        return 'assets/images/camera_guide_3.jpg';
       default:
         return 'assets/images/camera_guide_1_new.jpeg';
     }

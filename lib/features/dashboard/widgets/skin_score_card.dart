@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/utils/severity_analyzer.dart';
+import 'skin_condition_meter.dart';
 
 String _monthName(int month) {
   const months = [
@@ -294,25 +295,12 @@ class SkinScoreCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: conditionColor.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          conditionLabel,
-                          style: textTheme.headlineSmall?.copyWith(
-                            color: conditionColor,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 24,
-                          ),
-                        ),
-                      ),
-                    ],
+                  const SizedBox(height: 16),
+                  Center(
+                    child: SkinConditionMeter(
+                      score: score.toDouble(),
+                      size: MediaQuery.of(context).size.width - 100, // Responsive width based on card padding
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Column(
