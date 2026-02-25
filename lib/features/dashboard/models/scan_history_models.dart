@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/utils/severity_analyzer.dart';
 
 /// ---------------- SAFETY HELPERS ----------------
 
@@ -171,9 +172,8 @@ class ScanHistoryItem {
   }
 
   Color get skinScoreColor {
-    if (skinScore >= 80) return const Color(0xFF4CAF50); // Green
-    if (skinScore >= 60) return const Color(0xFFFF9800); // Orange
-    return const Color(0xFFF44336); // Red
+    final condition = SeverityAnalyzer.getOverAllSkinCondition(skinScore.toDouble());
+    return SeverityAnalyzer.getOverAllConditionColor(condition);
   }
 
   List<String> get topIssues {
@@ -181,6 +181,11 @@ class ScanHistoryItem {
       ..sort((a, b) => b.value.compareTo(a.value));
 
     return sorted.take(3).map((e) => e.key).toList();
+  }
+
+  String get skinConditionLabel {
+    final condition = SeverityAnalyzer.getOverAllSkinCondition(skinScore.toDouble());
+    return SeverityAnalyzer.getOverAllConditionLabel(condition);
   }
 }
 

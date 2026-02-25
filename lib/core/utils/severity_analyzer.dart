@@ -99,15 +99,15 @@ class SeverityAnalyzer {
   static String getIcon(SeverityLevel level) {
     switch (level) {
       case SeverityLevel.clear:
-        return '😊';
+        return '';
       case SeverityLevel.mild:
-        return '🙂';
+        return '';
       case SeverityLevel.moderate:
-        return '😐';
+        return '';
       case SeverityLevel.high:
-        return '😟';
+        return '';
       case SeverityLevel.severe:
-        return '😰';
+        return '';
     }
   }
 
@@ -127,6 +127,47 @@ class SeverityAnalyzer {
     }
   }
 
+  /// Overall skin condition based on score (0-100)
+  static OverAllSkinCondition getOverAllSkinCondition(double score) {
+    if (score <= 30) return OverAllSkinCondition.severe;
+    if (score <= 50) return OverAllSkinCondition.high;
+    if (score <= 70) return OverAllSkinCondition.moderate;
+    if (score <= 85) return OverAllSkinCondition.mild;
+    return OverAllSkinCondition.clear;
+  }
+
+  /// Returns the display label for the overall skin condition.
+  static String getOverAllConditionLabel(OverAllSkinCondition condition) {
+    switch (condition) {
+      case OverAllSkinCondition.severe:
+        return 'Severe';
+      case OverAllSkinCondition.high:
+        return 'High';
+      case OverAllSkinCondition.moderate:
+        return 'Moderate';
+      case OverAllSkinCondition.mild:
+        return 'Mild';
+      case OverAllSkinCondition.clear:
+        return 'Clear';
+    }
+  }
+
+  /// Returns the color associated with the overall skin condition.
+  static Color getOverAllConditionColor(OverAllSkinCondition condition) {
+    switch (condition) {
+      case OverAllSkinCondition.severe:
+        return const Color(0xFFD32F2F); // Severe: #D32F2F
+      case OverAllSkinCondition.high:
+        return const Color(0xFFFF5722); // High: #FF5722
+      case OverAllSkinCondition.moderate:
+        return const Color(0xFFFF9800); // Moderate: #FF9800
+      case OverAllSkinCondition.mild:
+        return const Color(0xFFFFEB3B); // Mild: #FFEB3B
+      case OverAllSkinCondition.clear:
+        return const Color(0xFF4CAF50); // Clear: #4CAF50
+    }
+  }
+
   /// Helper to get label directly from score
   static String getLabelFromScore(double score) {
     return getLabel(getSeverity(score));
@@ -141,4 +182,12 @@ class SeverityAnalyzer {
   static String getIconFromScore(double score) {
     return getIcon(getSeverity(score));
   }
+}
+
+enum OverAllSkinCondition {
+  severe,
+  high,
+  moderate,
+  mild,
+  clear,
 }

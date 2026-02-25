@@ -646,7 +646,7 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     // Use SeverityAnalyzer for consistent 0-100 score mapping
     final severityLabel = SeverityAnalyzer.getLabelFromScore(condition.confidence);
     final severityColor = SeverityAnalyzer.getColorFromScore(condition.confidence);
-    final severityIcon = SeverityAnalyzer.getIconFromScore(condition.confidence);
+    // final severityIcon = SeverityAnalyzer.getIconFromScore(condition.confidence);
 
     return Container(
       padding: const EdgeInsets.all(16),
@@ -713,7 +713,7 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'Severity: $severityLabel $severityIcon',
+                  'Severity: $severityLabel',
                   style: theme.textTheme.bodySmall?.copyWith(
                     fontWeight: FontWeight.w500,
                     color: severityColor,

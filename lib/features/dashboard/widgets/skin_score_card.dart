@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/utils/severity_analyzer.dart';
 
 String _monthName(int month) {
   const months = [
@@ -55,7 +56,7 @@ class SkinScoreCard extends StatelessWidget {
                 SizedBox(
                   width: MediaQuery.of(context).size.width * 0.6,
                       child: Text(
-                        'About Your Skin Score',
+                        'About Your Skin condition',
                         style: textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                         ),
@@ -106,8 +107,8 @@ class SkinScoreCard extends StatelessWidget {
             const SizedBox(height: 10),
             _buildInfoPoint(
               context,
-              'Calculation',
-              'Skin Score = 100 – Total severity of all detected issues',
+              'Bands',
+              'Conditions: Clear (86-100), Mild (71-85), Moderate (51-70), High (31-50), Severe (0-30)',
             ),
             const SizedBox(height: 10),
             _buildInfoPoint(
@@ -238,6 +239,10 @@ class SkinScoreCard extends StatelessWidget {
       }
     }
 
+    final condition = SeverityAnalyzer.getOverAllSkinCondition(score.toDouble());
+    final conditionLabel = SeverityAnalyzer.getOverAllConditionLabel(condition);
+    final conditionColor = SeverityAnalyzer.getOverAllConditionColor(condition);
+
     final bool isNegative = change < 0;
     final Color changeColor = isNegative
         ? colorScheme.error
@@ -270,7 +275,7 @@ class SkinScoreCard extends StatelessWidget {
                     children: [
                       Flexible(
                         child: Text(
-                          showSheildImage ? 'Your skin score' : 'Skin Score',
+                          showSheildImage ? 'Your skin condition' : 'Skin condition',
                           maxLines: 2,
                           style: textTheme.bodyLarge!
                               .secondary(context)
@@ -292,24 +297,21 @@ class SkinScoreCard extends StatelessWidget {
                   Row(
                     crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
-                      Text(
-                        '$score',
-                        style: textTheme.headlineMedium?.copyWith(
-                          fontSize: 35,
-                          fontWeight: FontWeight.w700,
-                          color: colorScheme.secondary,
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: conditionColor.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(
+                          conditionLabel,
+                          style: textTheme.headlineSmall?.copyWith(
+                            color: conditionColor,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 24,
+                          ),
                         ),
                       ),
-                      const SizedBox(width: 10),
-                      Text(
-                        '${change > 0 ? '+' : ''}$change',
-                        style: textTheme.bodyMedium?.copyWith(
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                          color: changeColor,
-                        ),
-                      ),
-                      Icon(changeIcon, color: changeColor, size: 20),
                     ],
                   ),
                   const SizedBox(height: 8),
@@ -376,7 +378,7 @@ class SkinScoreCard extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    showSheildImage ? 'Your skin score' : 'Skin Score',
+                    showSheildImage ? 'Your skin condition' : 'Skin condition',
                     style: textTheme.bodyLarge!
                         .secondary(context)
                         .copyWith(fontSize: 14),

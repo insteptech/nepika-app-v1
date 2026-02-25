@@ -232,7 +232,7 @@ class _ConditionRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final severityColor = SeverityAnalyzer.getColorFromScore(percentage);
     final severityLabel = SeverityAnalyzer.getLabelFromScore(percentage);
-    final severityIcon = SeverityAnalyzer.getIconFromScore(percentage);
+    // final severityIcon = SeverityAnalyzer.getIconFromScore(percentage);
 
     return InkWell(
       onTap: onDetailsTap,
@@ -256,7 +256,7 @@ class _ConditionRow extends StatelessWidget {
             SizedBox(
               width: 80, // Increased width for text labels
               child: Text(
-                '$severityLabel $severityIcon',
+                severityLabel,
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: severityColor,

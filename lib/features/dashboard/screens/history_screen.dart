@@ -306,7 +306,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              '${scan.skinScore}%',
+                              scan.skinConditionLabel,
                               style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                 color: scan.skinScoreColor,
                                 fontWeight: FontWeight.w600,

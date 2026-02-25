@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../../core/mixins/guided_tour_mixin.dart';
 import '../../../core/widgets/guided_tour_overlay.dart';
+import '../../../core/utils/severity_analyzer.dart';
 
 /// Example implementation of a face scan result screen with guided tour
 /// Replace this with your actual face scan result screen implementation
@@ -119,6 +120,9 @@ class _FaceScanResultWithTourScreenState extends State<FaceScanResultWithTourScr
   }
 
   Widget _buildSkinScoreCard() {
+    final condition = SeverityAnalyzer.getOverAllSkinCondition(_skinScore.toDouble());
+    final conditionLabel = SeverityAnalyzer.getOverAllConditionLabel(condition);
+
     return Container(
       key: _skinScoreKey,
       width: double.infinity,
@@ -135,7 +139,7 @@ class _FaceScanResultWithTourScreenState extends State<FaceScanResultWithTourScr
       child: Column(
         children: [
           Text(
-            'Your Skin Score',
+            'Your Skin Condition',
             style: Theme.of(context).textTheme.titleLarge?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.w600,
@@ -143,17 +147,10 @@ class _FaceScanResultWithTourScreenState extends State<FaceScanResultWithTourScr
           ),
           const SizedBox(height: 12),
           Text(
-            '$_skinScore',
-            style: Theme.of(context).textTheme.displayLarge?.copyWith(
+            conditionLabel,
+            style: Theme.of(context).textTheme.displaySmall?.copyWith(
               color: Colors.white,
               fontWeight: FontWeight.bold,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Good skin health',
-            style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-              color: Colors.white.withValues(alpha: 0.9),
             ),
           ),
         ],

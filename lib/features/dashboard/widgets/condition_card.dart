@@ -48,7 +48,7 @@ class ConditionCard extends StatelessWidget {
     final severityColor = SeverityAnalyzer.getColorFromScore(percentage);
     final severityLabel = SeverityAnalyzer.getLabelFromScore(percentage);
 
-    final severityIcon = SeverityAnalyzer.getIconFromScore(percentage);
+    // final severityIcon = SeverityAnalyzer.getIconFromScore(percentage);
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -91,7 +91,7 @@ class ConditionCard extends StatelessWidget {
                      crossAxisAlignment: CrossAxisAlignment.start,
                      children: [
                        Text(
-                         '$severityLabel $severityIcon',
+                         severityLabel,
                          style: Theme.of(context).textTheme.headlineLarge
                              ?.copyWith(
                                fontWeight: FontWeight.w600,

@@ -70,7 +70,7 @@ class FaceScanInfoScreen extends StatelessWidget {
                     const SizedBox(height: 16),
                     _buildInfoCard(
                       context,
-                      title: 'How Your Skin Score Is Calculated',
+                      title: 'How Skin Condition Is Calculated',
                       content: 'Your face image is analyzed across multiple skin concerns, such as:\n• Acne\n• Enlarged pores\n• Dark spots or pigmentation\n• Wrinkles\n• Redness or similar issues\n\nEach concern is assigned a severity score based on its visibility and intensity.\nExample: Acne = Mild, Pores = Moderate, etc.\n\nWe aggregate these severity scores to calculate your total "skin health."\n\nYour final Skin Score is calculated as:\nSkin Score = 100 – (Total severity impact)\n\n• If your total severity is low → your score goes higher\n• If your severity is high → your score goes lower\n\nWe make sure the final score never goes below 0.',
                       theme: theme,
                     ),
