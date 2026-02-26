@@ -456,27 +456,19 @@ class _DashboardScreenState extends State<DashboardScreen>
   Widget _buildMainCardsRow(
       Map<String, dynamic> faceScan, Map<String, dynamic> skinScore) {
     return RepaintBoundary(
-      child: IntrinsicHeight(
-        child: Column(
-          spacing: 10,
-          // crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Expanded(
-              child: RepaintBoundary(
-                child: FaceScanCard(
-                  faceScan: faceScan,
-                  onTap: widget.onFaceScanTap,
-                ),
-              ),
+      child: Column(
+        children: [
+          RepaintBoundary(
+            child: FaceScanCard(
+              faceScan: faceScan,
+              onTap: widget.onFaceScanTap,
             ),
-            const SizedBox(width: 26),
-            Expanded(
-              child: RepaintBoundary(
-                child: SkinScoreCard(skinScore: skinScore),
-              ),
-            ),
-          ],
-        ),
+          ),
+          const SizedBox(height: 10),
+          RepaintBoundary(
+            child: SkinScoreCard(skinScore: skinScore),
+          ),
+        ],
       ),
     );
   }
@@ -493,7 +485,7 @@ class _DashboardScreenState extends State<DashboardScreen>
             child: ProgressSummaryChart(
               progressSummary: progressSummary,
               height: 280,
-              showPointsAndLabels: false,
+              showPointsAndLabels: true,
             ),
           ),
         ],

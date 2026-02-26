@@ -402,6 +402,24 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     );
   }
 
+  // Slug aliases: ML model condition name → DB condition slug
+  // Matches the backend SLUG_ALIASES in recommendation_engine.py
+  static const Map<String, String> _slugAliases = {
+    'dark-spots': 'dark-circles',
+    'englarged-pores': 'enlarged-pores',
+  };
+
+  bool _matchesCondition(RecommendationItem item, String conditionName) {
+    final itemCondition = item.condition.toLowerCase();
+    // "global" items apply to all conditions (cross-condition recommendations)
+    if (itemCondition == 'global') return true;
+    final aliased = _slugAliases[conditionName];
+    return itemCondition == conditionName ||
+        itemCondition.contains(conditionName) ||
+        (aliased != null &&
+            (itemCondition == aliased || itemCondition.contains(aliased)));
+  }
+
   Widget _buildConditionSection(
     BuildContext context,
     bool isDark,
@@ -412,53 +430,25 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
 
     // Filter recommendations for this condition
     final causes = recommendations.groups.causes
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
     final products = recommendations.groups.products
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
     final alternates = recommendations.groups.alternateSolutions
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
     final lifestyle = recommendations.groups.lifestyleSuggestions
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
     final considerations = recommendations.groups.importantConsiderations
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
     final dos = recommendations.groups.dos
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
     final donts = recommendations.groups.donts
-        .where(
-          (item) =>
-              item.condition.toLowerCase() == conditionName ||
-              item.condition.toLowerCase().contains(conditionName),
-        )
+        .where((item) => _matchesCondition(item, conditionName))
         .toList();
 
     // Get primary solution

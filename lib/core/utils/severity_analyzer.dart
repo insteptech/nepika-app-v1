@@ -117,7 +117,7 @@ class SeverityAnalyzer {
       case SeverityLevel.clear:
         return const Color(0xFF4CAF50); // Green
       case SeverityLevel.mild:
-        return const Color(0xFFFFEB3B); // Yellow
+        return const Color(0xFFFFB300); // Amber (Darker Yellow)
       case SeverityLevel.moderate:
         return const Color(0xFFFF9800); // Orange
       case SeverityLevel.high:
@@ -162,7 +162,7 @@ class SeverityAnalyzer {
       case OverAllSkinCondition.moderate:
         return const Color(0xFFFF9800); // Moderate: #FF9800
       case OverAllSkinCondition.mild:
-        return const Color(0xFFFFEB3B); // Mild: #FFEB3B
+        return const Color(0xFFFFB300); // Mild: #FFB300
       case OverAllSkinCondition.clear:
         return const Color(0xFF4CAF50); // Clear: #4CAF50
     }

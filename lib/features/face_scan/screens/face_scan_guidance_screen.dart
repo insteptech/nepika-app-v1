@@ -454,6 +454,8 @@ class _FaceScanGuidanceScreenState extends State<FaceScanGuidanceScreen>
 
   String get _referenceImagePath {
     switch (_currentStep) {
+      case 0:
+        return 'assets/images/camera_guide_1.jpg';
       case 1:
         return 'assets/images/camera_guide_1_new.jpeg';
       case 2:

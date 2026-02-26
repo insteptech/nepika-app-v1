@@ -87,7 +87,7 @@ class _SettingsHeaderDelegate extends SliverPersistentHeaderDelegate {
                     opacity: (showBackButton || progress > 0.3) ? 1.0 : 0.0,
                     child: Center(
                       child: CustomBackButton(
-                        label: showBackButton && isPinned ? 'Back' : '',
+                        label: '', // Removed 'Back' text to prevent overlap with title
                         onPressed:
                             onBack ?? () => Navigator.of(context).pop(),
                       ),

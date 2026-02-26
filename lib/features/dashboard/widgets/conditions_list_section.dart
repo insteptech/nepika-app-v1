@@ -73,11 +73,14 @@ class _ConditionsListSectionState extends State<ConditionsListSection> {
         : conditions.take(widget.initialVisibleCount).toList();
 
     // Calculate heights for animation
-    const rowHeight = 52.0;
+    const rowHeight = 60.0; // Increased to match new row content height
     final collapsedHeight = (widget.initialVisibleCount * rowHeight) +
         ((widget.initialVisibleCount - 1) * 1.0); // divider height
+    
+    // Add extra space at the bottom when expanded to prevent "View Less" from overlapping
     final expandedHeight = (conditions.length * rowHeight) +
-        ((conditions.length - 1) * 1.0);
+        ((conditions.length - 1) * 1.0); // Reduced to 24px padding for the button
+        
     final containerHeight = _isExpanded ? expandedHeight : collapsedHeight;
 
     return Column(
@@ -89,7 +92,7 @@ class _ConditionsListSectionState extends State<ConditionsListSection> {
             AnimatedContainer(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
-              height: hasMoreItems ? containerHeight + (hasMoreItems ? 48 : 0) : null,
+              height: hasMoreItems ? containerHeight + (hasMoreItems && !_isExpanded ? 48 : 0) : null,
               decoration: BoxDecoration(
                 color: Theme.of(context).colorScheme.surface,
                 borderRadius: BorderRadius.circular(16),
@@ -101,7 +104,7 @@ class _ConditionsListSectionState extends State<ConditionsListSection> {
               child: ListView.separated(
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
-                padding: EdgeInsets.zero,
+                padding: EdgeInsets.only(bottom: _isExpanded ? 2.0 : 0), // Added 24px bottom padding to ListView when expanded
                 itemCount: visibleConditions.length,
                 separatorBuilder: (context, index) => Divider(
                   height: 1,
@@ -252,17 +255,24 @@ class _ConditionRow extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Severity Label
-            SizedBox(
-              width: 80, // Increased width for text labels
-              child: Text(
-                severityLabel,
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w600,
-                      color: severityColor,
-                      fontSize: 13,
-                    ),
-                textAlign: TextAlign.center, // Align to end like the screenshot numbers
+            // Severity Label with Badge Styling
+            Container(
+              width: 80,
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: severityColor.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Center(
+                child: Text(
+                  severityLabel,
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: severityColor,
+                        fontSize: 13,
+                      ),
+                  textAlign: TextAlign.center,
+                ),
               ),
             ),
             const SizedBox(width: 12),

@@ -355,8 +355,8 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
     }
   }
 
-  MaterialPageRoute _createPageRoute(RouteSettings settings, Widget child) {
-    return MaterialPageRoute(
+  Route<dynamic> _createPageRoute(RouteSettings settings, Widget child) {
+    return _NoSwipeBackPageRoute(
       settings: settings,
       builder: (_) => child,
     );
@@ -394,4 +394,17 @@ class _DashboardRouteObserver extends RouteObserver<PageRoute<dynamic>> {
       onRouteChanged(newRoute.settings.name!);
     }
   }
+}
+
+/// Custom page route that disables the iOS swipe-to-go-back gesture.
+/// This prevents accidental pops on the dashboard inner Navigator which
+/// would otherwise route to the GoRouter error/not-found screen.
+class _NoSwipeBackPageRoute<T> extends MaterialPageRoute<T> {
+  _NoSwipeBackPageRoute({
+    required super.builder,
+    super.settings,
+  });
+
+  @override
+  bool get popGestureEnabled => false;
 }

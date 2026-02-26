@@ -113,7 +113,10 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const SettingsHeader(title: 'Settings'),
+            const SettingsHeader(
+              title: 'Settings',
+              showBackButton: true,
+            ),
 
             // Profile Section
             SliverToBoxAdapter(

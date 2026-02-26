@@ -261,7 +261,7 @@ class SkinScoreCard extends StatelessWidget {
         color: colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
       ),
-      padding: const EdgeInsets.all(22),
+      padding: const EdgeInsets.all(16),
       child: IntrinsicHeight(
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -270,7 +270,7 @@ class SkinScoreCard extends StatelessWidget {
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                mainAxisSize: MainAxisSize.min,
                 children: [
                   Row(
                     children: [
@@ -295,7 +295,6 @@ class SkinScoreCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 8),
-                  const SizedBox(height: 16),
                   Center(
                     child: SkinConditionMeter(
                       score: score.toDouble(),
