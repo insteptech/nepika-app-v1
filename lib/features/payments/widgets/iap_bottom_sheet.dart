@@ -271,16 +271,21 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
                       fontWeight: FontWeight.w700,
                     ),
                   ),
-                  if (billingPeriod.isNotEmpty) ...[
-                    const SizedBox(width: 4),
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 4),
-                      child: Text(
-                        '/ $billingPeriod',
-                        style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.outline),
+                    if (billingPeriod.isNotEmpty) ...[
+                      const SizedBox(width: 4),
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: 4),
+                        child: Text(
+                          (() {
+                            final period = billingPeriod.toLowerCase();
+                            if (period == 'monthly' || period == 'month') return '/ month';
+                            if (period == 'yearly' || period == 'year') return '/ year';
+                            return '/ $billingPeriod';
+                          })(),
+                          style: theme.textTheme.bodyLarge?.copyWith(color: theme.colorScheme.outline),
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
                 ],
               ),
             ],
@@ -335,11 +340,11 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
   }
 
   void _startPurchase(BuildContext context, String billingPeriod) {
-    String interval = 'weekly'; // default
+    String interval = 'monthly'; // default
     if (billingPeriod.toLowerCase().contains('year')) {
       interval = 'yearly';
-    } else if (billingPeriod.toLowerCase().contains('week')) {
-      interval = 'weekly';
+    } else if (billingPeriod.toLowerCase().contains('month')) {
+      interval = 'monthly';
     }
     context.read<IAPBloc>().add(PurchaseByInterval(interval));
   }

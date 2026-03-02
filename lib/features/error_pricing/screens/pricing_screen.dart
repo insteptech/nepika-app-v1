@@ -397,9 +397,13 @@ class _PricingScreenState extends State<PricingScreen> {
                                         ),
                                       ),
                                       Text(
-                                        plan['billingPeriod']?.toString().isNotEmpty == true 
-                                            ? 'Per ${plan['billingPeriod']}' 
-                                            : 'Per billing period',
+                                        (() {
+                                          final period = plan['billingPeriod']?.toString().toLowerCase() ?? '';
+                                          if (period == 'monthly' || period == 'month') return 'Per month';
+                                          if (period == 'yearly' || period == 'year') return 'Per year';
+                                          if (period.isNotEmpty) return 'Per $period';
+                                          return 'Per billing period';
+                                        })(),
                                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                                           color: isSelected ? theme.colorScheme.onSecondary : theme.colorScheme.primary,
                                         ),

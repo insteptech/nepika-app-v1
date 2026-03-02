@@ -197,11 +197,16 @@ class _FaceScanGuidanceScreenState extends State<FaceScanGuidanceScreen>
         curve: Curves.easeInOut,
       );
     } else {
-      // Dispose camera when going back to previous screen
-      debugPrint('Guidance page: Going back, disposing camera...');
-      _cameraManager.dispose();
-      debugPrint('Guidance page: Camera disposed, navigating back');
+      // Pop first so Flutter removes all dependents from the tree,
+      // then dispose the camera in the next microtask to avoid
+      // "dependents.isEmpty" assertion errors.
+      debugPrint('Guidance page: Going back, popping route first...');
       Navigator.of(context).pop();
+      Future.microtask(() {
+        debugPrint('Guidance page: Camera disposing after pop...');
+        _cameraManager.dispose();
+        debugPrint('Guidance page: Camera disposed');
+      });
     }
   }
 
@@ -470,14 +475,15 @@ class _FaceScanGuidanceScreenState extends State<FaceScanGuidanceScreen>
 Widget build(BuildContext context) {
   return PopScope(
     canPop: false,
-    onPopInvokedWithResult: (bool didPop, dynamic result) async {
+    onPopInvokedWithResult: (bool didPop, dynamic result) {
       if (!didPop) {
-        debugPrint('Guidance page: Back gesture detected, disposing camera...');
-        await _cameraManager.dispose();
-        debugPrint('Guidance page: Camera disposed via back gesture');
-        if (mounted && context.mounted) {
-          Navigator.of(context).pop();
-        }
+        debugPrint('Guidance page: Back gesture detected, popping first...');
+        Navigator.of(context).pop();
+        Future.microtask(() {
+          debugPrint('Guidance page: Camera disposing after pop via back gesture...');
+          _cameraManager.dispose();
+          debugPrint('Guidance page: Camera disposed');
+        });
       }
     },
     child: Scaffold(

@@ -3,14 +3,16 @@ import 'dart:math' as math;
 
 import 'package:nepika/core/config/constants/theme.dart';
 import 'package:nepika/features/face_scan/models/scan_analysis_models.dart';
+import 'package:nepika/core/utils/severity_analyzer.dart';
 
 
-class ProgressSummaryChart extends StatelessWidget {
+class ProgressSummaryChart extends StatefulWidget {
   final Object? progressSummary;
   final double height;
   final EdgeInsets padding;
   final bool showPointsAndLabels;
-  final Widget? toggleWidget;
+  final bool isOverall;
+  final String? filter;
 
   const ProgressSummaryChart({
     super.key,
@@ -18,29 +20,89 @@ class ProgressSummaryChart extends StatelessWidget {
     this.height = 300,
     this.padding = const EdgeInsets.all(20),
     this.showPointsAndLabels = true,
-    this.toggleWidget,
+    this.isOverall = false,
+    this.filter,
   });
 
-Map<String, dynamic>? _normalizeSummary(Object? raw) {
-  if (raw == null) return null;
+  @override
+  State<ProgressSummaryChart> createState() => _ProgressSummaryChartState();
+}
 
-  if (raw is ProgressSummary) {
-    return {
-      'unit': raw.unit,
-      'data': raw.data.map((e) => {
-            'month': e.month,
-            'value': e.value,
-            'scanId': e.scanId,
-            'datetime': e.datetime,
-          }).toList(),
-    };
+class _ProgressSummaryChartState extends State<ProgressSummaryChart> with SingleTickerProviderStateMixin {
+  late AnimationController _animationController;
+  late Animation<double> _animation;
+  int? _selectedIndex;
+  Offset? _tapPosition;
+
+  @override
+  void initState() {
+    super.initState();
+    _animationController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1500),
+    );
+    _animation = CurvedAnimation(
+      parent: _animationController,
+      curve: Curves.easeInOutCubic,
+    );
+    _animationController.forward();
   }
 
-  if (raw is Map<String, dynamic>) {
-    // Ensure 'data' is List<Map<String,dynamic>>
-    final rawData = raw['data'];
-    if (rawData is List) {
-      final normalizedList = rawData.map<Map<String, dynamic>>((item) {
+  @override
+  void didUpdateWidget(ProgressSummaryChart oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.progressSummary != widget.progressSummary || oldWidget.filter != widget.filter) {
+      _animationController.reset();
+      _animationController.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _animationController.dispose();
+    super.dispose();
+  }
+
+  Map<String, dynamic>? _normalizeSummary(Object? raw) {
+    if (raw == null) return null;
+
+    if (raw is ProgressSummary) {
+      return {
+        'unit': raw.unit,
+        'data': raw.data.map((e) => {
+              'month': e.month,
+              'value': e.value,
+              'scanId': e.scanId,
+              'datetime': e.datetime,
+            }).toList(),
+      };
+    }
+
+    if (raw is Map<String, dynamic>) {
+      final rawData = raw['data'];
+      if (rawData is List) {
+        final normalizedList = rawData.map<Map<String, dynamic>>((item) {
+          if (item is Map<String, dynamic>) return item;
+          if (item is ProgressData) {
+            return {
+              'month': item.month,
+              'value': item.value,
+              'scanId': item.scanId,
+              'datetime': item.datetime,
+            };
+          }
+          return <String, dynamic>{};
+        }).toList();
+        return {
+          'unit': raw['unit'],
+          'data': normalizedList,
+        };
+      }
+      return {'unit': raw['unit'], 'data': <Map<String, dynamic>>[]};
+    }
+
+    if (raw is List) {
+      final normalizedList = raw.map<Map<String, dynamic>>((item) {
         if (item is Map<String, dynamic>) return item;
         if (item is ProgressData) {
           return {
@@ -52,49 +114,69 @@ Map<String, dynamic>? _normalizeSummary(Object? raw) {
         }
         return <String, dynamic>{};
       }).toList();
-      return {
-        'unit': raw['unit'],
-        'data': normalizedList,
-      };
+
+      return {'unit': 'Points', 'data': normalizedList};
     }
 
-    // fallback
-    return {'unit': raw['unit'], 'data': <Map<String, dynamic>>[]};
+    return null;
   }
 
-  // raw is maybe a List<dynamic> already
-  if (raw is List) {
-    final normalizedList = raw.map<Map<String, dynamic>>((item) {
-      if (item is Map<String, dynamic>) return item;
-      if (item is ProgressData) {
-        return {
-          'month': item.month,
-          'value': item.value,
-          'scanId': item.scanId,
-          'datetime': item.datetime,
-        };
-      }
-      return <String, dynamic>{};
-    }).toList();
+  void _handleTap(TapUpDetails details, Size chartSize, List<Map<String, dynamic>> data) {
+    if (data.isEmpty || !widget.showPointsAndLabels) return;
 
-    return {'unit': 'Points', 'data': normalizedList};
+    final shouldRotateLabels = data.length > 8;
+    final bottomMargin = shouldRotateLabels ? 80.0 : 60.0;
+    
+    final chartArea = Rect.fromLTWH(
+      50,
+      10,
+      chartSize.width - 70,
+      chartSize.height - bottomMargin,
+    );
+
+    // Calculate x positions of points to find the closest one
+    double minDistance = double.infinity;
+    int? closestIndex;
+
+    for (int i = 0; i < data.length; i++) {
+        final x = data.length == 1 
+            ? chartArea.left + (chartArea.width / 2) 
+            : chartArea.left + (chartArea.width * i / (data.length - 1));
+            
+        final distance = (details.localPosition.dx - x).abs();
+        
+        // Horizontal hit area of roughly 30 pixels
+        if (distance < 30 && distance < minDistance) {
+          minDistance = distance;
+          closestIndex = i;
+        }
+    }
+
+    if (closestIndex != null) {
+      setState(() {
+        if (_selectedIndex == closestIndex) {
+          _selectedIndex = null; // Toggle off if tapping same point
+        } else {
+          _selectedIndex = closestIndex;
+          _tapPosition = details.localPosition;
+        }
+      });
+    } else {
+      setState(() {
+        _selectedIndex = null;
+      });
+    }
   }
-
-  return null;
-}
-
 
   @override
   Widget build(BuildContext context) {
-final summary = _normalizeSummary(progressSummary);
-final List<Map<String, dynamic>> data =
-    List<Map<String, dynamic>>.from(summary?['data'] ?? []);
-
-    final String unit = summary?['unit'] ?? 'Points';
+    final summary = _normalizeSummary(widget.progressSummary);
+    final List<Map<String, dynamic>> data =
+        List<Map<String, dynamic>>.from(summary?['data'] ?? []);
 
     if (data.isEmpty) {
       return Container(
-        height: height,
+        height: widget.height,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.onTertiary,
           borderRadius: BorderRadius.circular(20),
@@ -111,7 +193,7 @@ final List<Map<String, dynamic>> data =
     }
 
     return Container(
-      height: height,
+      height: widget.height,
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.onTertiary,
         borderRadius: BorderRadius.circular(20),
@@ -119,15 +201,30 @@ final List<Map<String, dynamic>> data =
       child: Stack(
         children: [
           Padding(
-            padding: padding,
-            child: CustomPaint(
-              size: Size(double.infinity, height - padding.vertical),
-              painter: ProgressChartPainter(
-                data: data,
-                unit: unit,
-                context: context,
-                showPointsAndLabels: showPointsAndLabels,
-              ),
+            padding: widget.padding,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return GestureDetector(
+                  onTapUp: (details) => _handleTap(details, Size(constraints.maxWidth, constraints.maxHeight), data),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedBuilder(
+                    animation: _animation,
+                    builder: (context, child) {
+                      return CustomPaint(
+                        size: Size(double.infinity, constraints.maxHeight),
+                        painter: ProgressChartPainter(
+                          data: data,
+                          context: context,
+                          showPointsAndLabels: widget.showPointsAndLabels,
+                          isOverall: widget.isOverall,
+                          progress: _animation.value,
+                          selectedIndex: _selectedIndex,
+                        ),
+                      );
+                    }
+                  ),
+                );
+              }
             ),
           ),
         ],
@@ -136,18 +233,21 @@ final List<Map<String, dynamic>> data =
   }
 }
 
-
 class ProgressChartPainter extends CustomPainter {
   final List<Map<String, dynamic>> data;
-  final String unit;
   final BuildContext context;
   final bool showPointsAndLabels;
+  final bool isOverall;
+  final double progress;
+  final int? selectedIndex;
 
   ProgressChartPainter({
     required this.data,
-    required this.unit,
     required this.context,
     required this.showPointsAndLabels,
+    required this.isOverall,
+    required this.progress,
+    this.selectedIndex,
   });
 
   @override
@@ -155,262 +255,162 @@ class ProgressChartPainter extends CustomPainter {
     if (data.isEmpty) return;
 
     final paint = Paint()
-      ..color = Theme.of(context).colorScheme.secondary.withValues(alpha: .5)
-      ..strokeWidth = 3.0
+      ..color = Theme.of(context).colorScheme.primary.withValues(alpha: .7)
+      ..strokeWidth = 4.0
       ..style = PaintingStyle.stroke
       ..strokeCap = StrokeCap.round
       ..strokeJoin = StrokeJoin.round;
 
-    // Create gradient fill paint that will be applied later
-    Paint? fillPaint;
-
-    final gridPaint = Paint()
-      ..color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.15)
-      ..strokeWidth = 1.0
-      ..strokeCap = StrokeCap.round;
-
-    final textStyle = Theme.of(context).textTheme.bodyMedium?.secondary(context);
-
-
-    final unitTextStyle = Theme.of(context).textTheme.bodyMedium?.secondary(context);
+    final textStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+      fontSize: 15,
+      fontWeight: FontWeight.w400,
+    );
 
     final shouldRotateLabels = data.length > 8;
-    final bottomMargin = shouldRotateLabels ? 100.0 : 80.0;
-
+    final bottomMargin = shouldRotateLabels ? 80.0 : 60.0;
+    
     final chartArea = Rect.fromLTWH(
       50,
-      30,
+      10,
       size.width - 70,
       size.height - bottomMargin,
     );
 
     final values = data.map((item) => (item['value'] ?? 0).toDouble()).toList();
     final minValue = 0.0;
-    final maxValue = (values.reduce((a, b) => math.max(a, b).toDouble()) * 1.1).ceilToDouble();
+    final maxValue = isOverall ? 100.0 : 100.0; // Fixed max value to map accurately to sections
 
-    // Draw unit label
-    final unitPainter = TextPainter(
-      text: TextSpan(text: unit, style: unitTextStyle),
-      textDirection: TextDirection.ltr,
-    );
-    unitPainter.layout();
-    unitPainter.paint(canvas, const Offset(0, 5));
-
-    // Draw Y-axis grid lines and labels
-    const ySteps = 5;
-    for (int i = 0; i <= ySteps; i++) {
-      final value = minValue + (maxValue - minValue) * i / ySteps;
-      final y = chartArea.bottom - (chartArea.height * i / ySteps);
-
-      // Draw dotted line
-      _drawDottedLine(canvas, Offset(chartArea.left, y), Offset(chartArea.right, y), gridPaint);
-
-      final labelPainter = TextPainter(
-        text: TextSpan(text: value.toInt().toString(), style: textStyle),
-        textDirection: TextDirection.ltr,
-      );
-      labelPainter.layout();
-      labelPainter.paint(
-        canvas,
-        Offset(chartArea.left - labelPainter.width - 10, y - labelPainter.height / 2),
-      );
-    }
-
+    // Draw background bands
+    _drawBackgroundBands(canvas, chartArea, textStyle, minValue, maxValue);
+    
     // Calculate points
     final points = <Offset>[];
-    final fillPoints = <Offset>[Offset(chartArea.left, chartArea.bottom)];
+    final originalLabels = <String>[];
+
 
     if (data.length == 1) {
-      // For single data point, create a smooth line from 0 to the value
+      // For single data point, center it
       final value = (data[0]['value'] ?? 0).toDouble();
-      final valueY = chartArea.bottom - ((value - minValue) / (maxValue - minValue) * chartArea.height);
-      final zeroY = chartArea.bottom - ((0 - minValue) / (maxValue - minValue) * chartArea.height);
+      final valueY = _calculateY(value, minValue, maxValue, chartArea);
       
-      // Add points to create a smooth line from left (at 0) to right (at value)
-      points.add(Offset(chartArea.left, zeroY)); // Start at 0
-      points.add(Offset(chartArea.right, valueY)); // End at the actual value
-      
-      fillPoints.add(Offset(chartArea.left, zeroY));
-      fillPoints.add(Offset(chartArea.right, valueY));
+      final dataPointX = chartArea.left + (chartArea.width / 2);
+      points.add(Offset(dataPointX, valueY));
+      originalLabels.add(_getLabelForValue(value));
     } else {
-      // Multiple data points - use existing logic
       for (int i = 0; i < data.length; i++) {
         final value = (data[i]['value'] ?? 0).toDouble();
         final x = chartArea.left + (chartArea.width * i / (data.length - 1));
-        final y = chartArea.bottom - ((value - minValue) / (maxValue - minValue) * chartArea.height);
+        final y = _calculateY(value, minValue, maxValue, chartArea);
 
-        final point = Offset(x, y);
-        points.add(point);
-        fillPoints.add(point);
+        points.add(Offset(x, y));
+        originalLabels.add(_getLabelForValue(value));
       }
     }
 
-    fillPoints.add(Offset(chartArea.right, chartArea.bottom));
-
-    // Draw filled area under the curve with gradient fill
-    if (fillPoints.length > 2) {
-      final fillPath = Path();
-      fillPath.moveTo(fillPoints.first.dx, fillPoints.first.dy);
-      for (int i = 1; i < fillPoints.length; i++) {
-        fillPath.lineTo(fillPoints[i].dx, fillPoints[i].dy);
-      }
-      fillPath.close();
-      
-      // Create gradient from transparent at bottom to existing color at top
-      final gradient = LinearGradient(
-        begin: Alignment.bottomCenter,
-        end: Alignment.topCenter,
-        colors: [
-          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.0), // Transparent at bottom
-          Theme.of(context).colorScheme.secondary.withValues(alpha: 0.3), // Existing color at top
-        ],
-        stops: const [0.0, 1.0],
-      );
-      
-      // Get the bounds of the fill area to apply gradient
-      final bounds = fillPath.getBounds();
-      
-      fillPaint = Paint()
-        ..shader = gradient.createShader(bounds)
-        ..style = PaintingStyle.fill;
-      
-      canvas.drawPath(fillPath, fillPaint);
-    }
-
-    // Draw main line with smooth curves
+    // Draw main line with animation
     if (points.length > 1) {
       final path = Path();
       path.moveTo(points.first.dx, points.first.dy);
       
       for (int i = 1; i < points.length; i++) {
-        final prev = points[i - 1];
-        final curr = points[i];
-        
-        // Calculate smooth cubic bezier control points
-        final tension = 0.3; // Adjust this value for smoother/tighter curves (0.1-0.5 works well)
-        final distance = (curr.dx - prev.dx).abs();
-        
-        // Control point 1 (from previous point)
-        final cp1x = prev.dx + distance * tension;
-        final cp1y = prev.dy;
-        
-        // Control point 2 (to current point)  
-        final cp2x = curr.dx - distance * tension;
-        final cp2y = curr.dy;
-        
-        path.cubicTo(cp1x, cp1y, cp2x, cp2y, curr.dx, curr.dy);
+        path.lineTo(points[i].dx, points[i].dy);
       }
-      canvas.drawPath(path, paint);
+      
+      // Animate line drawing
+      if (progress < 1.0) {
+        final pathMetrics = path.computeMetrics().toList();
+        if (pathMetrics.isNotEmpty) {
+          final totalLength = pathMetrics[0].length;
+          final currentLength = totalLength * progress;
+          
+          final animatePath = Path();
+          final extractPath = pathMetrics[0].extractPath(0, currentLength);
+          animatePath.addPath(extractPath, Offset.zero);
+          
+          canvas.drawPath(animatePath, paint);
+        }
+      } else {
+        canvas.drawPath(path, paint);
+      }
     }
 
-    // Draw data points as circles (only if showPointsAndLabels is true)
+    // Pre-compute X-axis labels
+    final months = data.map((item) => item['month']?.toString() ?? '').toList();
+    
+    // Draw data points
     if (showPointsAndLabels) {
-      final pointPaint = Paint()
-        ..color = Theme.of(context).colorScheme.primary
+      final pointBorderPaint = Paint()
+        ..color = Theme.of(context).colorScheme.primary.withValues(alpha: .7)
         ..style = PaintingStyle.fill;
         
-      final pointBorderPaint = Paint()
+      final pointFillPaint = Paint()
         ..color = Theme.of(context).colorScheme.surface
         ..style = PaintingStyle.fill;
 
-      // For single data point, we need to draw the point at the correct data location
-      if (data.length == 1) {
-        // Calculate the correct position for the single data point
-        final value = (data[0]['value'] ?? 0).toDouble();
-        final dataPointX = chartArea.left + (chartArea.width * 0.75); // Position at 3/4 of the chart width
-        final dataPointY = chartArea.bottom - ((value - minValue) / (maxValue - minValue) * chartArea.height);
-        final dataPoint = Offset(dataPointX, dataPointY);
+      // Draw points that are revealed by animation
+      final numPointsToDraw = data.length == 1 ? 1 : (points.length * progress).ceil();
+      
+      for (int i = 0; i < numPointsToDraw && i < points.length; i++) {
+        final point = points[i];
         
-        // Draw point border (white/background)
-        canvas.drawCircle(dataPoint, 6.0, pointBorderPaint);
+        // Highlight selected point
+        final isSelected = i == selectedIndex;
+        final radius = isSelected ? 8.0 : 6.0;
+        final innerRadius = isSelected ? 5.0 : 4.0;
+        
+        // Draw point border
+        if (isSelected) {
+          canvas.drawCircle(point, radius + 2, Paint()..color = Theme.of(context).colorScheme.primary.withValues(alpha: 0.2)..style = PaintingStyle.fill);
+        }
+        
+        canvas.drawCircle(point, radius, pointBorderPaint);
         // Draw point fill
-        canvas.drawCircle(dataPoint, 4.0, pointPaint);
+        canvas.drawCircle(point, innerRadius, pointFillPaint);
         
-        // Draw value label above point
-        final valueLabelPainter = TextPainter(
-          text: TextSpan(
-            text: value.toInt().toString(),
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: Theme.of(context).colorScheme.onSurface,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          textDirection: TextDirection.ltr,
-        );
-        valueLabelPainter.layout();
-        valueLabelPainter.paint(
-          canvas,
-          Offset(
-            dataPoint.dx - valueLabelPainter.width / 2,
-            dataPoint.dy - valueLabelPainter.height - 10,
-          ),
-        );
-      } else {
-        // Multiple data points - use existing logic
-        for (int i = 0; i < points.length; i++) {
-          final point = points[i];
-          final value = (data[i]['value'] ?? 0).toDouble();
+        // Check for transition drops to annotate
+        if (i > 0) {
+          final previousLabel = originalLabels[i-1];
+          final currentLabel = originalLabels[i];
           
-          // Draw point border (white/background)
-          canvas.drawCircle(point, 6.0, pointBorderPaint);
-          // Draw point fill
-          canvas.drawCircle(point, 4.0, pointPaint);
-          
-          // Draw value label above point
-          final valueLabelPainter = TextPainter(
-            text: TextSpan(
-              text: value.toInt().toString(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurface,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-            textDirection: TextDirection.ltr,
-          );
-          valueLabelPainter.layout();
-          valueLabelPainter.paint(
-            canvas,
-            Offset(
-              point.dx - valueLabelPainter.width / 2,
-              point.dy - valueLabelPainter.height - 10,
-            ),
-          );
+          if (previousLabel != currentLabel) {
+            final isImprovement = _isImprovement(previousLabel, currentLabel);
+            if (isImprovement) {
+              _drawTransitionAnnotation(canvas, point, currentLabel, textStyle, chartArea);
+            }
+          }
+        }
+        
+        // Draw tooltip for selected point
+        if (isSelected) {
+          _drawTooltip(canvas, point, originalLabels[i], data[i], months.length > i ? months[i] : '');
         }
       }
     }
-
     // Draw X-axis labels
-    final months = data.map((item) => item['month']?.toString() ?? '').toList();
-    final labelBottomMargin = shouldRotateLabels ? 35.0 : 15.0;
+    final labelBottomMargin = shouldRotateLabels ? 15.0 : 15.0;
+
+    final xAxisTextStyle = Theme.of(context).textTheme.bodyMedium?.copyWith(
+      color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
+      fontSize: 13,
+    );
 
     if (months.length == 1) {
-      // For single data point, show labels at both ends to match the line
-      final startLabelPainter = TextPainter(
-        text: TextSpan(text: 'Start', style: textStyle),
+      final labelPainter = TextPainter(
+        text: TextSpan(text: months[0], style: xAxisTextStyle),
         textDirection: TextDirection.ltr,
       );
-      startLabelPainter.layout();
-      startLabelPainter.paint(
+      labelPainter.layout();
+      labelPainter.paint(
         canvas,
-        Offset(chartArea.left - startLabelPainter.width / 2, chartArea.bottom + labelBottomMargin),
-      );
-
-      final endLabelPainter = TextPainter(
-        text: TextSpan(text: months[0], style: textStyle),
-        textDirection: TextDirection.ltr,
-      );
-      endLabelPainter.layout();
-      endLabelPainter.paint(
-        canvas,
-        Offset(chartArea.right - endLabelPainter.width / 2, chartArea.bottom + labelBottomMargin),
+        Offset(chartArea.left + (chartArea.width / 2) - labelPainter.width / 2, chartArea.bottom + labelBottomMargin),
       );
     } else {
-      // Multiple data points - use existing logic
       for (int i = 0; i < months.length; i++) {
         final x = chartArea.left + (chartArea.width * i / (months.length - 1));
           
         final labelPainter = TextPainter(
-          text: TextSpan(text: months[i], style: textStyle),
+          text: TextSpan(text: months[i], style: xAxisTextStyle),
           textDirection: TextDirection.ltr,
         );
         labelPainter.layout();
@@ -429,6 +429,252 @@ class ProgressChartPainter extends CustomPainter {
         }
       }
     }
+  }
+
+  double _calculateY(double value, double min, double max, Rect chartArea) {
+    // Invert if mapping high scores to bad
+    double adjustedValue = isOverall ? value : (100 - value);
+    if (!isOverall) {
+      adjustedValue = value; // Keep high = bad at top
+    }
+    
+    // Overall: 100 = Clear (bottom y), 0 = Severe (top y)
+    // Non-overall: 100 = Severe (top y), 0 = Clear (bottom y)
+    if (isOverall) {
+      return chartArea.bottom - ((value - min) / (max - min) * chartArea.height);
+    } else {
+      return chartArea.top + ((100 - value - min) / (max - min) * chartArea.height);
+    }
+  }
+
+  String _getLabelForValue(double value) {
+    if (isOverall) {
+      return SeverityAnalyzer.getOverAllConditionLabel(
+          SeverityAnalyzer.getOverAllSkinCondition(value));
+    } else {
+      return SeverityAnalyzer.getLabelFromScore(value);
+    }
+  }
+
+  void _drawBackgroundBands(Canvas canvas, Rect chartArea, TextStyle? textStyle, double min, double max) {
+    final bandNames = isOverall 
+      ? ['Clear', 'Mild', 'Moderate', 'High', 'Severe'] 
+      : ['Clear', 'Mild', 'Moderate', 'High', 'Severe'].reversed.toList();
+      
+    final bandColors = isOverall 
+      ? [
+          const Color(0xFFE3F2FD), // Clear
+          const Color(0xFFF1F8E9), // Mild
+          const Color(0xFFFFF8E1), // Moderate
+          const Color(0xFFFBE9E7), // High
+          const Color(0xFFFCE4EC), // Severe
+        ]
+      : [
+          const Color(0xFFFCE4EC), // Severe
+          const Color(0xFFFBE9E7), // High
+          const Color(0xFFFFF8E1), // Moderate
+          const Color(0xFFF1F8E9), // Mild
+          const Color(0xFFE3F2FD), // Clear
+        ];
+
+      final topScores = isOverall 
+        ? [100.0, 85.0, 70.0, 50.0, 30.0]
+        : [100.0, 80.0, 60.0, 35.0, 15.0];
+        
+      final bottomScores = isOverall
+        ? [85.0, 70.0, 50.0, 30.0, 0.0]
+        : [80.0, 60.0, 35.0, 15.0, 0.0];
+        
+      for (int i = 0; i < 5; i++) {
+        final topY = _calculateY(topScores[i], min, max, chartArea);
+        final bottomY = _calculateY(bottomScores[i], min, max, chartArea);
+        final bandHeight = (bottomY - topY).abs();
+        
+        final topEdge = math.min(topY, bottomY);
+        final bottomEdge = math.max(topY, bottomY);
+        
+        final bandRect = Rect.fromLTWH(
+          0, // extend to the left edge
+          topEdge,
+          chartArea.right,
+          bandHeight,
+        );
+
+        final bgPaint = Paint()
+          ..color = bandColors[i].withValues(alpha: 0.5)
+          ..style = PaintingStyle.fill;
+          
+        canvas.drawRect(bandRect, bgPaint);
+
+        // Draw dotted line at bottom of band (except for last one)
+        if (i < 4) {
+          final dottedPaint = Paint()
+            ..color = Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.1)
+            ..strokeWidth = 1.0;
+          _drawDottedLine(
+            canvas, 
+            Offset(0, bottomEdge), 
+            Offset(chartArea.right, bottomEdge), 
+            dottedPaint
+          );
+        }
+
+        // Draw label in vertical center of band
+        final labelPainter = TextPainter(
+          text: TextSpan(
+            text: bandNames[i], 
+            style: textStyle,
+          ),
+          textDirection: TextDirection.ltr,
+        );
+        labelPainter.layout();
+        
+        // Left align with padding
+        labelPainter.paint(
+          canvas,
+          Offset(15, topEdge + (bandHeight / 2) - (labelPainter.height / 2)),
+        );
+      }
+  }
+
+  bool _isImprovement(String previous, String current) {
+    final severityMap = {
+      'Severe': 4,
+      'High': 3,
+      'Moderate': 2,
+      'Mild': 1,
+      'Clear': 0,
+    };
+    
+    final prevVal = severityMap[previous] ?? -1;
+    final currVal = severityMap[current] ?? -1;
+    
+    if (prevVal == -1 || currVal == -1) return false;
+    
+    return currVal < prevVal;
+  }
+
+  void _drawTransitionAnnotation(Canvas canvas, Offset point, String condition, TextStyle? baseStyle, Rect chartArea) {
+    final annotationStyle = baseStyle?.copyWith(
+      fontSize: 13,
+      fontWeight: FontWeight.w500,
+    );
+    
+    final labelPainter = TextPainter(
+      text: TextSpan(
+        children: [
+          TextSpan(text: 'Improved to ', style: annotationStyle),
+          TextSpan(
+            text: condition, 
+            style: annotationStyle?.copyWith(
+              fontWeight: FontWeight.bold, 
+              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.8)
+            )
+          ),
+        ]
+      ),
+      textDirection: TextDirection.ltr,
+    );
+    
+    labelPainter.layout();
+    
+    // Position text above and slightly left of point
+    double xOffset = point.dx - labelPainter.width + 20;
+    
+    // Check if it clips on the left side (y-axis labels area)
+    if (xOffset < chartArea.left) {
+      xOffset = chartArea.left + 5; // Constrain to stay just inside the chart area
+    }
+    
+    // Also protect the right side
+    if (xOffset + labelPainter.width > chartArea.right) {
+      xOffset = chartArea.right - labelPainter.width - 5;
+    }
+
+    final textOffset = Offset(
+      xOffset, 
+      point.dy - 35
+    );
+    
+    labelPainter.paint(canvas, textOffset);
+    
+    // Draw small upward arrow
+    final arrowPaint = Paint()
+      ..color = Theme.of(context).colorScheme.primary.withValues(alpha: 0.8)
+      ..strokeWidth = 2.0
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.fill;
+      
+    // Point arrow down explicitly towards the data point
+    final arrowX = math.min(math.max(point.dx, textOffset.dx + 10), textOffset.dx + labelPainter.width - 10);
+    final arrowY = textOffset.dy + labelPainter.height + 2;
+    
+    final path = Path();
+    path.moveTo(arrowX - 4, arrowY + 6);
+    path.lineTo(arrowX + 4, arrowY + 6);
+    path.lineTo(arrowX, arrowY); // Point up towards text
+    path.close();
+    
+    canvas.drawPath(path, arrowPaint);
+    
+    // Draw a line connecting the arrow to the point
+    final linePaint = Paint()
+      ..color = Theme.of(context).colorScheme.primary.withValues(alpha: 0.4)
+      ..strokeWidth = 1.0;
+      
+    _drawDottedLine(
+      canvas, 
+      Offset(arrowX, arrowY + 6), 
+      Offset(point.dx, point.dy - 10), 
+      linePaint
+    );
+  }
+
+  void _drawTooltip(Canvas canvas, Offset point, String condition, Map<String, dynamic> dataPoint, String axisLabel) {
+    final tooltipStyle = Theme.of(context).textTheme.bodySmall?.copyWith(
+      color: Colors.white,
+      fontWeight: FontWeight.bold,
+    );
+
+    final titlePainter = TextPainter(
+      text: TextSpan(text: condition, style: tooltipStyle?.copyWith(fontSize: 14)),
+      textDirection: TextDirection.ltr,
+    );
+    titlePainter.layout();
+
+    final padding = 10.0;
+    final tooltipWidth = titlePainter.width + (padding * 2);
+    final tooltipHeight = titlePainter.height + (padding * 2);
+
+    // Calculate position
+    double left = point.dx - (tooltipWidth / 2);
+    double top = point.dy - tooltipHeight - 15; // 15px above the point
+    
+    // Boundary checks
+    if (left < 10) left = 10;
+    
+    // Draw tooltip background
+    final tooltipPaint = Paint()
+      ..color = Theme.of(context).colorScheme.primary
+      ..style = PaintingStyle.fill;
+      
+    final tooltipRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(left, top, tooltipWidth, tooltipHeight),
+      const Radius.circular(8),
+    );
+    
+    canvas.drawRRect(tooltipRect, tooltipPaint);
+    
+    // Draw little triangle pointing to the point
+    final path = Path();
+    path.moveTo(point.dx - 6, top + tooltipHeight);
+    path.lineTo(point.dx + 6, top + tooltipHeight);
+    path.lineTo(point.dx, top + tooltipHeight + 6);
+    path.close();
+    canvas.drawPath(path, tooltipPaint);
+
+    // Draw text
+    titlePainter.paint(canvas, Offset(left + padding, top + padding));
   }
 
   // Helper method to draw dotted lines
@@ -465,7 +711,9 @@ class ProgressChartPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant ProgressChartPainter oldDelegate) {
     return oldDelegate.data != data || 
-           oldDelegate.unit != unit || 
-           oldDelegate.showPointsAndLabels != showPointsAndLabels;
+           oldDelegate.showPointsAndLabels != showPointsAndLabels ||
+           oldDelegate.isOverall != isOverall ||
+           oldDelegate.progress != progress ||
+           oldDelegate.selectedIndex != selectedIndex;
   }
 }

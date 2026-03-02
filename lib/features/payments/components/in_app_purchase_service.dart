@@ -45,14 +45,14 @@ class IAPService {
   final List<PurchaseDetails> _restoredPurchases = [];
 
   static const Set<String> _productIds = {
-    'com.assisted.nepika.weekly',
+    'com.assisted.nepika.monthly',
     'com.assisted.nepika.yearly',
   };
 
   static const Map<String, String> planToProductId = {
-    'weekly': 'com.assisted.nepika.weekly',
+    'monthly': 'com.assisted.nepika.monthly',
     'yearly': 'com.assisted.nepika.yearly',
-    'week': 'com.assisted.nepika.weekly',
+    'month': 'com.assisted.nepika.monthly',
     'year': 'com.assisted.nepika.yearly',
   };
 

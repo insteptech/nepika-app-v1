@@ -17,7 +17,7 @@ import '../bloc/dashboard_state.dart';
 import '../widgets/face_scan_card.dart';
 import '../widgets/greeting_section.dart';
 import '../widgets/image_gallery_section.dart';
-import '../widgets/progress_summary_chart.dart';
+import '../widgets/progress_summary_section.dart';
 import '../widgets/skin_score_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/conditions_list_section.dart';
@@ -70,6 +70,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   List<Map<String, dynamic>>? _cachedRecommendedProducts;
   Map<String, dynamic>? _cachedLatestConditionResult;
   String? _latestSkinReportId;
+
   @override
   void initState() {
     super.initState();
@@ -420,10 +421,9 @@ class _DashboardScreenState extends State<DashboardScreen>
                 },
               ),
             ),
-            const SizedBox(height: 10),
             _memoizedWidget(
               cacheKey: progressSummary.hashCode,
-              child: _buildProgressSummarySection(progressSummary),
+              child: ProgressSummarySection(progressSummary: progressSummary),
             ),
             _memoizedWidget(
               cacheKey: '${dailyRoutine.hashCode}_$isLoading',
@@ -467,26 +467,6 @@ class _DashboardScreenState extends State<DashboardScreen>
           const SizedBox(height: 10),
           RepaintBoundary(
             child: SkinScoreCard(skinScore: skinScore),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProgressSummarySection(Map<String, dynamic> progressSummary) {
-    return RepaintBoundary(
-      child: Column(
-        children: [
-          const SectionHeader(
-            heading: 'Progress Summary',
-            showButton: false,
-          ),
-          RepaintBoundary(
-            child: ProgressSummaryChart(
-              progressSummary: progressSummary,
-              height: 280,
-              showPointsAndLabels: true,
-            ),
           ),
         ],
       ),

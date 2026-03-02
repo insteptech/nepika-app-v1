@@ -38,6 +38,13 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   CommunityProfileEntity? _userProfile;
   bool _isLoadingProfile = true;
   
+  // Mentions feature data
+  List<CommunityProfileEntity> _followingList = [];
+  List<CommunityProfileEntity> _filteredMentions = [];
+  bool _isShowingMentions = false;
+  String _mentionQuery = '';
+  int _mentionStartIndex = -1;
+  
   // Word count tracking
   int _wordCount = 0;
   static const int _maxWords = 50;
@@ -54,8 +61,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
   void initState() {
     super.initState();
     _fetchUserProfile();
+    if (widget.token != null && widget.userId != null) {
+      context.read<ProfileBloc>().add(
+        FetchFollowing(token: widget.token!, userId: widget.userId!, page: 1, pageSize: 100),
+      );
+    }
     _contentController.addListener(() {
       _updateWordCount();
+      _checkMentions();
       setState(() {}); // Update UI when text changes
     });
   }
@@ -108,6 +121,83 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
     final words = text.isEmpty ? 0 : text.split(RegExp(r'\s+')).length;
     setState(() {
       _wordCount = words;
+    });
+  }
+
+  void _checkMentions() {
+    final text = _contentController.text;
+    final selection = _contentController.selection;
+    
+    if (selection.baseOffset == -1) {
+      if (_isShowingMentions) setState(() => _isShowingMentions = false);
+      return;
+    }
+    
+    // Safety check that cursor is not out of bounds
+    final cursorPosition = min(selection.baseOffset, text.length);
+    if (cursorPosition == 0) {
+      if (_isShowingMentions) setState(() => _isShowingMentions = false);
+      return;
+    }
+
+    final textBeforeCursor = text.substring(0, cursorPosition);
+    
+    // Find last @ symbol
+    final lastAtPos = textBeforeCursor.lastIndexOf('@');
+    if (lastAtPos == -1) {
+      if (_isShowingMentions) setState(() => _isShowingMentions = false);
+      return;
+    }
+
+    // Ensure it's the start of a word (preceded by space or at string start)
+    if (lastAtPos > 0 && !textBeforeCursor[lastAtPos - 1].trim().isEmpty) {
+      if (_isShowingMentions) setState(() => _isShowingMentions = false);
+      return;
+    }
+
+    final query = textBeforeCursor.substring(lastAtPos + 1).toLowerCase();
+    
+    // If query has space in it, we typically close mention window
+    if (query.contains(' ')) {
+      if (_isShowingMentions) setState(() => _isShowingMentions = false);
+      return;
+    }
+
+    // Filter following lists
+    final matches = _followingList.where((u) {
+      return u.username.toLowerCase().contains(query);
+    }).toList();
+
+    setState(() {
+      _isShowingMentions = true;
+      _mentionStartIndex = lastAtPos;
+      _mentionQuery = query;
+      _filteredMentions = matches;
+    });
+  }
+
+  void _insertMention(CommunityProfileEntity user) {
+    final text = _contentController.text;
+    final textBeforeMention = text.substring(0, _mentionStartIndex);
+    
+    // Safely get bounds for the text after cursor
+    final selection = _contentController.selection;
+    final cursorPosition = selection.baseOffset != -1 
+        ? min(selection.baseOffset, text.length)
+        : text.length;
+        
+    final textAfterQuery = text.substring(cursorPosition);
+    
+    final newText = '$textBeforeMention@${user.username} $textAfterQuery';
+    
+    final newCursorPos = _mentionStartIndex + user.username.length + 2; // +1 for @, +1 for space
+    
+    setState(() {
+      _contentController.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newCursorPos),
+      );
+      _isShowingMentions = false;
     });
   }
 
@@ -302,6 +392,10 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                   });
                 } else if (state is MyProfileError) {
                   _loadUserInfoFromPrefs();
+                } else if (state is FollowingLoaded) {
+                  setState(() {
+                    _followingList = state.following;
+                  });
                 }
               },
             ),
@@ -326,12 +420,14 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               // Remove focus from input field when tapping outside
               FocusScope.of(context).unfocus();
             },
-            child: CustomScrollView(
-              slivers: [
-              // Initial spacing
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 10),
-              ),
+            child: Stack(
+              children: [
+                CustomScrollView(
+                  slivers: [
+                  // Initial spacing
+                  const SliverToBoxAdapter(
+                    child: SizedBox(height: 10),
+                  ),
               
               // Sticky header with close button and title
               SliverPersistentHeader(
@@ -473,6 +569,8 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
                           ),
                         ],
                       ),
+                      
+                      // Mentions UI moved to overlay drawer
 
                       const SizedBox(height: 16),
 
@@ -492,11 +590,109 @@ class _CreatePostScreenState extends State<CreatePostScreen> {
               ),
             ],
           ),
+          // Custom Mention Drawer Overlay
+          if (_isShowingMentions && _filteredMentions.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              top: 100, // Leave space for header
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.surface,
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.1),
+                      blurRadius: 10,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
+                ),
+                child: Column(
+                  children: [
+                    // Handle bar
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 12),
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            'Mention people',
+                            style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    // List
+                    Expanded(
+                      child: ListView.separated(
+                        padding: const EdgeInsets.only(bottom: 20),
+                        itemCount: _filteredMentions.length,
+                        separatorBuilder: (context, index) => Divider(
+                          height: 1,
+                          indent: 72,
+                          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.1),
+                        ),
+                        itemBuilder: (context, index) {
+                          final user = _filteredMentions[index];
+                          return ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            leading: CircleAvatar(
+                              radius: 20,
+                              backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                              backgroundImage: user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty
+                                  ? NetworkImage(user.profileImageUrl!)
+                                  : null,
+                              child: user.profileImageUrl == null || user.profileImageUrl!.isEmpty
+                                  ? Text(
+                                      user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
+                                      style: TextStyle(
+                                        color: Theme.of(context).colorScheme.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                            title: Text(
+                              user.username,
+                              style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            subtitle: Text(
+                              '@${user.username}',
+                              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                              ),
+                            ),
+                            onTap: () => _insertMention(user),
+                          );
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+        ],
+      ),
         ),
         ),
       ),
       // Bottom Post Button
-      bottomNavigationBar: Container(
+      bottomNavigationBar: (_isShowingMentions && _filteredMentions.isNotEmpty) ? const SizedBox.shrink() : Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.onTertiary,

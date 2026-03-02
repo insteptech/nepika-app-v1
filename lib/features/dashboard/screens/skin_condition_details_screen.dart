@@ -380,7 +380,7 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
                                 child: Row(
                                   children: [
                                     Text(
-                                      "Proints",
+                                      "Conditions",
                                       style: Theme.of(context)
                                           .textTheme
                                           .bodySmall
@@ -426,49 +426,6 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
   }
 
   Widget _buildProgressChart(SkinConditionState state) {
-    Widget toggleButton = Container(
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
-          width: 1,
-        ),
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(20),
-          onTap: () {
-            setState(() {
-              _showMarkings = !_showMarkings;
-            });
-          },
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  _showMarkings ? Icons.visibility : Icons.visibility_off,
-                  size: 16,
-                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                ),
-                const SizedBox(width: 6),
-                Text(
-                  _showMarkings ? 'Hide' : 'Show',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
-                    fontSize: 12,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ),
-      ),
-    );
-
     if (state is SkinConditionLoading) {
       return const Center(child: CircularProgressIndicator());
     } else if (state is SkinConditionLoaded) {
@@ -476,7 +433,6 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
         progressSummary: state.skinConditionDetails.progressSummary,
         height: 280,
         showPointsAndLabels: _showMarkings,
-        toggleWidget: toggleButton,
       );
     } else if (state is SkinConditionError) {
       return Center(
@@ -522,7 +478,6 @@ class _SkinConditionDetailsPageState extends State<SkinConditionDetailsPage> {
         progressSummary: {},
         height: 280,
         showPointsAndLabels: _showMarkings,
-        toggleWidget: toggleButton,
       );
     }
   }

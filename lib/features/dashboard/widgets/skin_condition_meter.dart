@@ -43,13 +43,13 @@ class _MeterPainter extends CustomPainter {
     final double startAngle = math.pi; // Start from left (180 degrees)
     final double sweepAngle = math.pi; // Sweep to right (180 degrees)
 
-    // Segment definitions
+    // Segment definitions (sweepWeight corresponds exactly to the mathematical threshold width out of 100)
     final List<_Segment> segments = [
-      _Segment(color: const Color(0xFFD32F2F), label: 'Severe', sweepWeight: 1), // 0-30
-      _Segment(color: const Color(0xFFFF5722), label: 'High', sweepWeight: 1), // 31-50
-      _Segment(color: const Color(0xFFFF9800), label: 'Moderate', sweepWeight: 1), // 51-70
-      _Segment(color: const Color(0xFFFFEB3B), label: 'Mild', sweepWeight: 1), // 71-85
-      _Segment(color: const Color(0xFF4CAF50), label: 'Clear', sweepWeight: 1), // 86-100
+      _Segment(color: const Color(0xFFD32F2F), label: 'Severe', sweepWeight: 30), // 0-30
+      _Segment(color: const Color(0xFFFF5722), label: 'High', sweepWeight: 20), // 31-50
+      _Segment(color: const Color(0xFFFF9800), label: 'Moderate', sweepWeight: 20), // 51-70
+      _Segment(color: const Color(0xFFFFEB3B), label: 'Mild', sweepWeight: 15), // 71-85
+      _Segment(color: const Color(0xFF4CAF50), label: 'Clear', sweepWeight: 15), // 86-100
     ];
 
     // Note: The UI screenshot shows Clear on the left and Severe on the right.
@@ -65,7 +65,6 @@ class _MeterPainter extends CustomPainter {
       ..style = PaintingStyle.stroke;
 
     double currentAngle = startAngle;
-    final double segmentSweep = sweepAngle / visualSegments.length;
     
     // We want the total meter to have a stroke thickness.
     // Let's say thickness is 35% of the radius.
@@ -81,6 +80,9 @@ class _MeterPainter extends CustomPainter {
     // 1. Draw the colorful bands
     for (int i = 0; i < visualSegments.length; i++) {
       segmentPaint.color = visualSegments[i].color;
+      
+      // Calculate specific sweep for this segment based on weight (out of 100 total points)
+      final double segmentSweep = (visualSegments[i].sweepWeight / 100.0) * sweepAngle;
       
       canvas.drawArc(drawRect, currentAngle, segmentSweep, false, segmentPaint);
       
