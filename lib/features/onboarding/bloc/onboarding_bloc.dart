@@ -198,6 +198,11 @@ class OnboardingBloc extends Bloc<OnboardingEvent, OnboardingState> {
       emit(const OnboardingStepSubmitting());
 
       final payload = _buildSubmissionPayload(loadedState.responses);
+      
+      // Inject terms_accepted if provided in the event
+      if (event.termsAccepted != null) {
+        payload['terms_accepted'] = event.termsAccepted!;
+      }
 
       debugPrint("📦 Submitting payload JSON: ${jsonEncode(payload)}");
 

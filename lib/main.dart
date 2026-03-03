@@ -9,6 +9,7 @@ import 'package:nepika/core/config/constants/theme_notifier.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
+import 'package:nepika/features/onboarding/screens/skincare_professional_screen.dart';
 import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
 import 'package:nepika/features/face_scan/main.dart';
 import 'package:nepika/features/face_scan/screens/scan_report_loader_screen.dart';
@@ -57,7 +58,7 @@ import 'domain/auth/usecases/send_otp.dart';
 import 'domain/auth/usecases/verify_otp.dart';
 import 'domain/auth/usecases/resend_otp.dart' as resend;
 import 'features/splash/main.dart';
-import 'features/welcome/main.dart'; 
+import 'features/welcome/main.dart';
 import 'package:provider/provider.dart';
 import 'core/services/local_notification_service.dart';
 import 'core/services/android_notification_service.dart';
@@ -67,13 +68,13 @@ import 'core/utils/app_logger.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
+
   // Only essential initialization - defer everything else
   final sharedPreferences = await SharedPreferences.getInstance();
-  
+
   // Initialize core dependencies with lazy loading pattern
   di.ServiceLocator.initializeCore(sharedPreferences);
-  
+
   // Set Stripe key synchronously (no await needed)
   // Set Stripe key (only on mobile for now, or use conditional import)
   // For web, Stripe.js in index.html handles the library, but flutter_stripe might need specific web init.
@@ -82,7 +83,7 @@ void main() async {
   if (!kIsWeb) {
     Stripe.publishableKey = AppConstants.stripePublishableKey;
   }
-  
+
   // Set up background message handler early
   FirebaseMessaging.onBackgroundMessage(firebaseMessagingBackgroundHandler);
 
@@ -92,7 +93,7 @@ void main() async {
       child: MyApp(sharedPreferences: sharedPreferences),
     ),
   );
-  
+
   // Initialize heavy services in background after app starts
   _initializeBackgroundServices();
 }
@@ -106,25 +107,32 @@ void _initializeBackgroundServices() {
         DeviceOrientation.portraitUp,
         DeviceOrientation.portraitDown,
       ]);
-      
+
       // Initialize SharedPrefsHelper
       await SharedPrefsHelper.init();
-      
+
       // Initialize remaining services
       await di.ServiceLocator.initializeRemaining();
-      
+
       // Initialize local notification service
       await LocalNotificationService.instance.initialize();
-      
+
       // Initialize Android-specific notification service for better Android support
       await AndroidNotificationService.instance.initialize();
-      
+
       // Initialize FCM service for push notifications (non-blocking)
       _initializeFcmService();
-      
-      AppLogger.info('Background services initialized successfully', tag: 'Main');
+
+      AppLogger.info(
+        'Background services initialized successfully',
+        tag: 'Main',
+      );
     } catch (e) {
-      AppLogger.error('Failed to initialize background services', tag: 'Main', error: e);
+      AppLogger.error(
+        'Failed to initialize background services',
+        tag: 'Main',
+        error: e,
+      );
     }
   });
 }
@@ -135,16 +143,21 @@ void _initializeFcmService() {
     try {
       // Initialize FCM without token (fast, non-blocking for first-time users)
       await UnifiedFcmService.instance.initializeWithoutToken();
-      
-      AppLogger.info('FCM service initialized for push notifications', tag: 'Main');
+
+      AppLogger.info(
+        'FCM service initialized for push notifications',
+        tag: 'Main',
+      );
     } catch (e) {
-      AppLogger.error('FCM service initialization failed (non-critical)', tag: 'Main', error: e);
+      AppLogger.error(
+        'FCM service initialization failed (non-critical)',
+        tag: 'Main',
+        error: e,
+      );
       // Don't throw - FCM failure shouldn't break the app for first-time users
     }
   });
 }
-
-
 
 class MyApp extends StatelessWidget {
   final SharedPreferences sharedPreferences;
@@ -154,14 +167,13 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     final themeNotifier = Provider.of<ThemeNotifier>(context);
 
-
     final remoteDataSource = AuthRemoteDataSourceImpl();
     final localDataSource = AuthLocalDataSourceImpl(sharedPreferences);
     final authRepository = AuthRepositoryImpl(
       remoteDataSource,
       localDataSource,
     );
-    
+
     // Create use cases
     final sendOtpUseCase = SendOtp(authRepository);
     final verifyOtpUseCase = VerifyOtp(authRepository);
@@ -186,16 +198,42 @@ class MyApp extends StatelessWidget {
         navigatorObservers: [RouteObserver<PageRoute>()],
         onGenerateRoute: (RouteSettings settings) {
           debugPrint('🚨 Route requested: ${settings.name}');
+
+          final hasToken =
+              sharedPreferences.getString(AppConstants.accessTokenKey) !=
+                  null &&
+              sharedPreferences
+                  .getString(AppConstants.accessTokenKey)!
+                  .isNotEmpty;
+
+          final publicRoutes = [
+            AppRoutes.splash,
+            AppRoutes.welcome,
+            AppRoutes.login,
+            AppRoutes.phoneEntry,
+            AppRoutes.otpVerification,
+            AppRoutes.mobileRecovery,
+            AppRoutes.userInfo,
+            AppRoutes.onboarding,
+          ];
+
+          if (!hasToken && !publicRoutes.contains(settings.name)) {
+            debugPrint(
+              '🚨 Unauthorized access attempt to ${settings.name}, redirecting to WelcomeRoute',
+            );
+            return MaterialPageRoute(builder: (_) => const WelcomeScreen());
+          }
+
           switch (settings.name) {
             case AppRoutes.splash:
               return MaterialPageRoute(builder: (_) => const SplashScreen());
             case AppRoutes.welcome:
-              return MaterialPageRoute(
-                builder: (_) => const WelcomeScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const WelcomeScreen());
             case AppRoutes.login:
             case AppRoutes.phoneEntry:
-              return MaterialPageRoute(builder: (_) => const PhoneEntryScreen());
+              return MaterialPageRoute(
+                builder: (_) => const PhoneEntryScreen(),
+              );
             case AppRoutes.otpVerification:
               return MaterialPageRoute(
                 builder: (_) => const OtpVerificationScreen(),
@@ -205,18 +243,22 @@ class MyApp extends StatelessWidget {
                 builder: (_) => const MobileRecoveryScreen(),
               );
             case AppRoutes.userInfo:
-              return MaterialPageRoute(builder: (_) => const OnboardingScreen());
+              return MaterialPageRoute(
+                builder: (_) => const OnboardingScreen(),
+              );
             case AppRoutes.onboarding:
               return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (_) => OnboardingBloc(
-                    repository: di.sl(),
-                    authRepository: di.sl(),
-                    validator: di.sl(),
-                    visibilityEvaluator: di.sl(),
-                  ),
-                  child: const OnboardingScreen(),
-                ),
+                builder:
+                    (_) => BlocProvider(
+                      create:
+                          (_) => OnboardingBloc(
+                            repository: di.sl(),
+                            authRepository: di.sl(),
+                            validator: di.sl(),
+                            visibilityEvaluator: di.sl(),
+                          ),
+                      child: const OnboardingScreen(),
+                    ),
               );
             case AppRoutes.cameraScanGuidence:
               return MaterialPageRoute(
@@ -226,18 +268,28 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (_) => const FaceScanMainScreen(),
               );
+            case AppRoutes.skincareProfessional:
+              return MaterialPageRoute(
+                builder: (_) => const SkincareProfessionalScreen(),
+              );
             case AppRoutes.faceScanResult:
               return MaterialPageRoute(
                 builder: (_) => const FaceScanResultScreen(),
               );
             case AppRoutes.dashboardHome:
-              return MaterialPageRoute(builder: (_) => const DashboardWithNotifications());
+              return MaterialPageRoute(
+                builder: (_) => const DashboardWithNotifications(),
+              );
             case AppRoutes.dashboardScanResultDetails:
               // Navigate to dashboard first, then to scan result details
               return MaterialPageRoute(
-                builder: (_) => DashboardWithScanResults(
-                  reportId: (settings.arguments as Map<String, dynamic>?)?['reportId'] as String?,
-                ),
+                builder:
+                    (_) => DashboardWithScanResults(
+                      reportId:
+                          (settings.arguments
+                                  as Map<String, dynamic>?)?['reportId']
+                              as String?,
+                    ),
               );
             case AppRoutes.conditionDetailsPage:
               return MaterialPageRoute(
@@ -260,12 +312,11 @@ class MyApp extends StatelessWidget {
             case CommunityRoutes.communitySettings:
               debugPrint('🚨 Route matched: Community Settings');
               return MaterialPageRoute(
-                builder: (_) => CommunityFactory.createCommunitySettingsScreen(),
+                builder:
+                    (_) => CommunityFactory.createCommunitySettingsScreen(),
               );
             case AppRoutes.dashboardAllProducts:
-              return MaterialPageRoute(
-                builder: (_) => const ProductsScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const ProductsScreen());
             case AppRoutes.dashboardSpecificProduct:
               return MaterialPageRoute(
                 settings: settings,
@@ -284,9 +335,7 @@ class MyApp extends StatelessWidget {
                 },
               );
             case AppRoutes.dashboardHistory:
-              return MaterialPageRoute(
-                builder: (_) => const HistoryScreen(),
-              );
+              return MaterialPageRoute(builder: (_) => const HistoryScreen());
             case AppRoutes.dashboardSettings:
               return MaterialPageRoute(
                 builder: (_) => const MainSettingsScreen(),
@@ -300,10 +349,12 @@ class MyApp extends StatelessWidget {
             case DashboardRoutes.reminderSettings:
               final reminder = settings.arguments as Reminder?;
               return MaterialPageRoute(
-                builder: (_) => BlocProvider(
-                  create: (context) => di.ServiceLocator.get<ReminderBloc>(),
-                  child: ReminderSettings(reminderToEdit: reminder),
-                ),
+                builder:
+                    (_) => BlocProvider(
+                      create:
+                          (context) => di.ServiceLocator.get<ReminderBloc>(),
+                      child: ReminderSettings(reminderToEdit: reminder),
+                    ),
               );
             case AppRoutes.dashboardScheduledReminders:
             case DashboardRoutes.scheduledReminders:
@@ -317,52 +368,56 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(builder: (_) => const PricingScreen());
             case AppRoutes.notifications:
               return MaterialPageRoute(
-                builder: (_) => MultiBlocProvider(
-                  providers: [
-                    BlocProvider(
-                      create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
+                builder:
+                    (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider(
+                          create:
+                              (context) =>
+                                  di.sl<NotificationBloc>()
+                                    ..add(const FetchAllNotifications()),
+                        ),
+                        BlocProvider(create: (context) => di.sl<PostsBloc>()),
+                        BlocProvider(
+                          create: (context) => di.sl<UserSearchBloc>(),
+                        ),
+                        BlocProvider(create: (context) => di.sl<ProfileBloc>()),
+                      ],
+                      child: const NotificationsScreen(),
                     ),
-                    BlocProvider(
-                      create: (context) => di.sl<PostsBloc>(),
-                    ),
-                    BlocProvider(
-                      create: (context) => di.sl<UserSearchBloc>(),
-                    ),
-                    BlocProvider(
-                      create: (context) => di.sl<ProfileBloc>(),
-                    ),
-                  ],
-                  child: const NotificationsScreen(),
-                ),
               );
             case AppRoutes.notificationDebug:
               return MaterialPageRoute(
-                builder: (_) => MultiBlocProvider(
-                  providers: [
-                    BlocProvider(
-                      create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
+                builder:
+                    (_) => MultiBlocProvider(
+                      providers: [
+                        BlocProvider(
+                          create:
+                              (context) =>
+                                  di.sl<NotificationBloc>()
+                                    ..add(const FetchAllNotifications()),
+                        ),
+                        BlocProvider(create: (context) => di.sl<PostsBloc>()),
+                        BlocProvider(
+                          create: (context) => di.sl<UserSearchBloc>(),
+                        ),
+                        BlocProvider(create: (context) => di.sl<ProfileBloc>()),
+                      ],
+                      child: const NotificationDebugScreen(),
                     ),
-                    BlocProvider(
-                      create: (context) => di.sl<PostsBloc>(),
-                    ),
-                    BlocProvider(
-                      create: (context) => di.sl<UserSearchBloc>(),
-                    ),
-                    BlocProvider(
-                      create: (context) => di.sl<ProfileBloc>(),
-                    ),
-                  ],
-                  child: const NotificationDebugScreen(),
-                ),
               );
             case AppRoutes.privacyPolicy:
               return MaterialPageRoute(
                 builder: (_) => const PrivacyPolicyScreen(),
               );
             case AppRoutes.termsOfUse:
-              return MaterialPageRoute(builder: (_) => const TermsOfUseScreen());
+              return MaterialPageRoute(
+                builder: (_) => const TermsOfUseScreen(),
+              );
             case AppRoutes.faceScanInfo:
-              return MaterialPageRoute(builder: (_) => const FaceScanInfoScreen());
+              return MaterialPageRoute(
+                builder: (_) => const FaceScanInfoScreen(),
+              );
             case AppRoutes.faq:
               return MaterialPageRoute(builder: (_) => const FaqScreen());
             case AppRoutes.feedback:
@@ -388,7 +443,9 @@ class MyApp extends StatelessWidget {
               final args = settings.arguments as Map<String, dynamic>?;
               final reportId = args?['reportId'] as String?;
               if (reportId == null) {
-                return MaterialPageRoute(builder: (_) => const NotFoundScreen());
+                return MaterialPageRoute(
+                  builder: (_) => const NotFoundScreen(),
+                );
               }
               return MaterialPageRoute(
                 builder: (_) => ScanReportLoaderScreen(reportId: reportId),

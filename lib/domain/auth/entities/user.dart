@@ -14,6 +14,7 @@ class User {
   final bool? isPhoneVerified;
   final bool onboardingCompleted;
   final int activeStep;
+  final bool isSkincareProfessional;
   final bool isNewUser;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -31,6 +32,7 @@ class User {
     this.weight,
     this.isEmailVerified,
     this.isNewUser = false,
+    this.isSkincareProfessional = false,
     this.isPhoneVerified,
     required this.onboardingCompleted,
     required this.activeStep,
@@ -61,6 +63,7 @@ class User {
       isPhoneVerified: json['is_phone_verified'] as bool?,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       activeStep: json['active_step'] as int? ?? 1,
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -86,6 +89,7 @@ class User {
       'is_phone_verified': isPhoneVerified,
       'onboarding_completed': onboardingCompleted,
       'active_step': activeStep,
+      'is_skincare_professional': isSkincareProfessional,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

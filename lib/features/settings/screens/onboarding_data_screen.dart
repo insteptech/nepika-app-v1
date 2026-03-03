@@ -1,12 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
 
+import 'package:nepika/features/onboarding/screens/skincare_professional_screen.dart';
+
 import '../components/settings_options_list.dart';
 import '../models/settings_option_data.dart';
 import '../widgets/settings_header.dart';
 
 class OnboardingDataScreen extends StatelessWidget {
-  const OnboardingDataScreen({super.key});
+  final bool isSkincareProfessional;
+
+  const OnboardingDataScreen({super.key, this.isSkincareProfessional = false});
 
   // Mocked onboarding keys (replace later with real API data)
   final List<String> onboardingSections = const [
@@ -20,6 +24,43 @@ class OnboardingDataScreen extends StatelessWidget {
   ];
 
   List<SettingsOptionData> _buildOptions(BuildContext context) {
+    if (isSkincareProfessional) {
+      return [
+        SettingsOptionData.option(
+          'Basic Info',
+          onTap: () {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder:
+                    (context) => OnboardingScreen(
+                      initialStep: 1,
+                      isFromSettingNavigation: true,
+                      customOnBack: () {
+                        Navigator.of(context).pop();
+                      },
+                      mainButtonText: 'Update',
+                      customShowSkip: false,
+                      showProgressBar: false,
+                    ),
+              ),
+            );
+          },
+        ),
+        SettingsOptionData.option(
+          'Professional Details',
+          onTap: () {
+            Navigator.of(context, rootNavigator: true).push(
+              MaterialPageRoute(
+                builder:
+                    (context) =>
+                        const SkincareProfessionalScreen(isEditMode: true),
+              ),
+            );
+          },
+        ),
+      ];
+    }
+
     return onboardingSections
         .asMap()
         .entries
@@ -29,19 +70,19 @@ class OnboardingDataScreen extends StatelessWidget {
             onTap: () {
               Navigator.of(context, rootNavigator: true).push(
                 MaterialPageRoute(
-                  builder: (context) => OnboardingScreen(
-                    initialStep: entry.key + 1,
-                    isFromSettingNavigation: true,
-                    customOnBack: () {
-                      Navigator.of(context).pop();
-                    },
-                    mainButtonText: 'Update',
-                    customShowSkip: false,
-                    showProgressBar: false,
-                  ),
+                  builder:
+                      (context) => OnboardingScreen(
+                        initialStep: entry.key + 1,
+                        isFromSettingNavigation: true,
+                        customOnBack: () {
+                          Navigator.of(context).pop();
+                        },
+                        mainButtonText: 'Update',
+                        customShowSkip: false,
+                        showProgressBar: false,
+                      ),
                 ),
               );
-
             },
           ),
         )
@@ -70,12 +111,8 @@ class OnboardingDataScreen extends StatelessWidget {
               title: 'Onboarding & Initial Data',
               showBackButton: true,
             ),
-            SliverToBoxAdapter(
-              child: SettingsOptionsList(options: options),
-            ),
-            const SliverToBoxAdapter(
-              child: SizedBox(height: 100),
-            ),
+            SliverToBoxAdapter(child: SettingsOptionsList(options: options)),
+            const SliverToBoxAdapter(child: SizedBox(height: 100)),
           ],
         ),
       ),

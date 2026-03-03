@@ -42,6 +42,10 @@ class SplashView extends StatelessWidget {
               arguments: {'activeStep': state.activeStep},
             );
           }
+        } else if (state is SplashNavigateToProfessionalOnboarding) {
+          Navigator.of(context).pushReplacementNamed(
+            AppRoutes.skincareProfessional,
+          );
         } else {
          debugPrint('🔍 SPLASH: Unhandled state: ${state.runtimeType}');
         }
