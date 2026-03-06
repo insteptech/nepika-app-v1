@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
+import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/utils/trial_gate_helper.dart';
+import 'package:nepika/data/app/repositories/app_repository.dart';
+import 'package:nepika/presentation/bloc/app/app_bloc.dart';
 import 'package:nepika/features/error_pricing/screens/not_found_screen.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/reminders/screens/scheduled_reminders_screen.dart';
@@ -95,8 +99,12 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
     super.dispose();
   }
 
-  void _onNavBarTap(int index, String route) {
+  void _onNavBarTap(int index, String route) async {
     if (route == AppRoutes.cameraScanGuidence) {
+      if (await TrialGateHelper.shouldBlockScan(context)) {
+        TrialGateHelper.showTrialExpiredSheet(context);
+        return;
+      }
       Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
       return;
     }
@@ -194,9 +202,16 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
         navigator.pop();
         Future.delayed(
             const Duration(milliseconds: 100), _updateCurrentRoute);
-      } else {
-        Navigator.of(context).pop();
+      } else if (_currentRoute != AppRoutes.dashboardHome) {
+        // We're on a non-home tab with no stack to pop — go back to Home
+        _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.dashboardHome);
+        setState(() {
+          _currentRoute = AppRoutes.dashboardHome;
+          _selectedIndex = 0;
+        });
+        _resetNavBarVisibility();
       }
+      // If already on home, do nothing (don't pop root navigator)
     }
   }
 
@@ -237,8 +252,14 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
             onScroll: _handleScroll,
             child: DashboardScreen(
               token: '',
-              onFaceScanTap: () => Navigator.of(context)
-                  .pushNamed(AppRoutes.cameraScanGuidence),
+              onFaceScanTap: () async {
+                if (await TrialGateHelper.shouldBlockScan(context)) {
+                  debugPrint('🚨 Trial limit reached. Showing Trial Expired Sheet.');
+                  TrialGateHelper.showTrialExpiredSheet(context);
+                  return;
+                }
+                Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
+              },
             ),
           ),
         );
@@ -356,8 +377,9 @@ class _DashboardNavigatorState extends State<DashboardNavigator>
   }
 
   Route<dynamic> _createPageRoute(RouteSettings settings, Widget child) {
-    return _NoSwipeBackPageRoute(
+    return _InterceptPopRoute(
       settings: settings,
+      navigatorKey: _navigatorKey,
       builder: (_) => child,
     );
   }
@@ -396,15 +418,27 @@ class _DashboardRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   }
 }
 
-/// Custom page route that disables the iOS swipe-to-go-back gesture.
-/// This prevents accidental pops on the dashboard inner Navigator which
-/// would otherwise route to the GoRouter error/not-found screen.
-class _NoSwipeBackPageRoute<T> extends MaterialPageRoute<T> {
-  _NoSwipeBackPageRoute({
+/// Custom page route that allows iOS swipe-to-go-back gesture,
+/// but intercepts the pop to safely route back to the Home tab
+/// instead of leaving the navigator empty and showing a 404 page.
+class _InterceptPopRoute<T> extends MaterialPageRoute<T> {
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  _InterceptPopRoute({
     required super.builder,
     super.settings,
+    required this.navigatorKey,
   });
 
   @override
-  bool get popGestureEnabled => false;
+  bool didPop(T? result) {
+    if (settings.name != AppRoutes.dashboardHome && settings.name != null) {
+      // Instead of popping into nothingness, push the user back to the Home tab
+      Future.microtask(() {
+         navigatorKey.currentState?.pushReplacementNamed(AppRoutes.dashboardHome);
+      });
+      return false;
+    }
+    return super.didPop(result);
+  }
 }

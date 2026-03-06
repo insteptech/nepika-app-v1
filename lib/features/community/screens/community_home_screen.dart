@@ -213,14 +213,11 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
         // Already on community home, just refresh
         _refreshPosts();
         break;
-      case 1: // Search
-        _navigateToSearch();
-        break;
-      case 2: // Community Settings
+      case 1: // Community Settings
         debugPrint('🚨 Navigating to: ${CommunityRoutes.communitySettings}');
         Navigator.of(context, rootNavigator: true).pushNamed(CommunityRoutes.communitySettings);
         break;
-      case 3: // Dashboard
+      case 2: // Dashboard
         Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.dashboardHome);
         break;
     }
@@ -239,10 +236,6 @@ Navigator.of(context, rootNavigator: true).pushNamed(
       const DrawerItem(
         title: 'Home',
         icon: Icons.home_outlined,
-      ),
-      const DrawerItem(
-        title: 'Search',
-        icon: Icons.search_outlined,
       ),
       const DrawerItem(
         title: 'Community Settings',

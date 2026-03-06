@@ -72,28 +72,30 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(24),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Container(
-                    width: 40,
-                    height: 4,
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.outline.withValues(alpha: 0.4),
-                      borderRadius: BorderRadius.circular(2),
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.4),
+                        borderRadius: BorderRadius.circular(2),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                  
-                  if (state is IAPLoading || state is IAPPurchasePending)
-                    _buildLoadingState(theme, state)
-                  else if (state is IAPError)
-                    _buildErrorState(theme, state, context, billingPeriod)
-                  else if (state is IAPNotAvailable)
-                    _buildErrorState(theme, IAPError(state.message), context, billingPeriod)
-                  else
-                    _buildPurchaseState(theme, context, planName, priceDisplay, billingPeriod),
-                ],
+                    const SizedBox(height: 24),
+                    
+                    if (state is IAPLoading || state is IAPPurchasePending)
+                      _buildLoadingState(theme, state)
+                    else if (state is IAPError)
+                      _buildErrorState(theme, state, context, billingPeriod)
+                    else if (state is IAPNotAvailable)
+                      _buildErrorState(theme, IAPError(state.message), context, billingPeriod)
+                    else
+                      _buildPurchaseState(theme, context, planName, priceDisplay, billingPeriod),
+                  ],
+                ),
               ),
             ),
           ),
@@ -182,7 +184,7 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
                 onPressed: () => _startPurchase(context, billingPeriod),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: theme.colorScheme.primary,
-                  foregroundColor: theme.colorScheme.onPrimary,
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
@@ -253,7 +255,7 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
                     child: Text(
                       'PREMIUM',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: theme.colorScheme.onPrimary,
+                        color: Colors.white,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -310,7 +312,7 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
             onPressed: () => _startPurchase(context, billingPeriod),
             style: ElevatedButton.styleFrom(
               backgroundColor: theme.colorScheme.primary,
-              foregroundColor: theme.colorScheme.onPrimary,
+              foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -318,7 +320,7 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
               'Subscribe Now',
               style: theme.textTheme.titleMedium?.copyWith(
                 fontWeight: FontWeight.w600,
-                color: theme.colorScheme.onPrimary,
+                color: Colors.white,
               ),
             ),
           ),
@@ -400,7 +402,6 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
                 child: ElevatedButton(
                   onPressed: () {
                     Navigator.pop(ctx);
-                    Navigator.pop(context);
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: theme.colorScheme.primary,
@@ -409,7 +410,7 @@ class IAPPurchaseBottomSheet extends StatelessWidget {
                   ),
                   child: Text(
                     'Get Started',
-                    style: TextStyle(color: theme.colorScheme.onPrimary, fontWeight: FontWeight.w600),
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600),
                   ),
                 ),
               ),

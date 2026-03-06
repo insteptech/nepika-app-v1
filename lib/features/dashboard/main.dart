@@ -10,8 +10,13 @@ import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
 import 'package:nepika/features/notifications/bloc/notification_event.dart';
 import 'package:nepika/features/face_scan/screens/scan_recommendations_loader_screen.dart';
 import 'package:nepika/features/community/main.dart';
-import 'package:nepika/core/di/injection_container.dart' as di;
 import 'package:nepika/core/services/navigation_service.dart';
+
+// Trial limits dependencies
+import '../payments/bloc/payment_bloc.dart';
+import '../payments/bloc/payment_state.dart';
+import '../error_pricing/screens/pricing_screen.dart';
+import 'package:nepika/core/utils/trial_gate_helper.dart';
 
 import 'screens/dashboard_screen.dart';
 import 'screens/image_gallery_screen.dart';
@@ -21,6 +26,7 @@ import 'components/scrollable_page_wrapper.dart';
 import 'widgets/dashboard_navbar.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
+import 'package:nepika/presentation/bloc/app/app_bloc.dart';
 
 // Export BLoCs for dashboard feature independence
 export 'bloc/dashboard_bloc.dart';
@@ -159,17 +165,25 @@ class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
     super.dispose();
   }
 
-  void _onNavBarTap(int index, String route) {
+  void _onNavBarTap(int index, String route) async {
     if (route == AppRoutes.cameraScanGuidence) {
+      if (await TrialGateHelper.shouldBlockScan(context)) {
+        TrialGateHelper.showTrialExpiredSheet(context);
+        return;
+      }
       Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
       return;
     }
+
+    // Avoid re-navigating to the same route
+    if (_currentRoute == route) return;
 
     _resetNavBarVisibility();
     setState(() {
       _currentRoute = route;
     });
-    _navigatorKey.currentState?.pushNamed(route);
+    // Use pushReplacementNamed to avoid stacking routes on every tab tap
+    _navigatorKey.currentState?.pushReplacementNamed(route);
   }
 
   void _resetNavBarVisibility() {
@@ -432,17 +446,25 @@ class _DashboardState extends State<Dashboard>
     }
   }
 
-  void _onNavBarTap(int index, String route) {
+  void _onNavBarTap(int index, String route) async {
     if (route == AppRoutes.cameraScanGuidence) {
+      if (await TrialGateHelper.shouldBlockScan(context)) {
+        TrialGateHelper.showTrialExpiredSheet(context);
+        return;
+      }
       Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
       return;
     }
+
+    // Avoid re-navigating to the same route
+    if (_currentRoute == route) return;
 
     _resetNavBarVisibility();
     setState(() {
       _currentRoute = route;
     });
-    _navigatorKey.currentState?.pushNamed(route);
+    // Use pushReplacementNamed to avoid stacking routes on every tab tap
+    _navigatorKey.currentState?.pushReplacementNamed(route);
   }
 
   void _resetNavBarVisibility() {
@@ -481,9 +503,15 @@ class _DashboardState extends State<Dashboard>
           final navigator = _navigatorKey.currentState;
           if (navigator != null && navigator.canPop()) {
             navigator.pop();
-          } else {
-            Navigator.of(context).pop();
+          } else if (_currentRoute != AppRoutes.dashboardHome) {
+            // We're on a non-home tab with no stack to pop — go back to Home
+            _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.dashboardHome);
+            setState(() {
+              _currentRoute = AppRoutes.dashboardHome;
+            });
+            _resetNavBarVisibility();
           }
+          // If already on home, do nothing (don't pop root navigator)
         }
       },
       child: Scaffold(
@@ -510,19 +538,34 @@ class _DashboardState extends State<Dashboard>
       case AppRoutes.dashboardHome:
         return _buildScrollableRoute(
           settings: RouteSettings(name: AppRoutes.dashboardHome),
-          child: DashboardScreen(
-            token: '',
-            onFaceScanTap: () => Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence),
+          child: MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: di.ServiceLocator.get<PaymentBloc>()),
+              BlocProvider.value(value: di.ServiceLocator.get<AppBloc>()),
+            ],
+            child: DashboardScreen(
+              token: '',
+            onFaceScanTap: () async {
+              if (await TrialGateHelper.shouldBlockScan(context)) {
+                debugPrint('🚨 Trial limit reached. Showing Trial Expired Sheet from FaceScanCard.');
+                TrialGateHelper.showTrialExpiredSheet(context);
+                return;
+              }
+              Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
+            },
           ),
-        );
+        ),
+      );
       case AppRoutes.communityHome:
-        return MaterialPageRoute(
+        return _InterceptPopRoute(
           settings: RouteSettings(name: AppRoutes.communityHome),
+          navigatorKey: _navigatorKey,
           builder: (_) => CommunityFeature.create(),
         );
       case AppRoutes.dashboardExplore:
-        return MaterialPageRoute(
+        return _InterceptPopRoute(
           settings: RouteSettings(name: AppRoutes.dashboardExplore),
+          navigatorKey: _navigatorKey,
           builder: (_) => const Placeholder(),
         );
       case AppRoutes.dashboardTodaysRoutine:
@@ -605,8 +648,9 @@ class _DashboardState extends State<Dashboard>
       case AppRoutes.dashboardImageGallery:
         final args = settings.arguments as Map<String, dynamic>?;
         final images = args?['images'] as List<Map<String, dynamic>>?;
-        return MaterialPageRoute(
+        return _InterceptPopRoute(
           settings: RouteSettings(name: AppRoutes.dashboardImageGallery),
+          navigatorKey: _navigatorKey,
           builder: (_) => ImageGalleryScreen(initialImages: images),
         );
       case AppRoutes.dashboardHistory:
@@ -619,12 +663,13 @@ class _DashboardState extends State<Dashboard>
     }
   }
 
-  MaterialPageRoute _buildScrollableRoute({
+  _InterceptPopRoute _buildScrollableRoute({
     required RouteSettings settings,
     required Widget child,
   }) {
-    return MaterialPageRoute(
+    return _InterceptPopRoute(
       settings: settings,
+      navigatorKey: _navigatorKey,
       builder: (_) => ScrollablePageWrapper(
         onScroll: _handleScroll,
         child: child,
@@ -655,16 +700,49 @@ class _DashboardState extends State<Dashboard>
   }
 }
 
+/// Custom page route that allows iOS swipe-to-go-back gesture, 
+/// but intercepts the pop to safely route back to the Home tab 
+/// instead of leaving the navigator empty and showing a 404 page.
+class _InterceptPopRoute<T> extends MaterialPageRoute<T> {
+  final GlobalKey<NavigatorState> navigatorKey;
+
+  _InterceptPopRoute({
+    required super.builder,
+    super.settings,
+    required this.navigatorKey,
+  });
+
+  @override
+  bool didPop(T? result) {
+    if (settings.name != AppRoutes.dashboardHome) {
+      // Instead of popping into nothingness, push the user back to the Home tab
+      Future.microtask(() {
+         navigatorKey.currentState?.pushReplacementNamed(AppRoutes.dashboardHome);
+      });
+      return false; 
+    }
+    return super.didPop(result);
+  }
+}
+
 class _DashboardRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   final Function(String) onRouteChanged;
 
   _DashboardRouteObserver({required this.onRouteChanged});
 
+  // Defer onRouteChanged to after the current frame to avoid calling
+  // setState while the navigator is still mid-transition (debugLocked).
+  void _safeRouteChanged(String routeName) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      onRouteChanged(routeName);
+    });
+  }
+
   @override
   void didPop(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPop(route, previousRoute);
     if (previousRoute?.settings.name != null) {
-      onRouteChanged(previousRoute!.settings.name!);
+      _safeRouteChanged(previousRoute!.settings.name!);
     }
   }
 
@@ -672,7 +750,7 @@ class _DashboardRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
     super.didPush(route, previousRoute);
     if (route.settings.name != null) {
-      onRouteChanged(route.settings.name!);
+      _safeRouteChanged(route.settings.name!);
     }
   }
 
@@ -680,7 +758,7 @@ class _DashboardRouteObserver extends RouteObserver<PageRoute<dynamic>> {
   void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
     super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
     if (newRoute?.settings.name != null) {
-      onRouteChanged(newRoute!.settings.name!);
+      _safeRouteChanged(newRoute!.settings.name!);
     }
   }
 }

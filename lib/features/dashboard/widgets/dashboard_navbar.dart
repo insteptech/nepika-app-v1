@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
+import 'package:nepika/core/utils/trial_gate_helper.dart';
+
+import '../bloc/dashboard_bloc.dart';
 
 const double kNavBarIconSize = 22.0;
 const double kScanIconSize = 24.0;
@@ -57,16 +60,20 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     'Settings',
   ];
 
-  void _onTabTapped(int index) {
+  void _onTabTapped(int index) async {
     if (widget.selectedIndex == index && _navRoutes[index] != AppRoutes.cameraScanGuidence) {
       return;
     }
 
+    if (_navRoutes[index] == AppRoutes.cameraScanGuidence) {
+      // Check trial limits before scanning
+      if (await TrialGateHelper.shouldBlockScan(context)) {
+        debugPrint('🚨 Trial limit reached. Showing Trial Expired Sheet.');
+        TrialGateHelper.showTrialExpiredSheet(context);
+        return; // Block navigation
+      }
+    }
 
-    // if (index == 1) {
-    //   Navigator.of(context, rootNavigator: true).pushNamed(_navRoutes[index]);
-    //   return;
-    // }
     debugPrint('🔍 NAVBAR: Tapped index $index, route: ${_navRoutes[index]}');
     widget.onNavBarTap(index, _navRoutes[index]);
   }

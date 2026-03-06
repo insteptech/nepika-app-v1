@@ -6,11 +6,15 @@ import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/utils/debug_logger.dart';
 import 'package:nepika/data/dashboard/repositories/dashboard_repository.dart';
 import 'package:nepika/features/face_scan/screens/scan_recommendations_loader_screen.dart';
+import 'package:nepika/features/payments/bloc/payment_bloc.dart';
+import 'package:nepika/features/payments/bloc/payment_event.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/di/injection_container.dart' as di;
 import 'package:nepika/features/routine/main.dart';
 import 'package:nepika/core/services/unified_fcm_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../../presentation/bloc/app/app_bloc.dart';
+import '../../../presentation/bloc/app/app_event.dart';
 import '../bloc/dashboard_bloc.dart';
 import '../bloc/dashboard_event.dart';
 import '../bloc/dashboard_state.dart';
@@ -21,6 +25,7 @@ import '../widgets/progress_summary_section.dart';
 import '../widgets/skin_score_card.dart';
 import '../widgets/section_header.dart';
 import '../widgets/conditions_list_section.dart';
+import '../../../core/utils/trial_gate_helper.dart';
 
 // Memoization wrapper using RepaintBoundary for performance
 Widget _memoizedWidget({
@@ -59,6 +64,7 @@ class _DashboardScreenState extends State<DashboardScreen>
   // ignore: unused_field
   bool _isPageVisible = true;
   RouteObserver<PageRoute>? _routeObserver;
+  bool _isInBackground = false;
   
   // Cached data to prevent rebuilding on every state change
   Map<String, dynamic>? _cachedUser;
@@ -83,6 +89,9 @@ class _DashboardScreenState extends State<DashboardScreen>
       _dashboardBloc = DashboardBloc(DashboardRepositoryImpl(ApiBase()));
     }
 
+    // Initialize the trial gate listener to cache the subscription status
+    TrialGateHelper.initialize();
+
     // Focus listener removed - was causing excessive requests
     
     _loadTokenAndFetch();
@@ -104,13 +113,23 @@ class _DashboardScreenState extends State<DashboardScreen>
     super.didChangeAppLifecycleState(state);
     if (state == AppLifecycleState.resumed) {
       _isPageVisible = true;
+      if (!_isInBackground) return;
+      _isInBackground = false;
+      
+      debugPrint('Dashboard: App resumed to foreground, fetching latest subscriptions.');
+      if (mounted && _token != null) {
+        context.read<AppBloc>().add(AppSubscriptions(_token!));
+      }
+      
       // Only refresh if app was backgrounded for more than 5 minutes
       if (_isInitialized && _token != null && _shouldRefreshOnResume()) {
         debugPrint('App resumed after long pause, refreshing dashboard data');
+        _lastRefreshTime = DateTime.now(); // Moved here to ensure it's updated only when refresh occurs
         _refreshDashboard();
       }
     } else if (state == AppLifecycleState.paused) {
       _isPageVisible = false;
+      _isInBackground = true; // Set to true when app goes to background
     }
   }
 
@@ -136,10 +155,13 @@ class _DashboardScreenState extends State<DashboardScreen>
   @override
   void didPopNext() {
     // Called when a route has been popped off, and the current route shows up
-    debugPrint('Dashboard: Returned from another screen');
+    debugPrint('Dashboard: Returned from another screen. Refreshing subscription status...');
     _isPageVisible = true;
-    // Don't auto-refresh when returning from other screens
-    // User can manually pull-to-refresh if needed
+    
+    // Always fetch the absolute latest subscription status when returning to dashboard
+    if (mounted && _token != null) {
+      context.read<AppBloc>().add(AppSubscriptions(_token!));
+    }
   }
 
   @override
@@ -175,6 +197,19 @@ class _DashboardScreenState extends State<DashboardScreen>
       // FCM token generation will be triggered after dashboard response
       // with backend token validation optimization
       _dashboardBloc.add(DashboardRequested(_token!));
+      
+      // Also fetch subscription status on initial load
+      // so the PRO badge shows correctly for new/returning users
+      if (mounted) {
+        context.read<AppBloc>().add(AppSubscriptions(_token!));
+      }
+      
+      // Load subscription status on PaymentBloc singleton for trial gating
+      try {
+        di.ServiceLocator.get<PaymentBloc>().add(LoadSubscriptionStatus());
+      } catch (e) {
+        debugPrint('⚠️ Dashboard: Could not dispatch LoadSubscriptionStatus: $e');
+      }
     }
   }
 

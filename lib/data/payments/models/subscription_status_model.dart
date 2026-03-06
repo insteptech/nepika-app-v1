@@ -11,6 +11,10 @@ class SubscriptionStatusModel extends SubscriptionStatus {
     super.gracePeriodEnd,
     super.isInGracePeriod,
     super.isInBillingRetry,
+    super.trialScansUsed,
+    super.trialMaxScans,
+    super.trialExpiresAt,
+    super.isTrialExpired,
   });
 
   factory SubscriptionStatusModel.fromJson(Map<String, dynamic> json) {
@@ -44,6 +48,12 @@ class SubscriptionStatusModel extends SubscriptionStatus {
       gracePeriodEnd: gracePeriodEnd,
       isInGracePeriod: isInGracePeriod,
       isInBillingRetry: isInBillingRetry,
+      trialScansUsed: json['trial_scans_used'] as int?,
+      trialMaxScans: json['trial_max_scans'] as int?,
+      trialExpiresAt: json['trial_expires_at'] != null 
+          ? DateTime.tryParse(json['trial_expires_at'] as String)
+          : null,
+      isTrialExpired: json['is_trial_expired'] as bool?,
     );
   }
 
@@ -58,6 +68,10 @@ class SubscriptionStatusModel extends SubscriptionStatus {
       'grace_period_end': gracePeriodEnd?.toIso8601String(),
       'is_in_grace_period': isInGracePeriod,
       'is_in_billing_retry': isInBillingRetry,
+      if (trialScansUsed != null) 'trial_scans_used': trialScansUsed,
+      if (trialMaxScans != null) 'trial_max_scans': trialMaxScans,
+      if (trialExpiresAt != null) 'trial_expires_at': trialExpiresAt?.toIso8601String(),
+      if (isTrialExpired != null) 'is_trial_expired': isTrialExpired,
     };
   }
 }

@@ -66,25 +66,20 @@ class CommunityHeader extends SliverPersistentHeaderDelegate {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 // Search Icon
-                // IconButton(
-                //   splashRadius: 10,
-                //   // constraints: BoxConstraints(
-                //   //   maxHeight: 30
-                //   // ),
-                //   onPressed: onSearchTap,
-                //   icon: AnimatedContainer(
-                //     duration: const Duration(milliseconds: 100),
-                //     // padding: const EdgeInsets.all(8),
-                //     child: Image.asset(
-                //       'assets/icons/search_icon.png',
-                //       height: searchHeight,
-                //                         color: Theme.of(context).colorScheme.primary,
-
-                //     ),
-                //   ),
-                // ),
+                IconButton(
+                  splashRadius: 10,
+                  onPressed: onSearchTap,
+                  icon: AnimatedContainer(
+                    duration: const Duration(milliseconds: 100),
+                    child: Image.asset(
+                      'assets/icons/search_icon.png',
+                      height: searchHeight,
+                      color: Theme.of(context).colorScheme.primary,
+                    ),
+                  ),
+                ),
                 
-                // const SizedBox(width: 9),
+                const SizedBox(width: 9),
                 
                 // Notification Badge
                 BlocProvider(

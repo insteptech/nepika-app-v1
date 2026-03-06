@@ -43,6 +43,12 @@ class SubscriptionStatus extends Equatable {
   final DateTime? gracePeriodEnd;
   final bool isInGracePeriod;
   final bool isInBillingRetry;
+  
+  // Trial limitations
+  final int? trialScansUsed;
+  final int? trialMaxScans;
+  final DateTime? trialExpiresAt;
+  final bool? isTrialExpired;
 
   const SubscriptionStatus({
     required this.hasPremium,
@@ -54,6 +60,10 @@ class SubscriptionStatus extends Equatable {
     this.gracePeriodEnd,
     this.isInGracePeriod = false,
     this.isInBillingRetry = false,
+    this.trialScansUsed,
+    this.trialMaxScans,
+    this.trialExpiresAt,
+    this.isTrialExpired,
   });
 
   /// Parse status string to SubscriptionState enum
@@ -122,5 +132,9 @@ class SubscriptionStatus extends Equatable {
         gracePeriodEnd,
         isInGracePeriod,
         isInBillingRetry,
+        trialScansUsed,
+        trialMaxScans,
+        trialExpiresAt,
+        isTrialExpired,
       ];
 }

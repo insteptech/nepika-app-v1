@@ -1678,30 +1678,11 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              // Left Icon - Globe initially, Back arrow on scroll
-              AnimatedSwitcher(
-                duration: const Duration(milliseconds: 300),
-                transitionBuilder: (Widget child, Animation<double> animation) {
-                  return ScaleTransition(scale: animation, child: child);
-                },
-                child: showScrolledHeader
-                    ? IconButton(
-                        key: const ValueKey('back_button'),
-                        icon: const Icon(Icons.arrow_back, size: 24),
-                        onPressed: onBackPressed,
-                        padding: const EdgeInsets.all(8),
-                      )
-                    : IconButton(
-                        key: const ValueKey('globe_button'),
-                        icon: Image.asset(
-                          'assets/icons/globe_icon.png',
-                          width: 24,
-                          height: 24,
-                          color: Theme.of(context).iconTheme.color,
-                        ),
-                        onPressed: onBackPressed,
-                        padding: const EdgeInsets.all(8),
-                      ),
+              // Left Icon - Back arrow
+              IconButton(
+                icon: const Icon(Icons.arrow_back, size: 24),
+                onPressed: onBackPressed,
+                padding: const EdgeInsets.all(8),
               ),
               
               // Center - Username (only visible on scroll)

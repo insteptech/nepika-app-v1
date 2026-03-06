@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/features/dashboard/widgets/dashboard_navbar.dart';
+import 'package:nepika/core/utils/trial_gate_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:async';
@@ -218,8 +219,12 @@ class _NotificationsScreenState extends State<NotificationsScreen>
 
 
   String _currentRoute = AppRoutes.communityHome;
-  void _onNavBarTap(int index, String route) {
+  void _onNavBarTap(int index, String route) async {
     if (route == AppRoutes.cameraScanGuidence) {
+      if (await TrialGateHelper.shouldBlockScan(context)) {
+        TrialGateHelper.showTrialExpiredSheet(context);
+        return;
+      }
       Navigator.of(context).pushNamed(AppRoutes.cameraScanGuidence);
       return;
     }

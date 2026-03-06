@@ -94,6 +94,10 @@ import '../../domain/auth/repositories/auth_repository.dart';
 import '../../domain/auth/usecases/get_notification_settings.dart';
 import '../../domain/auth/usecases/update_notification_settings.dart';
 
+// App
+import '../../data/app/repositories/app_repository.dart';
+import '../../presentation/bloc/app/app_bloc.dart';
+
 import '../../../../core/di/injection_container.dart' as di;
 import '../../data/support/datasources/faq_remote_data_source.dart';
 import '../../data/support/repositories/faq_repository_impl.dart';
@@ -391,9 +395,9 @@ class ServiceLocator {
       ReactivateSubscription(get<PaymentsRepository>()),
     );
 
-    // Payments - Bloc (Factory)
-    _registerFactory<PaymentBloc>(
-      () => PaymentBloc(
+    // Payments - Bloc (Singleton - shared across app for trial gating)
+    _registerLazySingleton<PaymentBloc>(
+      PaymentBloc(
         getPaymentPlans: get<GetPaymentPlans>(),
         getStripeConfig: get<GetStripeConfig>(),
         createCheckoutSession: get<CreateCheckoutSession>(),
@@ -482,6 +486,16 @@ class ServiceLocator {
     // Support (Feedback) - Bloc (Factory)
     _registerFactory<FeedbackBloc>(
       () => FeedbackBloc(submitFeedback: get<SubmitFeedback>()),
+    );
+
+    // App - Repository
+    _registerLazySingleton<AppRepository>(
+      AppRepositoryImpl(get<ApiBase>()),
+    );
+
+    // App - Bloc (Factory)
+    _registerFactory<AppBloc>(
+      () => AppBloc(appRepository: get<AppRepository>()),
     );
 
     // Auth - Data sources

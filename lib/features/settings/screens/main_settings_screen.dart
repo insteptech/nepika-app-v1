@@ -51,6 +51,8 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
       await sharedPrefs.remove(AppConstants.userTokenKey);
       await sharedPrefs.remove(AppConstants.userDataKey);
       await sharedPrefs.remove(AppConstants.onboardingKey);
+      // Clear subscription cache so next user doesn't see stale badge
+      await sharedPrefs.remove('cached_subscription_plan');
 
       // Navigate to welcome screen and clear navigation stack
       // Use the captured navigator

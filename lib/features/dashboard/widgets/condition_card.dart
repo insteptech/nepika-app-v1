@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:nepika/core/utils/severity_analyzer.dart';
 
 class ConditionCard extends StatelessWidget {
