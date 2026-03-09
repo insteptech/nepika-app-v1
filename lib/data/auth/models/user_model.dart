@@ -20,6 +20,7 @@ class UserModel extends User {
     super.isPhoneVerified,
     required super.onboardingCompleted,
     required super.activeStep,
+    super.isSkincareProfessional,
     super.createdAt,
     super.updatedAt,
   });
@@ -46,6 +47,7 @@ class UserModel extends User {
       isPhoneVerified: json['is_phone_verified'] as bool? ?? false,
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       activeStep: json['active_step'] as int ? ?? 1,
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -72,6 +74,7 @@ class UserModel extends User {
       'is_phone_verified': isPhoneVerified,
       'onboarding_completed': onboardingCompleted,
       'active_step': activeStep,
+      'is_skincare_professional': isSkincareProfessional,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -93,6 +96,7 @@ class UserModel extends User {
       isPhoneVerified: user.isPhoneVerified,
       onboardingCompleted: user.onboardingCompleted,
       activeStep: user.activeStep,
+      isSkincareProfessional: user.isSkincareProfessional,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     );
@@ -114,6 +118,7 @@ class UserModel extends User {
       isPhoneVerified: isPhoneVerified,
       onboardingCompleted: onboardingCompleted,
       activeStep: activeStep,
+      isSkincareProfessional: isSkincareProfessional,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -134,6 +139,7 @@ class UserModel extends User {
     bool? isPhoneVerified,
     bool? onboardingCompleted,
     int? activeStep,
+    bool? isSkincareProfessional,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -152,6 +158,7 @@ class UserModel extends User {
       isPhoneVerified: isPhoneVerified ?? this.isPhoneVerified,
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       activeStep: activeStep ?? this.activeStep,
+      isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

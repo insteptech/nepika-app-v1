@@ -15,12 +15,8 @@ import '../components/otp_permission_handler.dart';
 class OtpVerificationScreen extends StatefulWidget {
   final String? phoneNumber;
   final String? otpId;
-  
-  const OtpVerificationScreen({
-    super.key,
-    this.phoneNumber,
-    this.otpId,
-  });
+
+  const OtpVerificationScreen({super.key, this.phoneNumber, this.otpId});
 
   @override
   State<OtpVerificationScreen> createState() => _OtpVerificationScreenState();
@@ -33,7 +29,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   // Controllers
   final OtpController _otpController = OtpController();
   final OtpService _otpService = OtpService();
-  
+
   // State variables
   String _otp = '';
   String _phoneNumber = '';
@@ -50,13 +46,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   void initState() {
     super.initState();
     _startResendTimer();
-    
+
     // Initialize with constructor parameters if provided
     if (widget.phoneNumber != null && widget.phoneNumber!.isNotEmpty) {
       _phoneNumber = widget.phoneNumber!;
       debugPrint('Phone number from constructor: "$_phoneNumber"');
     }
-    
+
     if (widget.otpId != null && widget.otpId!.isNotEmpty) {
       _otpId = widget.otpId!;
       debugPrint('OTP ID from constructor: "$_otpId"');
@@ -84,11 +80,11 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     if (_phoneNumber.isEmpty || _otpId == null) {
       final args = ModalRoute.of(context)?.settings.arguments as Map?;
       debugPrint('Navigation arguments (fallback): $args');
-      
+
       if (args != null) {
         final newPhoneNumber = args['phone'] ?? '';
         final newOtpId = args['otpId'];
-        
+
         setState(() {
           if (_phoneNumber.isEmpty && newPhoneNumber.isNotEmpty) {
             _phoneNumber = newPhoneNumber;
@@ -97,15 +93,19 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             _otpId = newOtpId;
           }
         });
-        
-        debugPrint('Extracted from navigation - Phone: "$_phoneNumber", OtpId: "$_otpId"');
+
+        debugPrint(
+          'Extracted from navigation - Phone: "$_phoneNumber", OtpId: "$_otpId"',
+        );
       } else {
         debugPrint('No navigation arguments found');
       }
     } else {
-      debugPrint('Using constructor parameters - Phone: "$_phoneNumber", OtpId: "$_otpId"');
+      debugPrint(
+        'Using constructor parameters - Phone: "$_phoneNumber", OtpId: "$_otpId"',
+      );
     }
-    
+
     // Start auto-capture if we have the required data
     if (!_hasRequestedPermission && _phoneNumber.isNotEmpty && _otpId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -123,7 +123,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         debugPrint('Getting navigation arguments in build method: $args');
         final newPhoneNumber = args['phone'] ?? '';
         final newOtpId = args['otpId'];
-        
+
         if (newPhoneNumber.isNotEmpty && newOtpId != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted) {
@@ -131,13 +131,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 _phoneNumber = newPhoneNumber;
                 _otpId = newOtpId;
               });
-              debugPrint('Set from build method - Phone: "$_phoneNumber", OtpId: "$_otpId"');
+              debugPrint(
+                'Set from build method - Phone: "$_phoneNumber", OtpId: "$_otpId"',
+              );
             }
           });
         }
       }
     }
-    
+
     return Scaffold(
       body: SafeArea(
         child: Padding(
@@ -158,8 +160,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 // Hide the existing auto-capture indicator
                 // AutoCaptureIndicator(isActive: _isAutoCapturing),
                 _buildVerifyButton(),
-                const SizedBox(height: 24),
-                _buildTermsAndPrivacy(),
               ],
             ),
           ),
@@ -228,9 +228,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             OtpInputField(
               length: 6,
               controller: _otpController,
-              autofillHints: const [
-                AutofillHints.oneTimeCode,
-              ],
+              autofillHints: const [AutofillHints.oneTimeCode],
               onCompleted: (otp) {
                 debugPrint('OTP Completed manually: "$otp"');
                 // Schedule state update after build completes
@@ -241,7 +239,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                     });
 
                     // Auto-verify when 6 digits are entered manually
-                    if (otp.length == 6 && _phoneNumber.isNotEmpty && _otpId != null && !_isLoading) {
+                    if (otp.length == 6 &&
+                        _phoneNumber.isNotEmpty &&
+                        _otpId != null &&
+                        !_isLoading) {
                       debugPrint('Auto-verifying manually entered OTP');
                       Future.delayed(const Duration(milliseconds: 300), () {
                         if (mounted && !_isLoading && _otp == otp) {
@@ -278,7 +279,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                   child: CircularProgressIndicator(
                     strokeWidth: 1.5,
                     valueColor: AlwaysStoppedAnimation<Color>(
-                      Theme.of(context).colorScheme.primary.withValues(alpha: 0.6),
+                      Theme.of(
+                        context,
+                      ).colorScheme.primary.withValues(alpha: 0.6),
                     ),
                   ),
                 ),
@@ -286,10 +289,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
                 Text(
                   'Auto-detecting',
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        fontSize: 10,
-                        color: Theme.of(context).colorScheme.outline,
-                        fontWeight: FontWeight.w400,
-                      ),
+                    fontSize: 10,
+                    color: Theme.of(context).colorScheme.outline,
+                    fontWeight: FontWeight.w400,
+                  ),
                 ),
               ],
             ),
@@ -302,24 +305,22 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        Text(
-          'Resend code in ',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        Text('Resend code in ', style: Theme.of(context).textTheme.bodyLarge),
         GestureDetector(
           onTap: _canResend ? _handleResendOtp : null,
           child: Text(
-            _canResend 
-                ? 'Send Again' 
+            _canResend
+                ? 'Send Again'
                 : '00:${_resendCountdown.toString().padLeft(2, '0')}s',
-            style: _canResend
-                ? Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.primary,
-                    fontWeight: FontWeight.w600,
-                  )
-                : Theme.of(context).textTheme.bodyLarge?.copyWith(
-                    color: Theme.of(context).colorScheme.outline,
-                  ),
+            style:
+                _canResend
+                    ? Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.w600,
+                    )
+                    : Theme.of(context).textTheme.bodyLarge?.copyWith(
+                      color: Theme.of(context).colorScheme.outline,
+                    ),
           ),
         ),
       ],
@@ -338,73 +339,14 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     );
   }
 
-  Widget _buildTermsAndPrivacy() {
-    return Center(
-      child: Wrap(
-        alignment: WrapAlignment.center,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        children: [
-          Text(
-            'By continuing, you agree to our ',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.termsOfUse);
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-              child: Text(
-                'Terms of Service',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-          ),
-          Text(
-            ' and ',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              fontSize: 10,
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-          InkWell(
-            onTap: () {
-              Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 2, vertical: 2),
-              child: Text(
-                'Privacy Policy',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  fontSize: 10,
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.w600,
-                  decoration: TextDecoration.underline,
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   void _startResendTimer() {
     setState(() {
       _canResend = false;
       _resendCountdown = 60;
     });
-    
+
     _resendTimer?.cancel();
-    
+
     _resendTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       if (mounted) {
         setState(() {
@@ -421,15 +363,16 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
   }
 
-
   void _handleVerifyOtp() {
-    debugPrint('Verify OTP clicked - OTP: "$_otp", Length: ${_otp.length}, Phone: "$_phoneNumber", OtpId: "$_otpId"');
-    
+    debugPrint(
+      'Verify OTP clicked - OTP: "$_otp", Length: ${_otp.length}, Phone: "$_phoneNumber", OtpId: "$_otpId"',
+    );
+
     if (_otp.length == 6 && _phoneNumber.isNotEmpty && _otpId != null) {
       _performOtpVerification();
     } else {
       String errorMessage = 'Please enter the complete 6-digit OTP';
-      
+
       if (_otp.length != 6) {
         errorMessage = 'Please enter all 6 digits (current: ${_otp.length})';
       } else if (_phoneNumber.isEmpty) {
@@ -437,9 +380,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       } else if (_otpId == null) {
         errorMessage = 'OTP session expired. Please go back and resend OTP';
       }
-      
+
       debugPrint('OTP Validation failed: $errorMessage');
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(errorMessage),
@@ -451,18 +394,15 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
   }
 
   void _performOtpVerification() {
-    if (_isLoading || _hasVerifiedSuccessfully) return; // Prevent duplicate calls
-    
+    if (_isLoading || _hasVerifiedSuccessfully)
+      return; // Prevent duplicate calls
+
     setState(() {
       _isLoading = true;
     });
-    
+
     context.read<AuthBloc>().add(
-      VerifyOtpRequested(
-        phone: _phoneNumber,
-        otp: _otp,
-        otpId: _otpId!,
-      ),
+      VerifyOtpRequested(phone: _phoneNumber, otp: _otp, otpId: _otpId!),
     );
   }
 
@@ -472,13 +412,13 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       setState(() {
         _otp = '';
       });
-      
+
       context.read<AuthBloc>().add(
         ResendOtpRequested(phone: _phoneNumber, otpId: _otpId!),
       );
-      
+
       _startResendTimer();
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('OTP sent again'),
@@ -497,19 +437,23 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
     });
 
     // Directly request permission without showing dialog
-    final hasPermission = await OtpPermissionHandler.handlePermissionRequest(context);
+    final hasPermission = await OtpPermissionHandler.handlePermissionRequest(
+      context,
+    );
 
     if (hasPermission && mounted) {
       _startAutoCapture();
     } else if (mounted) {
       // If permission denied, silently continue with manual entry
-      debugPrint('Auto-capture permission denied, continuing with manual entry');
+      debugPrint(
+        'Auto-capture permission denied, continuing with manual entry',
+      );
     }
   }
 
   void _handleAutoFilledCode(String code) {
     debugPrint('Handling auto-filled code: "$code"');
-    
+
     // Schedule state update after build completes
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted && code.length == 6) {
@@ -517,7 +461,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
           _otp = code;
           _isAutoCapturing = false;
         });
-        
+
         // Update the visible OTP input fields
         _otpController.setText(code);
 
@@ -583,7 +527,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
       case OtpSent():
         // Don't override navigation arguments with BLoC state
         // Navigation arguments take precedence
-        debugPrint('OtpSent state received but navigation arguments take precedence');
+        debugPrint(
+          'OtpSent state received but navigation arguments take precedence',
+        );
         break;
 
       case VerifyingOtp():
@@ -597,13 +543,21 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         debugPrint('OTP verification successful');
         setState(() {
           _isLoading = false;
-          _hasVerifiedSuccessfully = true; // Prevent any further verification attempts
+          _hasVerifiedSuccessfully =
+              true; // Prevent any further verification attempts
         });
 
         if (mounted) {
-          final route = state.authResponse.user.activeStep == 1 || state.authResponse.user.activeStep == 0
-              ? AppRoutes.userInfo
-              : AppRoutes.dashboardHome;
+          String route;
+          if (state.authResponse.user.activeStep == 1 ||
+              state.authResponse.user.activeStep == 0) {
+            route = AppRoutes.userInfo;
+          } else if (state.authResponse.user.isSkincareProfessional &&
+              !state.authResponse.user.onboardingCompleted) {
+            route = AppRoutes.skincareProfessional;
+          } else {
+            route = AppRoutes.dashboardHome;
+          }
 
           Navigator.of(context).pushReplacementNamed(route);
         }
@@ -621,7 +575,6 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
         setState(() {
           _isLoading = false;
         });
-        
 
         if (mounted) {
           debugPrint('Attempting to show error snackbar...');
@@ -629,7 +582,9 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: Text(
-                  state.message.isNotEmpty ? state.message : 'Invalid or expired OTP. Please try again.',
+                  state.message.isNotEmpty
+                      ? state.message
+                      : 'Invalid or expired OTP. Please try again.',
                 ),
                 backgroundColor: Colors.red,
                 duration: const Duration(seconds: 2),

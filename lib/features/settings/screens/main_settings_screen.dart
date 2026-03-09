@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
@@ -38,11 +39,11 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
   Future<void> _logout(BuildContext context) async {
     // Capture navigator reference before async gap to prevent 'deactivated widget' errors
     final navigator = Navigator.of(context, rootNavigator: true);
-    
+
     try {
       // Clear FCM token first to stop notifications
       await UnifiedFcmService.instance.logout();
-      
+
       final sharedPrefs = await SharedPreferences.getInstance();
 
       // Clear all authentication data
@@ -56,25 +57,17 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
 
       // Navigate to welcome screen and clear navigation stack
       // Use the captured navigator
-      navigator.pushNamedAndRemoveUntil(
-        AppRoutes.welcome,
-        (route) => false,
-      );
+      navigator.pushNamedAndRemoveUntil(AppRoutes.welcome, (route) => false);
     } catch (e) {
       // Even on error, force logout navigation
-      navigator.pushNamedAndRemoveUntil(
-        AppRoutes.welcome,
-        (route) => false,
-      );
+      navigator.pushNamedAndRemoveUntil(AppRoutes.welcome, (route) => false);
     }
   }
 
   void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
-      builder: (context) => LogoutDialog(
-        onConfirm: () => _logout(context),
-      ),
+      builder: (context) => LogoutDialog(onConfirm: () => _logout(context)),
     );
   }
 
@@ -82,10 +75,10 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
     try {
       // Ensure services are initialized
       await di.ServiceLocator.init();
-      
+
       // Test if the service is available
       di.ServiceLocator.get<DeleteAccountBloc>();
-      
+
       if (mounted) {
         showDialog(
           context: context,
@@ -96,7 +89,9 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Delete account service not available: ${e.toString()}'),
+            content: Text(
+              'Delete account service not available: ${e.toString()}',
+            ),
             backgroundColor: Colors.red,
           ),
         );
@@ -115,10 +110,7 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            const SettingsHeader(
-              title: 'Settings',
-              showBackButton: true,
-            ),
+            const SettingsHeader(title: 'Settings', showBackButton: true),
 
             // Profile Section
             SliverToBoxAdapter(
@@ -133,115 +125,129 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                         showDialog(
                           context: context,
                           barrierDismissible: false,
-                          builder: (context) => const Center(
-                            child: CircularProgressIndicator(),
-                          ),
+                          builder:
+                              (context) => const Center(
+                                child: CircularProgressIndicator(),
+                              ),
                         );
 
-                        final sharedPrefs = await SharedPreferences.getInstance();
-                        final token = sharedPrefs.getString(AppConstants.accessTokenKey);
-                        final userDataStr = sharedPrefs.getString(AppConstants.userDataKey);
-                        
+                        final sharedPrefs =
+                            await SharedPreferences.getInstance();
+                        final token = sharedPrefs.getString(
+                          AppConstants.accessTokenKey,
+                        );
+                        final userDataStr = sharedPrefs.getString(
+                          AppConstants.userDataKey,
+                        );
+
                         // Parse userId from stored user data if possible, or handle otherwise
                         String? userId;
-                        // Note: AppConstants.userDataKey usually stores JSON. 
+                        // Note: AppConstants.userDataKey usually stores JSON.
                         // We might need to fetch the user ID from the token or stored data.
-                        // Assuming we can get the profile just with the token if the repo supports 'me' 
+                        // Assuming we can get the profile just with the token if the repo supports 'me'
                         // or we interpret the token.
                         // Actually CommunityRepository.getUserProfile requires userId.
                         // Let's try to get it from local storage.
-                        
-                        if (token != null && userDataStr != null) {
-                           // Quick parsing of user data specific to this app structure
-                           // This part depends on how UserData is stored. 
-                           // Let's assume standard extraction or fetch "my profile"
-                           
-                           // Option B: Fetch "my" profile if repository supports it.
-                           // The repository method is getUserProfile(token, userId).
-                           
-                           // Using a workaround: The repository in this app usually requires a user ID.
-                           // Let's try to find where we can get the current user ID.
-                           // Usually it's in AppConstants.userDataKey decoded JSON 'id'.
-                           
-                           // Simpler approach: Verify if we can just navigate to UserProfileScreen?
-                           // No, user specifically asked for Edit Profile.
-                           
-                           // Let's assume we can get ID from sharedPrefs.
-                           // For now, I'll attempt to parse specific ID logic or use a known pattern.
-                           
-                           // Actually, let's look at `_logout` it clears AppConstants.userTokenKey. 
-                           // Is there a helper class for UserData?
-                           // Let's rely on `CommunityRepository` fetching the profile.
-                           
-                           // Assuming we have to verify the user ID first.
-                           // I will peek at `UserProfileScreen` again to see how it gets ID.
-                           // It gets it from `_initializeData`.
-                           
-                           // Let's just implement dynamic retrieval here.
-                           
-                           // Only proceed if context mounted after async
-                           if (!context.mounted) return;
-                           
-                           // Get repo
-                           final repo = di.ServiceLocator.get<CommunityRepository>();
-                           
-                           // We need user ID. 
-                           // For this implementation, let's fetch 'my' profile if possible or extract ID.
-                           // Let's assume we can pass the userId if we parse it.
-                           
-                           // Temporarily assuming we can invoke a "fetch my profile" or similar logic?
-                           // CommunityRepository doesn't usually have "fetchMyProfile" without ID.
-                           // Wait, `ProfileBloc` handles `FetchMyProfile`?
-                           // Let's check `ProfileBloc`.
-                           
-                           // If `ProfileBloc` exists, we can use it.
-                           // But we are in Settings.
-                           
-                           // Let's use `CommunityNavigation` helper if it exists for this?
-                           // No.
-                           
-                           // Let's parse the UserData string to get ID.
-                           final regExp = RegExp(r'"id"\s*:\s*"([^"]+)"');
-                           final match = regExp.firstMatch(userDataStr);
-                           userId = match?.group(1);
 
-                           if (userId != null) {
-                             final profile = await repo.getUserProfile(
-                               token: token,
-                               userId: userId,
-                             );
-                             
-                             if (context.mounted) {
-                               // Hide loading
-                               Navigator.of(context, rootNavigator: true).pop();
-                               
-                               // Navigate to Edit Profile
-                               final result = await Navigator.of(context).push(
-                                 MaterialPageRoute(
-                                   builder: (_) => BlocProvider.value(
-                                     value: di.ServiceLocator.get<ProfileBloc>(),
-                                     child: EditProfileScreen(
-                                       token: token,
-                                       currentUsername: profile.username,
-                                       currentBio: profile.bio,
-                                       currentProfileImage: profile.profileImageUrl,
-                                     ),
-                                   ),
-                                 ),
-                               );
-                               
-                               if (result != null && context.mounted) {
-                                 ScaffoldMessenger.of(context).showSnackBar(
-                                   const SnackBar(
-                                     content: Text('Profile updated successfully!'),
-                                     backgroundColor: Colors.green,
-                                   ),
-                                 );
-                               }
-                             }
-                           } else {
-                              throw Exception("User ID not found");
-                           }
+                        if (token != null && userDataStr != null) {
+                          // Quick parsing of user data specific to this app structure
+                          // This part depends on how UserData is stored.
+                          // Let's assume standard extraction or fetch "my profile"
+
+                          // Option B: Fetch "my" profile if repository supports it.
+                          // The repository method is getUserProfile(token, userId).
+
+                          // Using a workaround: The repository in this app usually requires a user ID.
+                          // Let's try to find where we can get the current user ID.
+                          // Usually it's in AppConstants.userDataKey decoded JSON 'id'.
+
+                          // Simpler approach: Verify if we can just navigate to UserProfileScreen?
+                          // No, user specifically asked for Edit Profile.
+
+                          // Let's assume we can get ID from sharedPrefs.
+                          // For now, I'll attempt to parse specific ID logic or use a known pattern.
+
+                          // Actually, let's look at `_logout` it clears AppConstants.userTokenKey.
+                          // Is there a helper class for UserData?
+                          // Let's rely on `CommunityRepository` fetching the profile.
+
+                          // Assuming we have to verify the user ID first.
+                          // I will peek at `UserProfileScreen` again to see how it gets ID.
+                          // It gets it from `_initializeData`.
+
+                          // Let's just implement dynamic retrieval here.
+
+                          // Only proceed if context mounted after async
+                          if (!context.mounted) return;
+
+                          // Get repo
+                          final repo =
+                              di.ServiceLocator.get<CommunityRepository>();
+
+                          // We need user ID.
+                          // For this implementation, let's fetch 'my' profile if possible or extract ID.
+                          // Let's assume we can pass the userId if we parse it.
+
+                          // Temporarily assuming we can invoke a "fetch my profile" or similar logic?
+                          // CommunityRepository doesn't usually have "fetchMyProfile" without ID.
+                          // Wait, `ProfileBloc` handles `FetchMyProfile`?
+                          // Let's check `ProfileBloc`.
+
+                          // If `ProfileBloc` exists, we can use it.
+                          // But we are in Settings.
+
+                          // Let's use `CommunityNavigation` helper if it exists for this?
+                          // No.
+
+                          // Let's parse the UserData string to get ID.
+                          final regExp = RegExp(r'"id"\s*:\s*"([^"]+)"');
+                          final match = regExp.firstMatch(userDataStr);
+                          userId = match?.group(1);
+
+                          if (userId != null) {
+                            final profile = await repo.getUserProfile(
+                              token: token,
+                              userId: userId,
+                            );
+
+                            if (context.mounted) {
+                              // Hide loading
+                              Navigator.of(context, rootNavigator: true).pop();
+
+                              // Navigate to Edit Profile
+                              final result = await Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder:
+                                      (_) => BlocProvider.value(
+                                        value:
+                                            di.ServiceLocator.get<
+                                              ProfileBloc
+                                            >(),
+                                        child: EditProfileScreen(
+                                          token: token,
+                                          currentUsername: profile.username,
+                                          currentBio: profile.bio,
+                                          currentProfileImage:
+                                              profile.profileImageUrl,
+                                        ),
+                                      ),
+                                ),
+                              );
+
+                              if (result != null && context.mounted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text(
+                                      'Profile updated successfully!',
+                                    ),
+                                    backgroundColor: Colors.green,
+                                  ),
+                                );
+                              }
+                            }
+                          } else {
+                            throw Exception("User ID not found");
+                          }
                         } else {
                           throw Exception("Not authenticated");
                         }
@@ -250,9 +256,9 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                           // Hide loading if showing (might need better logic)
                           // Currently this assumes the dialog is top.
                           Navigator.of(context, rootNavigator: true).maybePop();
-                          
+
                           ScaffoldMessenger.of(context).showSnackBar(
-                             SnackBar(content: Text('Error: ${e.toString()}')),
+                            SnackBar(content: Text('Error: ${e.toString()}')),
                           );
                         }
                       }
@@ -261,18 +267,56 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                 ],
               ),
             ),
-            
+
             SliverToBoxAdapter(
               child: SettingsSection(
                 title: 'ONBOARDING DATA',
                 options: [
                   SettingsOptionData.option(
                     'Update Onboarding Data',
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                        rootNavigator: false,
-                      ).push(MaterialPageRoute(builder: (_) => const OnboardingDataScreen()));
+                    onTap: () async {
+                      // Show loading while we fetch from SharedPreferences
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder:
+                            (context) => const Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                      );
+
+                      bool isProfessional = false;
+                      try {
+                        final sharedPrefs =
+                            await SharedPreferences.getInstance();
+                        final userDataStr = sharedPrefs.getString(
+                          AppConstants.userDataKey,
+                        );
+                        if (userDataStr != null) {
+                          final Map<String, dynamic> userData = jsonDecode(
+                            userDataStr,
+                          );
+                          isProfessional =
+                              userData['is_skincare_professional'] == true;
+                        }
+                      } catch (e) {
+                        debugPrint('Error reading user data: $e');
+                      }
+
+                      if (context.mounted) {
+                        Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pop(); // dismiss loading
+                        Navigator.of(context, rootNavigator: false).push(
+                          MaterialPageRoute(
+                            builder:
+                                (_) => OnboardingDataScreen(
+                                  isSkincareProfessional: isProfessional,
+                                ),
+                          ),
+                        );
+                      }
                     },
                   ),
                 ],
@@ -316,9 +360,10 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                   SettingsOptionData.option(
                     'Reminders',
                     onTap: () {
-                      Navigator.of(context, rootNavigator: true).pushNamed(
-                         AppRoutes.dashboardScheduledReminders,
-                      );
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.dashboardScheduledReminders);
                     },
                   ),
                 ],
@@ -387,20 +432,24 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                   SettingsOptionData.option(
                     'FAQ',
                     onTap: () {
-                      Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.faq);
+                      Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.faq);
                     },
                   ),
                   SettingsOptionData.option(
                     'Feedback',
                     onTap: () async {
-                      await Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.feedback);
+                      await Navigator.of(
+                        context,
+                        rootNavigator: true,
+                      ).pushNamed(AppRoutes.feedback);
                     },
                   ),
                 ],
               ),
             ),
-
-
 
             // Account Section
             SliverToBoxAdapter(
@@ -470,18 +519,22 @@ class _BottomSectionState extends State<_BottomSection> {
 
   Future<void> _loadVersion() async {
     try {
-      await Future.delayed(const Duration(milliseconds: 100)); // Small delay to ensure init
+      await Future.delayed(
+        const Duration(milliseconds: 100),
+      ); // Small delay to ensure init
       final packageInfo = await PackageInfo.fromPlatform();
       debugPrint('PackageInfo - Version: ${packageInfo.version}');
       debugPrint('PackageInfo - BuildNumber: ${packageInfo.buildNumber}');
       debugPrint('PackageInfo - AppName: ${packageInfo.appName}');
       debugPrint('PackageInfo - PackageName: ${packageInfo.packageName}');
-      
+
       if (mounted) {
         // Check if the values are empty or null
-        final version = packageInfo.version.isNotEmpty ? packageInfo.version : '1.0.0';
-        final buildNumber = packageInfo.buildNumber.isNotEmpty ? packageInfo.buildNumber : '1';
-        
+        final version =
+            packageInfo.version.isNotEmpty ? packageInfo.version : '1.0.0';
+        final buildNumber =
+            packageInfo.buildNumber.isNotEmpty ? packageInfo.buildNumber : '1';
+
         setState(() {
           _version = 'Version $version ($buildNumber)';
         });

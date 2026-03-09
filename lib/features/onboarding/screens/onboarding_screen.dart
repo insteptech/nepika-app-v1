@@ -10,6 +10,7 @@ import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/widgets/otp_input_field.dart';
 import 'package:nepika/core/widgets/custom_button.dart';
 import 'package:nepika/data/onboarding/datasources/onboarding_remote_datasource.dart';
+import 'package:nepika/data/onboarding/datasources/skincare_professional_datasource.dart';
 import 'package:nepika/data/onboarding/repositories/onboarding_repository.dart';
 import 'package:nepika/domain/onboarding/entities/onboarding_entites.dart';
 import 'package:nepika/features/onboarding/bloc/onboarding_bloc.dart';
@@ -59,6 +60,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   // Track submission state to keep form visible
   bool _isSubmitting = false;
   bool _isEmailVerificationOpen = false;
+  bool _isSkincareProfessional = false;
+  bool _termsAccepted = false;
   OnboardingStepLoaded? _lastLoadedState;
 
   final _secureStorage = SecureStorage();
@@ -138,9 +141,13 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
 
     debugPrint('🔄 _loadCurrentStep called');
-    debugPrint('🔄 Loading step: $_currentStep (screenSlug: ${_currentStep.toString()})');
-    debugPrint('🔄 UserId: $_userId, Token: ${_token != null ? 'present' : 'null'}');
-    
+    debugPrint(
+      '🔄 Loading step: $_currentStep (screenSlug: ${_currentStep.toString()})',
+    );
+    debugPrint(
+      '🔄 UserId: $_userId, Token: ${_token != null ? 'present' : 'null'}',
+    );
+
     _bloc.add(
       LoadOnboardingStep(
         userId: _userId!,
@@ -148,7 +155,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         token: _token!,
       ),
     );
-    
+
     debugPrint('🔄 LoadOnboardingStep event dispatched');
   }
 
@@ -168,29 +175,34 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     // Otherwise, submit the step for normal onboarding flow
     debugPrint('📤 Submitting step data');
-    
+
     // Safety check: if Bloc is in error state or verification state without previous data, try to restore from UI backup
     if (_bloc.state is OnboardingError) {
       final errorState = _bloc.state as OnboardingError;
       if (errorState.previousState == null && _lastLoadedState != null) {
-        debugPrint('🔄 Restoring lost form state from UI (Error) before submitting');
+        debugPrint(
+          '🔄 Restoring lost form state from UI (Error) before submitting',
+        );
         _bloc.add(RestoreFormState(state: _lastLoadedState!));
       }
     } else if (_bloc.state is OnboardingEmailVerificationRequired) {
       final verifyState = _bloc.state as OnboardingEmailVerificationRequired;
       if (verifyState.previousState == null && _lastLoadedState != null) {
-        debugPrint('🔄 Restoring lost form state from UI (Verify) before submitting');
+        debugPrint(
+          '🔄 Restoring lost form state from UI (Verify) before submitting',
+        );
         _bloc.add(RestoreFormState(state: _lastLoadedState!));
       }
     }
 
-    // Small delay to ensure state restoration processes if needed? 
+    // Small delay to ensure state restoration processes if needed?
     // Bloc processes events sequentially, so adding Submit immediately after Restore should work.
     _bloc.add(
       SubmitCurrentStep(
         userId: _userId!,
         screenSlug: _currentStep.toString(),
         token: _token!,
+        termsAccepted: _currentStep == 1 ? _termsAccepted : null,
       ),
     );
   }
@@ -266,10 +278,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else {
       // On step 1, we can't go back further. Navigate to login screen instead of popping (which causes black screen).
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          AppRoutes.login,
-          (route) => false,
-        );
+        Navigator.of(
+          context,
+        ).pushNamedAndRemoveUntil(AppRoutes.login, (route) => false);
       }
     }
   }
@@ -324,15 +335,26 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     } else if (state is OnboardingStepSubmitted) {
       debugPrint('✅ Step submitted successfully: ${state.message}');
       debugPrint('✅ NextStep from backend: ${state.nextStep}');
-      debugPrint('✅ isFromSettingNavigation: ${widget.isFromSettingNavigation}');
+      debugPrint(
+        '✅ isFromSettingNavigation: ${widget.isFromSettingNavigation}',
+      );
 
       if (widget.isFromSettingNavigation == true) {
         debugPrint('🔧 Settings navigation - popping screen');
         if (mounted) {
           Navigator.of(context).pop();
         }
+      } else if (_isEmailVerificationOpen) {
+        // Email verification screen is on top — DO NOT navigate here.
+        // The _navigateToEmailVerification handler will handle navigation
+        // after the email screen pops.
+        debugPrint(
+          '📧 Email verification open - deferring navigation to post-verification handler',
+        );
       } else {
-        debugPrint('📱 Normal onboarding flow - showing snackbar and moving to next step');
+        debugPrint(
+          '📱 Normal onboarding flow - showing snackbar and moving to next step',
+        );
         if (mounted) {
           try {
             ScaffoldMessenger.of(context).showSnackBar(
@@ -346,6 +368,11 @@ class _OnboardingScreenState extends State<OnboardingScreen>
             debugPrint('❌ Error showing success snackbar: $e');
           }
         }
+
+        // If user opted for skincare professional on step 1,
+        // do NOT navigate to professional here — wait for email verification.
+        // The post-email-verification handler will navigate after verification succeeds.
+
         debugPrint('🚀 About to call _moveToNextStep()');
         _moveToNextStep();
       }
@@ -369,14 +396,16 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       // we handle it inline in the EmailVerificationScreen.
       // We do NOT skip rate limit errors (429) or other general OTP-related errors.
       if (state.message.contains('Invalid OTP')) {
-        debugPrint('🚫 Skipping global snackbar for Invalid OTP error (handled inline on verification screen)');
+        debugPrint(
+          '🚫 Skipping global snackbar for Invalid OTP error (handled inline on verification screen)',
+        );
         return;
       }
 
       // Use post-frame callback to ensure widget is fully built before showing snackbar
       // Capture messenger here to avoid 'deactivated widget' errors inside callback
       final messenger = ScaffoldMessenger.of(context);
-      
+
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           try {
@@ -396,7 +425,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
               ),
             );
             debugPrint('✅ Error snackbar shown successfully');
-            
+
             // Note: We do NOT restore form state here automatically anymore.
             // We stay in Error state so the user sees the error.
             // The Bloc's _onSubmitCurrentStep handles recovery from Error state using previousState.
@@ -435,7 +464,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         setState(() {
           _currentStep++;
         });
-        debugPrint('⚠️ Backend nextStep invalid ($nextStep), incremented to: $_currentStep');
+        debugPrint(
+          '⚠️ Backend nextStep invalid ($nextStep), incremented to: $_currentStep',
+        );
       }
 
       debugPrint('⬆️ Loading next step: $_currentStep');
@@ -444,7 +475,7 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       // Direct skip case (no submission)
       final totalSteps = currentState.screenData.totalSteps ?? 7;
       debugPrint('📊 Total steps: $totalSteps, Current step: $_currentStep');
-      
+
       if (_currentStep < totalSteps) {
         setState(() {
           _currentStep++;
@@ -480,11 +511,15 @@ class _OnboardingScreenState extends State<OnboardingScreen>
   void _navigateToEmailVerification(String email, String otpId) async {
     // Prevent duplicate navigation if screen is already open
     if (_isEmailVerificationOpen) {
-      debugPrint('🚫 Email verification screen already open - skipping duplicate navigation');
+      debugPrint(
+        '🚫 Email verification screen already open - skipping duplicate navigation',
+      );
       return;
     }
 
-    debugPrint('🚦 Navigating to Email Verification. _lastLoadedState answers count: ${_lastLoadedState?.answers.length}');
+    debugPrint(
+      '🚦 Navigating to Email Verification. _lastLoadedState answers count: ${_lastLoadedState?.answers.length}',
+    );
     debugPrint('🚦 _lastLoadedState answers: ${_lastLoadedState?.answers}');
 
     _isEmailVerificationOpen = true;
@@ -493,42 +528,83 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     // (e.g. if user pressed back button without verifying)
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => EmailVerificationScreen(
-          email: email,
-          otpId: otpId,
-          onboardingBloc: _bloc,
-        ),
+        builder:
+            (_) => EmailVerificationScreen(
+              email: email,
+              otpId: otpId,
+              onboardingBloc: _bloc,
+            ),
       ),
     );
 
     _isEmailVerificationOpen = false;
 
     // After returning from the screen:
+    // Check the current bloc state to determine what to do next.
+    final currentState = _bloc.state;
+
+    // If step was already successfully submitted (email verified), handle navigation
+    if (currentState is OnboardingStepSubmitted) {
+      debugPrint(
+        '✅ Email verified and step submitted - handling post-verification navigation',
+      );
+
+      // Show success snackbar
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(currentState.message),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+
+      // If user opted for skincare professional on step 1, redirect to pro screen
+      if (_isSkincareProfessional && _currentStep == 1) {
+        debugPrint(
+          '🩺 Redirecting to professional onboarding after email verification',
+        );
+        // Flag the user as professional in the backend (fire-and-forget)
+        SkincareProfessionalDataSource(ApiBase()).flagAsProfessional();
+        if (mounted) {
+          // Use pushReplacementNamed to remove onboarding from the stack
+          Navigator.of(
+            context,
+          ).pushReplacementNamed(AppRoutes.skincareProfessional);
+        }
+        return;
+      }
+      // Otherwise, move to next step normally
+      _moveToNextStep();
+      return;
+    }
+
     // Check if we are still in a state that requires restoration (e.g. VerifyRequired or Error)
     // and if we have a backup.
-    // After returning from the screen:
-    // Check if we are still in a state that requires restoration (e.g. VerifyRequired or Error)
-    final currentState = _bloc.state;
-    if (currentState is OnboardingEmailVerificationRequired || currentState is OnboardingError) {
-       debugPrint('🔙 Email Screen dismissed without completion - restoring form state');
-       
-       OnboardingStepLoaded? stateToRestore;
-       
-       if (currentState is OnboardingEmailVerificationRequired) {
-         stateToRestore = currentState.previousState;
-       } else if (currentState is OnboardingError) {
-         stateToRestore = currentState.previousState;
-       }
-       
-       // Fallback to _lastLoadedState if previousState is null
-       stateToRestore ??= _lastLoadedState;
-       
-       if (stateToRestore != null) {
-         debugPrint('🔄 Restoring state from backup');
-         _bloc.add(RestoreFormState(state: stateToRestore));
-       } else {
-         debugPrint('⚠️ No state to restore!');
-       }
+    if (currentState is OnboardingEmailVerificationRequired ||
+        currentState is OnboardingError) {
+      debugPrint(
+        '🔙 Email Screen dismissed without completion - restoring form state',
+      );
+
+      OnboardingStepLoaded? stateToRestore;
+
+      if (currentState is OnboardingEmailVerificationRequired) {
+        stateToRestore = currentState.previousState;
+      } else if (currentState is OnboardingError) {
+        stateToRestore = currentState.previousState;
+      }
+
+      // Fallback to _lastLoadedState if previousState is null
+      stateToRestore ??= _lastLoadedState;
+
+      if (stateToRestore != null) {
+        debugPrint('🔄 Restoring state from backup');
+        _bloc.add(RestoreFormState(state: stateToRestore));
+      } else {
+        debugPrint('⚠️ No state to restore!');
+      }
     }
   }
 
@@ -557,7 +633,6 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     return 'Next';
   }
 
-
   Widget _buildScreen(BuildContext context, OnboardingState state) {
     Widget content;
     String title = 'Tell us about yourself';
@@ -569,7 +644,8 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     if (state is OnboardingLoading) {
       // Only show skeleton when initially loading
       content = const OnboardingSkeleton();
-    } else if (state is OnboardingStepSubmitting || state is OnboardingEmailVerificationRequired) {
+    } else if (state is OnboardingStepSubmitting ||
+        state is OnboardingEmailVerificationRequired) {
       // Keep the form visible during submission/verification using last loaded state
       if (_lastLoadedState != null) {
         title = _lastLoadedState!.screenData.title;
@@ -601,7 +677,19 @@ class _OnboardingScreenState extends State<OnboardingScreen>
       subtitle = state.screenData.description ?? subtitle;
       // Use smart button text instead of backend button text
       buttonText = _getButtonText();
-      isFormValid = state.isFormValid;
+
+      // On step 1, form is only valid if backend validation passes AND terms are accepted
+      // Skip terms validation if navigating from settings (checkbox is hidden)
+      if (_currentStep == 1) {
+        if (widget.isFromSettingNavigation == true) {
+          isFormValid = state.isFormValid;
+        } else {
+          isFormValid = state.isFormValid && _termsAccepted;
+        }
+      } else {
+        isFormValid = state.isFormValid;
+      }
+
       totalSteps = state.screenData.totalSteps ?? totalSteps;
 
       content = _buildQuestionsList(state);
@@ -610,46 +698,49 @@ class _OnboardingScreenState extends State<OnboardingScreen>
     }
 
     // Determine skip button visibility based on settings navigation
-    bool shouldShowSkipButton = widget.isFromSettingNavigation == true
-        ? false // Always hide when from settings
-        : (_currentStep == 1
-              ? false // Hide when step is 1
-              : (widget.customShowSkip ??
+    bool shouldShowSkipButton =
+        widget.isFromSettingNavigation == true
+            ? false // Always hide when from settings
+            : (_currentStep == 1
+                ? false // Hide when step is 1
+                : (widget.customShowSkip ??
                     true)); // Otherwise follow customShowSkip (default true)
 
     // Determine progress bar visibility based on settings navigation
-    bool shouldShowProgressBar = widget.isFromSettingNavigation == true
-        ? false // Hide progress bar when from settings
-        : (widget.showProgressBar ??
-              true); // Use existing logic for normal flow
+    bool shouldShowProgressBar =
+        widget.isFromSettingNavigation == true
+            ? false // Hide progress bar when from settings
+            : (widget.showProgressBar ??
+                true); // Use existing logic for normal flow
 
     return BaseQuestionPage(
-        currentStep: _currentStep,
-        showSkipButton: shouldShowSkipButton,
-        onSkip: _handleSkip,
-        totalSteps: totalSteps,
-        title: title,
-        subtitle: subtitle,
-        buttonText: buttonText,
-        isFormValid: isFormValid,
-        onNext: _handleNext,
-        showBackButton: _currentStep > 0,
-        onBack: _handleBack,
-        showProgressBar: shouldShowProgressBar,
-        content: content,
-        isLoading: _isSubmitting,
-      );
+      currentStep: _currentStep,
+      showSkipButton: shouldShowSkipButton,
+      onSkip: _handleSkip,
+      totalSteps: totalSteps,
+      title: title,
+      subtitle: subtitle,
+      buttonText: buttonText,
+      isFormValid: isFormValid,
+      onNext: _handleNext,
+      showBackButton: _currentStep > 0,
+      onBack: _handleBack,
+      showProgressBar: shouldShowProgressBar,
+      content: content,
+      isLoading: _isSubmitting,
+    );
   }
 
   Widget _buildQuestionsList(OnboardingStepLoaded state) {
     // Filter questions based on visibility conditions
-    final visibleQuestions = state.screenData.questions.where((question) {
-      final visibilityEvaluator = VisibilityEvaluator();
-      return visibilityEvaluator.evaluateVisibility(
-        question.visibilityConditions,
-        state.answers,
-      );
-    }).toList();
+    final visibleQuestions =
+        state.screenData.questions.where((question) {
+          final visibilityEvaluator = VisibilityEvaluator();
+          return visibilityEvaluator.evaluateVisibility(
+            question.visibilityConditions,
+            state.answers,
+          );
+        }).toList();
 
     if (visibleQuestions.isEmpty) {
       return const Center(child: Text('No questions available for this step.'));
@@ -657,16 +748,188 @@ class _OnboardingScreenState extends State<OnboardingScreen>
 
     return Column(
       spacing: 25,
-      children: visibleQuestions.map((question) {
-        return QuestionInput(
-          key: ValueKey('${question.slug}-${question.inputType}'),
-          question: question,
-          currentValue: _getCurrentValue(question, state),
-          allAnswers: state.answers,
-          onValueChanged: _handleValueChanged,
-          optionsPerRow:  null,
-        );
-      }).toList(),
+      children: [
+        // Show "Join as professional" link on step 1 only, unless from settings
+        if (_currentStep == 1 && widget.isFromSettingNavigation != true)
+          _buildProfessionalLink(),
+
+        ...visibleQuestions.map((question) {
+          return QuestionInput(
+            key: ValueKey('${question.slug}-${question.inputType}'),
+            question: question,
+            currentValue: _getCurrentValue(question, state),
+            allAnswers: state.answers,
+            onValueChanged: _handleValueChanged,
+            optionsPerRow: null,
+          );
+        }),
+
+        // Show Terms checkbox on step 1 only, at the bottom of the form, unless from settings
+        if (_currentStep == 1 && widget.isFromSettingNavigation != true)
+          _buildTermsCheckbox(),
+      ],
+    );
+  }
+
+  Widget _buildProfessionalLink() {
+    final theme = Theme.of(context);
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _isSkincareProfessional = !_isSkincareProfessional;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color:
+              _isSkincareProfessional
+                  ? theme.colorScheme.primary.withValues(alpha: 0.08)
+                  : Colors.transparent,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color:
+                _isSkincareProfessional
+                    ? theme.colorScheme.primary
+                    : theme.dividerColor,
+          ),
+        ),
+        child: Row(
+          children: [
+            SizedBox(
+              width: 22,
+              height: 22,
+              child: Checkbox(
+                value: _isSkincareProfessional,
+                onChanged: (v) {
+                  setState(() {
+                    _isSkincareProfessional = v ?? false;
+                  });
+                },
+                activeColor: theme.colorScheme.primary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Are you a skincare professional?',
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'Join the professional network',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(
+              Icons.arrow_forward_ios,
+              size: 14,
+              color: theme.colorScheme.primary.withValues(alpha: 0.6),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTermsCheckbox() {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 4.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 24,
+            height: 24,
+            child: Checkbox(
+              value: _termsAccepted,
+              onChanged: (v) {
+                setState(() {
+                  _termsAccepted = v ?? false;
+                });
+              },
+              // Make background transparent and checkmark colored
+              fillColor: WidgetStateProperty.resolveWith(
+                (states) => Colors.transparent,
+              ),
+              checkColor: theme.colorScheme.primary,
+              side: BorderSide(
+                color:
+                    _termsAccepted
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outline,
+                width: 1.5,
+              ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(4),
+              ),
+              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text.rich(
+              TextSpan(
+                text: 'I agree to the ',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+                  height: 1.5,
+                ),
+                children: [
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(context).pushNamed(AppRoutes.termsOfUse);
+                      },
+                      child: Text(
+                        'Terms of Service',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const TextSpan(text: ' and '),
+                  WidgetSpan(
+                    child: GestureDetector(
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                        ).pushNamed(AppRoutes.privacyPolicy);
+                      },
+                      child: Text(
+                        'Privacy Policy',
+                        style: TextStyle(
+                          color: theme.colorScheme.primary,
+                          fontWeight: FontWeight.w600,
+                          decoration: TextDecoration.underline,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

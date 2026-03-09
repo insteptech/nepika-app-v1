@@ -27,31 +27,15 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
   bool _isLoading = false;
   bool _isPhoneValid = false;
-  bool _isTermsAccepted = true;
   String _fullPhoneNumber = '';
 
   @override
   void initState() {
     super.initState();
-    // Load saved terms acceptance state
-    _loadTermsAcceptanceState();
     // Start SMS listener immediately when screen loads
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _startSmsListener();
     });
-  }
-
-  Future<void> _loadTermsAcceptanceState() async {
-    final prefs = SharedPrefsHelper();
-    final savedValue = await prefs.getBool(AppConstants.termsAcceptedKey);
-    setState(() {
-      _isTermsAccepted = savedValue;
-    });
-  }
-
-  Future<void> _saveTermsAcceptanceState(bool value) async {
-    final prefs = SharedPrefsHelper();
-    await prefs.setBool(AppConstants.termsAcceptedKey, value);
   }
 
   @override
@@ -91,7 +75,7 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
                     const Spacer(),
                     _buildContinueButton(),
                     const SizedBox(height: 24),
-                    _buildTermsAndPrivacy(),
+                    _buildLostAccessButton(),
                   ],
                 ),
               ),
@@ -141,120 +125,27 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
       width: double.infinity,
       child: CustomButton(
         text: 'Continue',
-        onPressed: (_isPhoneValid && _isTermsAccepted) ? _handleContinue : null,
-        isDisabled: !(_isPhoneValid && _isTermsAccepted),
+        onPressed: _isPhoneValid ? _handleContinue : null,
+        isDisabled: !_isPhoneValid,
         isLoading: _isLoading,
       ),
     );
   }
 
-
-  Widget _buildTermsAndPrivacy() {
-    return Column(
-      children: [
-        // Lost access button - Added here
-        Center(
-          child: TextButton(
-            onPressed: () {
-              Navigator.of(context).pushNamed(AppRoutes.mobileRecovery);
-            },
-            child: Text(
-              'Lost access to mobile number?',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                color: Theme.of(context).colorScheme.primary,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
+  Widget _buildLostAccessButton() {
+    return Center(
+      child: TextButton(
+        onPressed: () {
+          Navigator.of(context).pushNamed(AppRoutes.mobileRecovery);
+        },
+        child: Text(
+          'Lost access to mobile number?',
+          style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+            color: Theme.of(context).colorScheme.primary,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        const SizedBox(height: 16),
-        
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Checkbox
-              SizedBox(
-                width: 24,
-                height: 24,
-                child: Checkbox(
-                  value: _isTermsAccepted,
-                  onChanged: (bool? value) {
-                    final newValue = value ?? false;
-                    setState(() {
-                      _isTermsAccepted = newValue;
-                    });
-                    _saveTermsAcceptanceState(newValue);
-                  },
-                  activeColor: Theme.of(context).colorScheme.primary,
-                  checkColor: Colors.white,
-                  side: BorderSide(
-                    color: Theme.of(context).colorScheme.outline,
-                    width: 1.5,
-                  ),
-                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  visualDensity: VisualDensity.compact,
-                ),
-              ),
-    
-              const SizedBox(width: 12),
-    
-              // Terms text
-              Expanded(
-                child: GestureDetector(
-                  onTap: () {
-                    final newValue = !_isTermsAccepted;
-                    setState(() {
-                      _isTermsAccepted = newValue;
-                    });
-                    _saveTermsAcceptanceState(newValue);
-                  },
-                  child: RichText(
-                    text: TextSpan(
-                      style: Theme.of(context).textTheme.bodySmall,
-                      children: [
-                        const TextSpan(text: 'By continuing, you agree to our '),
-                        WidgetSpan(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).pushNamed(AppRoutes.termsOfUse);
-                            },
-                            child: Text(
-                              'Terms of Service',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const TextSpan(text: ' and '),
-                        WidgetSpan(
-                          child: GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).pushNamed(AppRoutes.privacyPolicy);
-                            },
-                            child: Text(
-                              'Privacy Policy',
-                              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: Theme.of(context).colorScheme.primary,
-                                fontWeight: FontWeight.w600,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
+      ),
     );
   }
 
@@ -357,10 +248,11 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => OtpVerificationScreen(
-            phoneNumber: state.phone,
-            otpId: state.otpId ?? '',
-          ),
+          builder:
+              (context) => OtpVerificationScreen(
+                phoneNumber: state.phone,
+                otpId: state.otpId ?? '',
+              ),
           settings: const RouteSettings(name: AppRoutes.otpVerification),
         ),
       );

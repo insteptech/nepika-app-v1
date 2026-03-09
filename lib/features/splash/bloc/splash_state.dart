@@ -14,6 +14,8 @@ class SplashNavigateToOnboarding extends SplashState {
   SplashNavigateToOnboarding({this.activeStep});
 }
 
+class SplashNavigateToProfessionalOnboarding extends SplashState {}
+
 class SplashError extends SplashState {
   final String message;
   

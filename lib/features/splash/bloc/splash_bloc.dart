@@ -99,16 +99,25 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
           final userData = responseData['data'];
           final int activeStep = userData['active_step'] ?? 1;
           final bool onboardingCompleted = userData['onboarding_completed'] ?? false;
+          final bool isSkincareProfessional = userData['is_skincare_professional'] ?? false;
 
           logJson('🔍 SPLASH DEBUG: User data received');
           logJson('  - Active Step: $activeStep');
           logJson('  - Onboarding Completed: $onboardingCompleted');
-          logJson('  - Will emit: SplashNavigateToOnboarding(activeStep: $activeStep)');
+          logJson('  - Is Skincare Professional: $isSkincareProfessional');
 
-          // Navigate to onboarding regardless of completion status
-          emit(SplashNavigateToOnboarding(activeStep: activeStep));
+          // If user is flagged as professional but hasn't completed onboarding,
+          // send them to the professional onboarding screen
+          if (isSkincareProfessional && !onboardingCompleted) {
+            logJson('  - Will emit: SplashNavigateToProfessionalOnboarding');
+            emit(SplashNavigateToProfessionalOnboarding());
+          } else {
+            logJson('  - Will emit: SplashNavigateToOnboarding(activeStep: $activeStep)');
+            // Navigate to onboarding regardless of completion status
+            emit(SplashNavigateToOnboarding(activeStep: activeStep));
+          }
           
-          logJson('✅ SPLASH: SplashNavigateToOnboarding state emitted');
+          logJson('✅ SPLASH: Navigation state emitted');
         } else {
           logJson('❌ SPLASH: Backend returned success: false, navigating to welcome');
           // Backend returned success: false

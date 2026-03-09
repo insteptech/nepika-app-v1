@@ -44,15 +44,17 @@ class SubmitCurrentStep extends OnboardingEvent {
   final String userId;
   final String screenSlug;
   final String token;
+  final bool? termsAccepted;
 
   const SubmitCurrentStep({
     required this.userId,
     required this.screenSlug,
     required this.token,
+    this.termsAccepted,
   });
 
   @override
-  List<Object?> get props => [userId, screenSlug, token];
+  List<Object?> get props => [userId, screenSlug, token, termsAccepted];
 }
 
 class NavigateToNextStep extends OnboardingEvent {
