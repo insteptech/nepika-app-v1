@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
+import 'package:nepika/core/config/constants/api_endpoints.dart';
+import 'package:nepika/core/api_base.dart';
+import 'package:nepika/core/di/injection_container.dart';
+import 'package:nepika/core/utils/app_logger.dart';
 
 class FeatureSuggestionDialog extends StatefulWidget {
   const FeatureSuggestionDialog({super.key});
@@ -12,27 +16,69 @@ class FeatureSuggestionDialog extends StatefulWidget {
 class _FeatureSuggestionDialogState extends State<FeatureSuggestionDialog> {
   final TextEditingController _controller = TextEditingController();
   bool _isButtonEnabled = false;
+  bool _isSubmitting = false;
 
   @override
   void initState() {
     super.initState();
     _controller.addListener(() {
-      final isNotEmpty = _controller.text.trim().isNotEmpty;
-      if (isNotEmpty != _isButtonEnabled) {
+      final isValid = _controller.text.trim().length >= 10;
+      if (isValid != _isButtonEnabled) {
         setState(() {
-          _isButtonEnabled = isNotEmpty;
+          _isButtonEnabled = isValid;
         });
       }
     });
   }
 
-  void _handleSubmit() {
-    Navigator.of(context).pop();
-    debugPrint('Suggested feature: ${_controller.text}');
-    showDialog(
-      context: context,
-      builder: (context) => const ThankYouDialog(),
-    );
+  Future<void> _handleSubmit() async {
+    if (_isSubmitting) return;
+
+    final suggestionText = _controller.text.trim();
+    if (suggestionText.length < 10) return;
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final apiBase = ServiceLocator.get<ApiBase>();
+      final response = await apiBase.request(
+        path: ApiEndpoints.suggestions,
+        method: 'POST',
+        body: {
+          'suggestion_text': suggestionText,
+        },
+      );
+
+      if (!mounted) return;
+
+      if (response.statusCode == 200 && response.data['success'] == true) {
+        Navigator.of(context).pop();
+        showDialog(
+          context: context,
+          builder: (context) => const ThankYouDialog(),
+        );
+      } else {
+        final message = response.data['message'] ?? 'Failed to submit suggestion';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+      }
+    } catch (e) {
+      AppLogger.error('Suggestion Submission Error', error: e);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to submit suggestion. Please try again.')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+      }
+    }
   }
 
   @override
@@ -62,8 +108,9 @@ class _FeatureSuggestionDialogState extends State<FeatureSuggestionDialog> {
               child: TextField(
                 controller: _controller,
                 maxLines: 4,
+                enabled: !_isSubmitting,
                 decoration: InputDecoration(
-                  hintText: "Type your feature suggestion...",
+                  hintText: "Type your feature suggestion (min 10 characters)...",
                   hintStyle: Theme.of(context).textTheme.bodyLarge!.secondary(context),
                   border: InputBorder.none,
                   enabledBorder: InputBorder.none,
@@ -78,21 +125,38 @@ class _FeatureSuggestionDialogState extends State<FeatureSuggestionDialog> {
               children: [
                 Expanded(
                   child: TextButton(
-                    onPressed: () => Navigator.of(context).pop(),
+                    onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(),
                     child: const Text("Cancel", style: TextStyle(color: Colors.blue)),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: _isButtonEnabled ? _handleSubmit : null,
+                    onPressed: (_isButtonEnabled && !_isSubmitting) ? _handleSubmit : null,
                     style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.blue),
+                      side: BorderSide(
+                        color: (_isButtonEnabled && !_isSubmitting)
+                            ? Colors.blue
+                            : Colors.grey.shade400,
+                      ),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    child: const Text("Submit", style: TextStyle(color: Colors.blue)),
+                    child: _isSubmitting
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(
+                            "Submit",
+                            style: TextStyle(
+                              color: (_isButtonEnabled && !_isSubmitting)
+                                  ? Colors.blue
+                                  : Colors.grey.shade500,
+                            ),
+                          ),
                   ),
                 ),
               ],

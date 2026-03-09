@@ -51,6 +51,7 @@ class ApiEndpoints {
   // Support Endpoints
   static const String faqs = '/faqs';
   static const String feedback = '/auth/users/feedback';
+  static const String suggestions = '/auth/users/suggestions';
   
   // Community Endpoints - Updated to match API specification
   static const String communityPosts = '/community/posts';
