@@ -44,6 +44,7 @@ class AppRoutes {
   static const String communityHome = '/community/home';
   static const String communitySearch = '/community/search';
   static const String communityUserProfile = '/community/user-profile';
+  static const String communityFollowersList = '/community/followers-list';
 
   // Dashboard Internal Routes (with navbar)
   static const String dashboardHome = '/dashboard/home';
@@ -168,4 +169,5 @@ class CommunityRoutes {
   static const String searchUsers = '/community/search-users';
   static const String createProfile = '/community/create-profile';
   static const String communitySettings = '/community/settings';
+  static const String followersList = '/community/followers-list';
 }

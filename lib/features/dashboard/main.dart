@@ -89,7 +89,7 @@ class DashboardWithInitialRoute extends StatefulWidget {
 
 class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  GlobalKey<NavigatorState> get _navigatorKey => NavigationService.dashboardNavigatorKey;
   late String _currentRoute;
 
   // Navigation bar auto-hide functionality
@@ -337,7 +337,7 @@ class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
 
 class _DashboardState extends State<Dashboard>
     with WidgetsBindingObserver, TickerProviderStateMixin {
-  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
+  GlobalKey<NavigatorState> get _navigatorKey => NavigationService.dashboardNavigatorKey;
   String _currentRoute = AppRoutes.dashboardHome;
 
   // Navigation bar auto-hide functionality

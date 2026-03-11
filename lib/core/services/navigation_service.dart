@@ -3,6 +3,7 @@ import '../config/constants/routes.dart';
 
 class NavigationService {
   static final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+  static final GlobalKey<NavigatorState> dashboardNavigatorKey = GlobalKey<NavigatorState>();
   
   static NavigatorState? get navigator => navigatorKey.currentState;
 

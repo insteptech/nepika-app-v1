@@ -161,6 +161,7 @@ class _DashboardScreenState extends State<DashboardScreen>
     // Always fetch the absolute latest subscription status when returning to dashboard
     if (mounted && _token != null) {
       context.read<AppBloc>().add(AppSubscriptions(_token!));
+      context.read<PaymentBloc>().add(LoadSubscriptionStatus());
     }
   }
 

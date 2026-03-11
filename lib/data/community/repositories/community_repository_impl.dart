@@ -833,16 +833,23 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String userId,
     required int page,
     required int pageSize,
+    String? searchQuery,
   }) async {
     try {
+      final queryParams = {
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      };
+      
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        queryParams['search_query'] = searchQuery;
+      }
+
       final response = await apiBase.request(
         path: '${ApiEndpoints.getFollowers}/$userId/followers',
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
-        query: {
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-        },
+        query: queryParams,
       );
       
       debugPrint('Repository: getFollowers response: ${response.statusCode}');
@@ -865,16 +872,23 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String userId,
     required int page,
     required int pageSize,
+    String? searchQuery,
   }) async {
     try {
+      final queryParams = {
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      };
+      
+      if (searchQuery != null && searchQuery.isNotEmpty) {
+        queryParams['search_query'] = searchQuery;
+      }
+
       final response = await apiBase.request(
         path: '${ApiEndpoints.getFollowing}/$userId/following',
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
-        query: {
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-        },
+        query: queryParams,
       );
       
       debugPrint('Repository: getFollowing response: ${response.statusCode}');

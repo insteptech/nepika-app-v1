@@ -1696,7 +1696,7 @@ Widget _buildImageWidget() {
                 
                 // Description
                 Text(
-                  'Learn how our AI analyzes your skin condition, scoring system, and privacy practices.',
+                  'Learn how our AI analyzes your skin condition, analysis system, and privacy practices.',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.textTheme.bodyMedium?.color?.withValues(alpha: 0.8),
                   ),

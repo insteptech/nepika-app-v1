@@ -7,6 +7,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'dart:async';
 
+import 'package:nepika/core/services/navigation_service.dart';
 import '../bloc/notification_bloc.dart';
 import '../bloc/notification_state.dart';
 import '../bloc/notification_event.dart';
@@ -229,10 +230,15 @@ class _NotificationsScreenState extends State<NotificationsScreen>
       return;
     }
 
-    // The NotificationsScreen is an overlay on top of the Dashboard.
-    // Simply pop to return to the Dashboard which already has the proper navbar.
-    // The Dashboard maintains its own navigation state.
-    Navigator.of(context).pop();
+    // Navigate the underlying Dashboard navigator to the selected route
+    // before popping the current notifications overlay.
+    // This ensures the user lands on the correct tab.
+    NavigationService.dashboardNavigatorKey.currentState?.pushReplacementNamed(route);
+    
+    // Check if we can pop (just in case)
+    if (Navigator.of(context).canPop()) {
+      Navigator.of(context).pop();
+    }
   }
 
 
@@ -294,13 +300,13 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               // NOTIFICATIONS LIST
               BlocBuilder<NotificationBloc, NotificationState>(
                 builder: (context, state) {
-                  if (state is NotificationLoading ||
+                  if ((state is NotificationLoading && state.notifications.isEmpty) ||
                       state is NotificationConnecting) {
                     return const SliverFillRemaining(
-                    hasScrollBody: false,
-                    child: Center(child: CircularProgressIndicator()),
-                  );
-                }
+                      hasScrollBody: false,
+                      child: Center(child: CircularProgressIndicator()),
+                    );
+                  }
 
                 if (state is NotificationError) {
                   return const SliverFillRemaining(
@@ -312,6 +318,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
                 List<NotificationEntity> list = [];
                 if (state is NotificationLoaded) {
                   list = state.filteredNotifications;
+                }
+                if (state is NotificationLoading) {
+                  list = state.notifications.where((n) => state.currentFilter.shouldShowNotification(n.type)).toList();
                 }
                 if (state is NotificationDisconnected) {
                   list = state.notifications;

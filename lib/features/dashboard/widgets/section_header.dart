@@ -52,12 +52,8 @@ class SectionHeader extends StatelessWidget {
                         style: Theme.of(context).textTheme.bodyLarge
                             ?.hint(context)
                             .copyWith(
-                              decoration: TextDecoration.combine([
-                                TextDecoration.underline,
-                              ]),
-                              decorationColor: Theme.of(
-                                context,
-                              ).colorScheme.primary,
+                              fontWeight: FontWeight.w500,
+                              decoration: TextDecoration.none,
                             ),
                       ),
                     ),

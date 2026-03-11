@@ -147,6 +147,7 @@ class _PricingScreenState extends State<PricingScreen> {
                   if (state is IAPPurchaseSuccess) {
                     // Refresh subscription status after successful IAP
                     context.read<AppBloc>().add(AppSubscriptions(token));
+                    context.read<PaymentBloc>().add(LoadSubscriptionStatus());
                   } else if (state is IAPRestoreSuccess) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('Purchases restored successfully'), backgroundColor: Colors.green),
@@ -713,6 +714,7 @@ class _PricingScreenState extends State<PricingScreen> {
       onSuccess: () {
         // Refresh subscription data after successful purchase
         context.read<AppBloc>().add(AppSubscriptions(token));
+        context.read<PaymentBloc>().add(LoadSubscriptionStatus());
       },
       onCancel: () {
         // User cancelled - nothing to do

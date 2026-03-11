@@ -22,6 +22,8 @@ class NotificationFilterTabs extends StatelessWidget {
           currentFilter = state.currentFilter;
         } else if (state is NotificationError) {
           currentFilter = state.currentFilter;
+        } else if (state is NotificationLoading) {
+          currentFilter = state.currentFilter;
         } else if (state is NotificationConnecting) {
           currentFilter = state.currentFilter;
         } else if (state is NotificationDisconnected) {

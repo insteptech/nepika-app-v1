@@ -10,6 +10,7 @@ import 'screens/community_search_screen.dart';
 import 'screens/user_profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/community_settings_screen.dart';
+import 'screens/followers_list_screen.dart';
 import 'utils/community_navigation.dart';
 
 /// Main entry point for the Community feature
@@ -166,6 +167,21 @@ class CommunityFactory {
   static Widget createCommunitySettingsScreen() {
     debugPrint('🏗️ CommunityFactory: Creating Community Settings Screen');
     return const CommunitySettingsScreen();
+  }
+
+  /// Create followers/following list screen with proper BLoC providers
+  static Widget createFollowersListScreen({
+    required String userId,
+    required String username,
+    required bool isFollowers,
+  }) {
+    return CommunityProviders(
+      child: FollowersListScreen(
+        userId: userId,
+        username: username,
+        isFollowers: isFollowers,
+      ),
+    );
   }
 }
 

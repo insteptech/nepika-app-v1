@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/theme.dart';
-import 'package:nepika/presentation/bloc/app/app_bloc.dart';
-import 'package:nepika/presentation/bloc/app/app_state.dart';
+import 'package:nepika/features/payments/bloc/payment_bloc.dart';
+import 'package:nepika/features/payments/bloc/payment_state.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class GreetingSection extends StatefulWidget {
@@ -21,72 +21,7 @@ class GreetingSection extends StatefulWidget {
   State<GreetingSection> createState() => _GreetingSectionState();
 }
 
-class _GreetingSectionState extends State<GreetingSection> with RouteAware {
-  bool _isPremium = false;
-  RouteObserver<PageRoute>? _routeObserver;
-
-  @override
-  void initState() {
-    super.initState();
-    _checkPremiumStatus();
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final route = ModalRoute.of(context);
-    if (route != null && route is PageRoute) {
-      final navigator = Navigator.of(context);
-      final observers = navigator.widget.observers;
-      _routeObserver = observers.whereType<RouteObserver<PageRoute>>().firstOrNull;
-      if (_routeObserver != null) {
-        _routeObserver!.subscribe(this, route);
-      }
-    }
-  }
-
-  @override
-  void dispose() {
-    if (_routeObserver != null) {
-      _routeObserver!.unsubscribe(this);
-    }
-    super.dispose();
-  }
-
-  @override
-  void didPopNext() {
-    // Called when the top route has been popped off, and the current route shows up.
-    // e.g., coming back from the Pricing Screen
-    _checkPremiumStatus();
-  }
-
-  Future<void> _checkPremiumStatus() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      final String? cachedData = prefs.getString('cached_subscription_plan');
-      
-      if (cachedData != null) {
-        debugPrint('CACHED SUBSCRIPTION DATA: $cachedData');
-        final data = jsonDecode(cachedData);
-        final hasSubscription = data['has_subscription'] == true || data['is_premium'] == true;
-        
-        bool isCanceled = false;
-        if (data['current_plan'] != null) {
-          isCanceled = data['current_plan']['cancel_at_period_end'] == true;
-        } else if (data['cancel_at_period_end'] != null) {
-          isCanceled = data['cancel_at_period_end'] == true;
-        }
-
-        final isPremium = hasSubscription && !isCanceled;
-        debugPrint('BADGE STATUS: hasSubscription=$hasSubscription, isCanceled=$isCanceled, SHOW_BADGE=$isPremium');
-        
-        if (mounted) setState(() => _isPremium = isPremium);
-      }
-    } catch (e) {
-      debugPrint('Error reading cached subscription for badge: $e');
-    }
-  }
-
+class _GreetingSectionState extends State<GreetingSection> {
   String _getTimeBasedGreeting() {
     final now = DateTime.now();
     final hour = now.hour;
@@ -112,28 +47,36 @@ class _GreetingSectionState extends State<GreetingSection> with RouteAware {
         ? NetworkImage(avatarUrl)
         : const AssetImage('assets/icons/horizontal_lines_with_dots.png');
 
-    return AnimatedContainer(
-      duration: const Duration(milliseconds: 200),
-      curve: Curves.easeInOut,
-      color: Theme.of(context).scaffoldBackgroundColor,
-      child: Row(
-        crossAxisAlignment: widget.isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
-        children: [
-          AnimatedSwitcher(
-            duration: const Duration(milliseconds: 200),
-            transitionBuilder: (Widget child, Animation<double> animation) {
-              return FadeTransition(
-                opacity: animation,
-                child: SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(0, -0.2),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                ),
-              );
-            },
-            child: Column(
+    return BlocBuilder<PaymentBloc, PaymentState>(
+      buildWhen: (previous, current) => current is SubscriptionStatusLoaded || current is PaymentLoading,
+      builder: (context, state) {
+        bool isPremium = false;
+        if (state is SubscriptionStatusLoaded) {
+          isPremium = state.status.hasPremium;
+        }
+
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          color: Theme.of(context).scaffoldBackgroundColor,
+          child: Row(
+            crossAxisAlignment: widget.isCollapsed ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+            children: [
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 200),
+                transitionBuilder: (Widget child, Animation<double> animation) {
+                  return FadeTransition(
+                    opacity: animation,
+                    child: SlideTransition(
+                      position: Tween<Offset>(
+                        begin: const Offset(0, -0.2),
+                        end: Offset.zero,
+                      ).animate(animation),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Column(
                   key: const ValueKey('expanded'),
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -145,7 +88,7 @@ class _GreetingSectionState extends State<GreetingSection> with RouteAware {
                           'Hey, ${userName.isNotEmpty ? userName.split(' ')[0] : 'User'}',
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
-                        if (_isPremium) ...[
+                        if (isPremium) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -213,7 +156,7 @@ class _GreetingSectionState extends State<GreetingSection> with RouteAware {
                       : const SizedBox(height: 0),
                   ],
                 ),
-          ),
+              ),
           const Spacer(),
           AnimatedContainer(
             duration: const Duration(milliseconds: 200),
@@ -249,6 +192,8 @@ class _GreetingSectionState extends State<GreetingSection> with RouteAware {
           ),
         ],
       ),
+        );
+      },
     );
   }
 }

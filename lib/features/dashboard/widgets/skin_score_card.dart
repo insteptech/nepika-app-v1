@@ -81,7 +81,7 @@ class SkinScoreCard extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'A numerical rating (0-100) that represents your overall skin health based on detected skin concerns.',
+              'A rating that represents your overall skin health based on detected skin concerns.',
               style: textTheme.bodyMedium?.copyWith(
                 height: 1.5,
               ),
@@ -109,7 +109,7 @@ class SkinScoreCard extends StatelessWidget {
             _buildInfoPoint(
               context,
               'Bands',
-              'Conditions: Clear (86-100), Mild (71-85), Moderate (51-70), High (31-50), Severe (0-30)',
+              'Conditions: Clear, Mild, Moderate, High, Severe',
             ),
             const SizedBox(height: 10),
             _buildInfoPoint(

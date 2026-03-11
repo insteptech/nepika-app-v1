@@ -1,9 +1,28 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import 'package:nepika/core/widgets/back_button.dart';
+import 'package:nepika/core/widgets/loading_widget.dart';
+import '../../../../core/di/injection_container.dart';
 import '../../routine/widgets/sticky_header_delegate.dart';
+import '../bloc/legal/legal_cubit.dart';
+import '../bloc/legal/legal_state.dart';
 
 class TermsOfUseScreen extends StatelessWidget {
   const TermsOfUseScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return BlocProvider(
+      create: (context) => sl<LegalCubit>()..loadLegalDocument('terms'),
+      child: const _TermsOfUseView(),
+    );
+  }
+}
+
+class _TermsOfUseView extends StatelessWidget {
+  const _TermsOfUseView();
 
   @override
   Widget build(BuildContext context) {
@@ -16,15 +35,15 @@ class TermsOfUseScreen extends StatelessWidget {
       body: SafeArea(
         child: CustomScrollView(
           slivers: [
-            SliverToBoxAdapter(
+            const SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const SizedBox(height: 16),
-                    const CustomBackButton(),
-                    const SizedBox(height: 15),
+                    SizedBox(height: 16),
+                    CustomBackButton(),
+                    SizedBox(height: 15),
                   ],
                 ),
               ),
@@ -50,244 +69,68 @@ class TermsOfUseScreen extends StatelessWidget {
             SliverToBoxAdapter(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 25),
-                    Text(
-                      'These App Terms of Use ("Terms") govern your access to and use of the Nepika mobile application ("App"). The App is operated by Nepika Creative Ltd, a company registered in England and Wales with company number 16507702 and registered office at 20 Wenlock Road, London, N1 7GU, England. By using this App, you agree to comply with and be bound by these Terms. If you do not agree, you must not use our App.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '1. App Access',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'We grant you a limited, non-exclusive, non-transferable license to access and use this App for personal skincare and wellness purposes only. We reserve the right to withdraw or amend the App, and any service or material provided on it, without notice.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '2. Intellectual Property',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'All content, trademarks, and other intellectual property displayed in this App are the property of Nepika or its licensors. You may not reproduce, distribute, or create derivative works from any content in this App without our prior written consent.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '3. User Conduct',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'You agree not to:\n• Use the App in any way that violates applicable laws or regulations.\n• Attempt to gain unauthorized access to our systems or networks.\n• Introduce viruses, malware, or other harmful code.\n• Use the App for any unlawful or fraudulent purpose.\n• Share inappropriate or harmful content through community features.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '4. Third-Party Services',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Our App may contain links to third-party websites, services, or product recommendations. These links are provided for your convenience only, and we are not responsible for the content or practices of such third parties.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '5. Health and Medical Disclaimer',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'The App provides skincare information and recommendations for educational purposes only. It is not intended as medical advice, diagnosis, or treatment. Always consult with qualified healthcare professionals for medical concerns or before making significant changes to your skincare routine.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '6. Disclaimer of Warranties',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'The App and its content are provided "as is" and "as available," without any warranties of any kind, either express or implied. We do not guarantee that the App will be secure, error-free, or available at all times.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '7. Limitation of Liability',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'To the maximum extent permitted by law, Nepika shall not be liable for any direct, indirect, incidental, or consequential damages arising from your use of the App.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '8. Subscription Terms',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'The App offers optional subscription plans that provide access to premium features.\n\nSubscription details:\n• Subscriptions are billed through your Apple App Store or Google Play Store account.\n• Payment will be charged to your account at confirmation of purchase.\n• Subscriptions automatically renew unless auto-renew is turned off at least 24 hours before the end of the current period.\n• Your account will be charged for renewal within 24 hours prior to the end of the current period.\n• You can manage or cancel your subscription through your App Store or Google Play Store account settings.\n\nCancellation:\n• You may cancel your subscription at any time through your device settings.\n• Cancellation takes effect at the end of the current billing period.\n• No refunds will be provided for partial subscription periods.\n\nFree trials:\n• Free trial periods, if offered, will convert to a paid subscription unless canceled before the trial ends.\n• Any unused portion of a free trial period will be forfeited when you purchase a subscription.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '9. Changes to These Terms',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'We may update these Terms from time to time. Any changes will be posted in the App with an updated revision date. Continued use of the App after changes are made indicates your acceptance of the revised Terms.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '10. Governing Law',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'These Terms shall be governed by and construed in accordance with the laws of England and Wales. Any disputes arising under these Terms shall be subject to the exclusive jurisdiction of the courts of England and Wales.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '11. Contact Us',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'If you have any questions or concerns regarding these Terms, please contact us at:\n\nNepika Creative Ltd\n20 Wenlock Road\nLondon\nN1 7GU\nEngland\nEmail: info@nepika.com',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      '12. Accessibility',
-                      style: textTheme.titleMedium?.copyWith(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w400,
-                        color: colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      'Nepika is committed to ensuring that our app is accessible to all users, including people with disabilities. We aim to comply with applicable accessibility standards where possible. If you encounter any accessibility issues, please contact us so we can address them.',
-                      style: textTheme.bodyMedium?.copyWith(
-                        fontSize: 14,
-                        color: colorScheme.onSurfaceVariant,
-                        height: 1.6,
-                      ),
-                    ),
-                    const SizedBox(height: 30),
-                    Text(
-                      'Last updated: July 2025',
-                      style: textTheme.bodySmall?.copyWith(
-                        fontSize: 12,
-                        color: colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 100),
-                  ],
+                child: BlocBuilder<LegalCubit, LegalState>(
+                  builder: (context, state) {
+                    if (state is LegalLoading || state is LegalInitial) {
+                      return const Padding(
+                        padding: EdgeInsets.only(top: 50.0),
+                        child: Center(child: LoadingWidget()),
+                      );
+                    } else if (state is LegalError) {
+                      return Padding(
+                        padding: const EdgeInsets.only(top: 50.0),
+                        child: Center(
+                          child: Text(
+                            state.message,
+                            style: textTheme.bodyMedium?.copyWith(
+                              color: colorScheme.error,
+                            ),
+                          ),
+                        ),
+                      );
+                    } else if (state is LegalLoaded) {
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 25),
+                          MarkdownBody(
+                            data: state.document.content
+                                .replaceAll('<br>', '\n\n&nbsp;\n\n')
+                                .replaceAll('<br/>', '\n\n&nbsp;\n\n'),
+                            extensionSet: md.ExtensionSet.gitHubWeb,
+                            styleSheet: MarkdownStyleSheet(
+                              blockSpacing: 16.0,
+                              p: textTheme.bodyMedium?.copyWith(
+                                fontSize: 14,
+                                color: colorScheme.onSurfaceVariant,
+                                height: 1.6,
+                              ),
+                              h1: textTheme.titleLarge?.copyWith(
+                                color: colorScheme.onSurface,
+                              ),
+                              h2: textTheme.titleMedium?.copyWith(
+                                fontSize: 16,
+                                fontWeight: 
+                                FontWeight.w600,
+                                color: colorScheme.onSurface,
+                              ),
+                              listBullet: TextStyle(color: colorScheme.onSurfaceVariant),
+                            ),
+                          ),
+                          const SizedBox(height: 30),
+                          Text(
+                            'Last Updates: ${state.document.updatedAt.toLocal().toString().split(' ')[0]}',
+                            style: textTheme.bodySmall?.copyWith(
+                              fontSize: 12,
+                              color: colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                          const SizedBox(height: 100),
+                        ],
+                      );
+                    }
+                    return const SizedBox.shrink();
+                  },
                 ),
               ),
             ),

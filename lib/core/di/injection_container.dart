@@ -50,6 +50,7 @@ import '../../domain/community/usecases/check_follow_request_status.dart';
 import '../../features/community/bloc/blocs/posts_bloc.dart';
 import '../../features/community/bloc/blocs/user_search_bloc.dart';
 import '../../features/community/bloc/blocs/profile_bloc.dart';
+import '../../features/community/bloc/blocs/followers_bloc.dart';
 import '../../features/community/managers/like_state_manager.dart';
 
 // Notifications
@@ -109,6 +110,13 @@ import '../../data/support/repositories/feedback_repository_impl.dart';
 import '../../domain/support/repositories/feedback_repository.dart';
 import '../../domain/support/usecases/submit_feedback.dart';
 import '../../features/support/bloc/feedback_bloc.dart';
+
+// Legal
+import '../../data/settings/datasources/legal_remote_data_source.dart';
+import '../../data/settings/repositories/legal_repository_impl.dart';
+import '../../domain/settings/repositories/legal_repository.dart';
+import '../../domain/settings/usecases/get_active_legal_document.dart';
+import '../../features/settings/bloc/legal/legal_cubit.dart';
 
 class ServiceLocator {
   static final Map<Type, dynamic> _services = <Type, dynamic>{};
@@ -334,6 +342,12 @@ class ServiceLocator {
         repository: get<CommunityRepository>(),
       ),
     );
+    
+    _registerFactory<FollowersBloc>(
+      () => FollowersBloc(
+        repository: get<CommunityRepository>(),
+      ),
+    );
 
     // Notifications - Repository
     _registerLazySingleton<NotificationRepository>(
@@ -486,6 +500,26 @@ class ServiceLocator {
     // Support (Feedback) - Bloc (Factory)
     _registerFactory<FeedbackBloc>(
       () => FeedbackBloc(submitFeedback: get<SubmitFeedback>()),
+    );
+
+    // Legal - Data sources
+    _registerLazySingleton<LegalRemoteDataSource>(
+      LegalRemoteDataSourceImpl(), // It gets SecureApiClient internally
+    );
+
+    // Legal - Repository
+    _registerLazySingleton<LegalRepository>(
+      LegalRepositoryImpl(remoteDataSource: get<LegalRemoteDataSource>()),
+    );
+
+    // Legal - Use cases
+    _registerLazySingleton<GetActiveLegalDocumentUseCase>(
+      GetActiveLegalDocumentUseCase(get<LegalRepository>()),
+    );
+
+    // Legal - Bloc (Factory)
+    _registerFactory<LegalCubit>(
+      () => LegalCubit(get<GetActiveLegalDocumentUseCase>()),
     );
 
     // App - Repository

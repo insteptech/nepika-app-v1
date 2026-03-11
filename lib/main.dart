@@ -309,6 +309,17 @@ class MyApp extends StatelessWidget {
                 builder: (_) => CommunityFactory.createUserProfileScreen(),
                 settings: settings,
               );
+            case AppRoutes.communityFollowersList:
+              final args = settings.arguments as Map<String, dynamic>?;
+              return MaterialPageRoute(
+                builder:
+                    (_) => CommunityFactory.createFollowersListScreen(
+                      userId: args?['userId'] as String? ?? '',
+                      username: args?['username'] as String? ?? '',
+                      isFollowers: args?['isFollowers'] as bool? ?? true,
+                    ),
+                settings: settings,
+              );
             case CommunityRoutes.communitySettings:
               debugPrint('🚨 Route matched: Community Settings');
               return MaterialPageRoute(

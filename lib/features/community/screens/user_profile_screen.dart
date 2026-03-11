@@ -18,11 +18,8 @@ enum ActiveTab { threads, replies }
 
 class UserProfileScreen extends StatefulWidget {
   final String? userId;
-  
-  const UserProfileScreen({
-    super.key,
-    this.userId,
-  });
+
+  const UserProfileScreen({super.key, this.userId});
 
   @override
   State<UserProfileScreen> createState() => _UserProfileScreenState();
@@ -37,7 +34,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   DateTime? _lastLoadTime; // Prevent rapid loading requests
 
   ActiveTab _currentActive = ActiveTab.threads;
-  
+
   // Pagination state
   List<PostEntity> _threads = [];
   List<PostEntity> _replies = [];
@@ -50,35 +47,37 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   // Profile data
   CommunityProfileEntity? _profileData;
-  
+
   // Profile error state
   String? _profileError;
-  
+
   // Follow state
   bool? _isFollowing;
   bool _isFollowLoading = false;
-  
+
   // Scroll-based scaling and header transformation
   double _imageScale = 1.0;
   bool _showScrolledHeader = false; // Controls globe->back icon transition
   late ScrollController _mainScrollController;
 
-
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    
+
     // Use widget parameter first, then route arguments as fallback
     if (widget.userId != null && widget.userId!.isNotEmpty) {
       profileUserId = widget.userId;
     } else {
       final args = ModalRoute.of(context)?.settings.arguments;
-      profileUserId = (args is Map<String, dynamic>)
-          ? args['userId'] as String? ?? 'Unknown'
-          : 'Unknown';
+      profileUserId =
+          (args is Map<String, dynamic>)
+              ? args['userId'] as String? ?? 'Unknown'
+              : 'Unknown';
     }
 
-    if (!_isInitialized && profileUserId != null && profileUserId != 'Unknown') {
+    if (!_isInitialized &&
+        profileUserId != null &&
+        profileUserId != 'Unknown') {
       _isInitialized = true;
       _initializeData();
     }
@@ -87,9 +86,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _mainScrollController = ScrollController()
-      ..addListener(_onMainScroll)
-      ..addListener(() => _onScroll('main'));
+    _mainScrollController =
+        ScrollController()
+          ..addListener(_onMainScroll)
+          ..addListener(() => _onScroll('main'));
   }
 
   @override
@@ -109,46 +109,57 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     // More aggressive triggering to ensure pagination works smoothly
     final scrollThreshold = position.maxScrollExtent * 0.75;
     final pixelThreshold = position.maxScrollExtent - 200;
-    final isNearBottom = position.pixels >= scrollThreshold ||
-                        position.pixels >= pixelThreshold;
+    final isNearBottom =
+        position.pixels >= scrollThreshold || position.pixels >= pixelThreshold;
 
     // Debounce logic: prevent rapid requests (500ms cooldown)
     final now = DateTime.now();
-    final canLoad = _lastLoadTime == null ||
-                   now.difference(_lastLoadTime!).inMilliseconds > 500;
+    final canLoad =
+        _lastLoadTime == null ||
+        now.difference(_lastLoadTime!).inMilliseconds > 500;
 
     if (_currentActive == ActiveTab.threads) {
       // Only trigger if all conditions are met for threads
-      final shouldLoad = isNearBottom &&
-                        _threads.isNotEmpty &&
-                        _hasMoreThreads &&
-                        !_loadingMoreThreads &&
-                        _token != null &&
-                        canLoad;
+      final shouldLoad =
+          isNearBottom &&
+          _threads.isNotEmpty &&
+          _hasMoreThreads &&
+          !_loadingMoreThreads &&
+          _token != null &&
+          canLoad;
 
       if (shouldLoad) {
         debugPrint('🔄 Profile: Loading more threads');
-        debugPrint('  📊 Current: ${_threads.length} threads, page $_threadsPage');
+        debugPrint(
+          '  📊 Current: ${_threads.length} threads, page $_threadsPage',
+        );
         debugPrint('  ⏭️  Loading: page ${_threadsPage + 1}');
-        debugPrint('  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%');
+        debugPrint(
+          '  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%',
+        );
 
         _lastLoadTime = now;
         _loadMoreThreads();
       }
     } else if (_currentActive == ActiveTab.replies) {
       // Only trigger if all conditions are met for replies
-      final shouldLoad = isNearBottom &&
-                        _replies.isNotEmpty &&
-                        _hasMoreReplies &&
-                        !_loadingMoreReplies &&
-                        _token != null &&
-                        canLoad;
+      final shouldLoad =
+          isNearBottom &&
+          _replies.isNotEmpty &&
+          _hasMoreReplies &&
+          !_loadingMoreReplies &&
+          _token != null &&
+          canLoad;
 
       if (shouldLoad) {
         debugPrint('🔄 Profile: Loading more replies');
-        debugPrint('  📊 Current: ${_replies.length} replies, page $_repliesPage');
+        debugPrint(
+          '  📊 Current: ${_replies.length} replies, page $_repliesPage',
+        );
         debugPrint('  ⏭️  Loading: page ${_repliesPage + 1}');
-        debugPrint('  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%');
+        debugPrint(
+          '  📍 Scroll: ${(position.pixels / position.maxScrollExtent * 100).toStringAsFixed(0)}%',
+        );
 
         _lastLoadTime = now;
         _loadMoreReplies();
@@ -158,23 +169,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   void _onMainScroll() {
     if (!_mainScrollController.hasClients) return;
-    
+
     final scrollOffset = _mainScrollController.offset;
     const maxScroll = 300.0;
-    
+
     // Calculate the exact position where username gets hidden behind header
     // Header height = 56px (sticky header), Profile padding = 20px, Username text position ≈ 20px
     // Total distance from top = Header(56) - Profile_padding(20) - Username_position(20) = ~16px margin
     // So transformation should trigger when scroll reaches approximately 40-50px
-    const usernameHiddenThreshold = 45.0; // Precise trigger when profile username gets hidden
-    
+    const usernameHiddenThreshold =
+        45.0; // Precise trigger when profile username gets hidden
+
     double scale = 1.0 - (scrollOffset / maxScroll * 0.4);
     scale = scale.clamp(0.6, 1.4);
-    
+
     // Only show scrolled header when username is actually hidden
     bool shouldShowScrolledHeader = scrollOffset > usernameHiddenThreshold;
-    
-    if (scale != _imageScale || shouldShowScrolledHeader != _showScrolledHeader) {
+
+    if (scale != _imageScale ||
+        shouldShowScrolledHeader != _showScrolledHeader) {
       setState(() {
         _imageScale = scale;
         _showScrolledHeader = shouldShowScrolledHeader;
@@ -182,14 +195,15 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
-
   Future<void> _initializeData() async {
     try {
       final sharedPreferences = await SharedPreferences.getInstance();
       await SharedPrefsHelper.init();
       _token = sharedPreferences.getString(AppConstants.accessTokenKey);
 
-      final userDataString = sharedPreferences.getString(AppConstants.userDataKey);
+      final userDataString = sharedPreferences.getString(
+        AppConstants.userDataKey,
+      );
       if (userDataString != null) {
         final userData = jsonDecode(userDataString);
         _currentUserId = userData['id'];
@@ -210,11 +224,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {
         _loadingMoreThreads = true;
       });
-      _profileBloc!.add(LoadMoreUserThreads(
-        token: _token!,
-        userId: profileUserId!,
-        page: _threadsPage + 1,
-      ));
+      _profileBloc!.add(
+        LoadMoreUserThreads(
+          token: _token!,
+          userId: profileUserId!,
+          page: _threadsPage + 1,
+        ),
+      );
     }
   }
 
@@ -223,61 +239,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       setState(() {
         _loadingMoreReplies = true;
       });
-      _profileBloc!.add(LoadMoreUserReplies(
-        token: _token!,
-        userId: profileUserId!,
-        page: _repliesPage + 1,
-      ));
+      _profileBloc!.add(
+        LoadMoreUserReplies(
+          token: _token!,
+          userId: profileUserId!,
+          page: _repliesPage + 1,
+        ),
+      );
     }
   }
-
 
   void _loadTabData(ActiveTab tab) {
     debugPrint('ProfilePage: _loadTabData called for ${tab.name}');
     debugPrint('ProfilePage: Current active tab: ${_currentActive.name}');
-    
+
     if (tab == ActiveTab.threads) {
-      debugPrint('ProfilePage: Loading threads tab, threads empty: ${_threads.isEmpty}');
+      debugPrint(
+        'ProfilePage: Loading threads tab, threads empty: ${_threads.isEmpty}',
+      );
       if (_threads.isEmpty && _profileBloc != null && _token != null) {
         debugPrint('ProfilePage: Dispatching FetchUserThreads event');
-        _profileBloc!.add(FetchUserThreads(
-          token: _token!,
-          userId: profileUserId!,
-        ));
+        _profileBloc!.add(
+          FetchUserThreads(token: _token!, userId: profileUserId!),
+        );
       } else {
-        debugPrint('ProfilePage: Threads already loaded (${_threads.length} items) or missing dependencies');
+        debugPrint(
+          'ProfilePage: Threads already loaded (${_threads.length} items) or missing dependencies',
+        );
       }
     } else if (tab == ActiveTab.replies) {
-      debugPrint('ProfilePage: Loading replies tab, replies empty: ${_replies.isEmpty}');
+      debugPrint(
+        'ProfilePage: Loading replies tab, replies empty: ${_replies.isEmpty}',
+      );
       if (_replies.isEmpty && _profileBloc != null && _token != null) {
         debugPrint('ProfilePage: Dispatching FetchUserReplies event');
-        _profileBloc!.add(FetchUserReplies(
-          token: _token!,
-          userId: profileUserId!,
-        ));
+        _profileBloc!.add(
+          FetchUserReplies(token: _token!, userId: profileUserId!),
+        );
       } else {
-        debugPrint('ProfilePage: Replies already loaded (${_replies.length} items) or missing dependencies');
+        debugPrint(
+          'ProfilePage: Replies already loaded (${_replies.length} items) or missing dependencies',
+        );
       }
     }
   }
 
   bool get isCurrentUserProfile {
     // Use backend-provided isSelf if available, fallback to manual comparison
-    return _profileData?.isSelf ?? (_currentUserId != null && profileUserId != null && _currentUserId == profileUserId);
+    return _profileData?.isSelf ??
+        (_currentUserId != null &&
+            profileUserId != null &&
+            _currentUserId == profileUserId);
   }
 
   void _handleFollowToggle() {
     if (_token == null || profileUserId == null || _profileBloc == null) return;
-    
+
     // Use backend-provided isFollowing if available, fallback to stored value
-    final currentFollowStatus = _profileData?.isFollowing ?? _isFollowing ?? false;
+    final currentFollowStatus =
+        _profileData?.isFollowing ?? _isFollowing ?? false;
     final newFollowStatus = !currentFollowStatus;
-    
+
     // Optimistic update - immediately update UI
     setState(() {
       _isFollowLoading = true;
       _isFollowing = newFollowStatus;
-      
+
       // Also update profile data for immediate UI response
       if (_profileData != null) {
         _profileData = CommunityProfileEntity(
@@ -301,17 +328,11 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         );
       }
     });
-    
+
     if (currentFollowStatus) {
-      _profileBloc!.add(UnfollowUser(
-        token: _token!,
-        userId: profileUserId!,
-      ));
+      _profileBloc!.add(UnfollowUser(token: _token!, userId: profileUserId!));
     } else {
-      _profileBloc!.add(FollowUser(
-        token: _token!,
-        userId: profileUserId!,
-      ));
+      _profileBloc!.add(FollowUser(token: _token!, userId: profileUserId!));
     }
   }
 
@@ -329,7 +350,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     try {
       final prefs = await SharedPreferences.getInstance();
       final followStatus = prefs.getBool('follow_status_$userId');
-      debugPrint('ProfilePage: Retrieved follow status for $userId: $followStatus');
+      debugPrint(
+        'ProfilePage: Retrieved follow status for $userId: $followStatus',
+      );
       return followStatus;
     } catch (e) {
       debugPrint('ProfilePage: Error retrieving follow status: $e');
@@ -339,7 +362,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
   Future<void> _loadStoredFollowStatus() async {
     if (profileUserId == null) return;
-    
+
     final storedStatus = await _getStoredFollowStatus(profileUserId!);
     if (storedStatus != null && mounted) {
       setState(() {
@@ -357,8 +380,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       return;
     }
 
-    final String profileUrl = '${Env.backendBase}/profile/${_profileData!.userId}';
-    
+    final String profileUrl =
+        '${Env.backendBase}/profile/${_profileData!.userId}';
+
     final String shareText = '''Check out ${_profileData!.username} on Nepika!
 
 ${_profileData!.bio ?? ''}
@@ -368,10 +392,7 @@ ${_profileData!.bio ?? ''}
 
 Join the conversation: $profileUrl''';
 
-    Share.share(
-      shareText,
-      subject: '${_profileData!.username} on Nepika',
-    );
+    Share.share(shareText, subject: '${_profileData!.username} on Nepika');
   }
 
   void _showMenuOptions() {
@@ -381,35 +402,40 @@ Join the conversation: $profileUrl''';
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+
+                    // Dynamic options based on profile type
+                    if (isCurrentUserProfile)
+                      ..._buildCurrentUserMenuOptions()
+                    else
+                      ..._buildOtherUserMenuOptions(),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                
-                // Dynamic options based on profile type
-                if (isCurrentUserProfile) ..._buildCurrentUserMenuOptions()
-                else ..._buildOtherUserMenuOptions(),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -417,14 +443,8 @@ Join the conversation: $profileUrl''';
   List<Widget> _buildCurrentUserMenuOptions() {
     return [
       ListTile(
-        leading: Icon(
-          Icons.settings,
-          color: Theme.of(context).iconTheme.color,
-        ),
-        title: Text(
-          'Settings',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        leading: Icon(Icons.settings, color: Theme.of(context).iconTheme.color),
+        title: Text('Settings', style: Theme.of(context).textTheme.bodyLarge),
         onTap: () {
           Navigator.pop(context);
           _showSettingsOptions();
@@ -435,20 +455,14 @@ Join the conversation: $profileUrl''';
           Icons.lock_outline,
           color: Theme.of(context).iconTheme.color,
         ),
-        title: Text(
-          'Privacy',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        title: Text('Privacy', style: Theme.of(context).textTheme.bodyLarge),
         onTap: () {
           Navigator.pop(context);
           _showPrivacyOptions();
         },
       ),
       ListTile(
-        leading: Icon(
-          Icons.share,
-          color: Theme.of(context).iconTheme.color,
-        ),
+        leading: Icon(Icons.share, color: Theme.of(context).iconTheme.color),
         title: Text(
           'Share profile',
           style: Theme.of(context).textTheme.bodyLarge,
@@ -459,14 +473,8 @@ Join the conversation: $profileUrl''';
         },
       ),
       ListTile(
-        leading: Icon(
-          Icons.copy,
-          color: Theme.of(context).iconTheme.color,
-        ),
-        title: Text(
-          'Copy link',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        leading: Icon(Icons.copy, color: Theme.of(context).iconTheme.color),
+        title: Text('Copy link', style: Theme.of(context).textTheme.bodyLarge),
         onTap: () {
           Navigator.pop(context);
           _copyProfileLink();
@@ -479,10 +487,7 @@ Join the conversation: $profileUrl''';
   List<Widget> _buildOtherUserMenuOptions() {
     return [
       ListTile(
-        leading: Icon(
-          Icons.share,
-          color: Theme.of(context).iconTheme.color,
-        ),
+        leading: Icon(Icons.share, color: Theme.of(context).iconTheme.color),
         title: Text(
           'Share profile',
           style: Theme.of(context).textTheme.bodyLarge,
@@ -493,29 +498,20 @@ Join the conversation: $profileUrl''';
         },
       ),
       ListTile(
-        leading: Icon(
-          Icons.copy,
-          color: Theme.of(context).iconTheme.color,
-        ),
-        title: Text(
-          'Copy link',
-          style: Theme.of(context).textTheme.bodyLarge,
-        ),
+        leading: Icon(Icons.copy, color: Theme.of(context).iconTheme.color),
+        title: Text('Copy link', style: Theme.of(context).textTheme.bodyLarge),
         onTap: () {
           Navigator.pop(context);
           _copyProfileLink();
         },
       ),
       ListTile(
-        leading: Icon(
-          Icons.block,
-          color: Colors.red,
-        ),
+        leading: Icon(Icons.block, color: Colors.red),
         title: Text(
           'Block user',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Colors.red,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: Colors.red),
         ),
         onTap: () {
           Navigator.pop(context);
@@ -523,15 +519,12 @@ Join the conversation: $profileUrl''';
         },
       ),
       ListTile(
-        leading: Icon(
-          Icons.report,
-          color: Colors.red,
-        ),
+        leading: Icon(Icons.report, color: Colors.red),
         title: Text(
           'Report',
-          style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-            color: Colors.red,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodyLarge?.copyWith(color: Colors.red),
         ),
         onTap: () {
           Navigator.pop(context);
@@ -549,89 +542,99 @@ Join the conversation: $profileUrl''';
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (sheetContext) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: const Icon(Icons.edit),
-                  title: const Text('Edit Profile'),
-                  onTap: () async {
-                    // Close the bottom sheet locally first
-                    Navigator.of(sheetContext).pop();
-                    
-                    // Navigate using the PARENT context which is still mounted
-                    if (!mounted) return;
-                    
-                    final result = await CommunityNavigation.navigateToEditProfile(
-                      context,
-                      token: _token ?? '',
-                      currentUsername: _profileData?.username,
-                      currentBio: _profileData?.bio,
-                      currentProfileImage: _profileData?.profileImageUrl,
-                    );
-                    
-                    if (result != null && mounted) {
-                      // Immediately update local state with returned data
-                      setState(() {
-                         if (_profileData != null) {
-                           _profileData = _profileData!.copyWith(
-                             username: result['username'],
-                             bio: result['bio'],
-                             profileImageUrl: result['profileImage'],
-                           );
-                         }
-                      });
+      builder:
+          (sheetContext) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ListTile(
+                      leading: const Icon(Icons.edit),
+                      title: const Text('Edit Profile'),
+                      onTap: () async {
+                        // Close the bottom sheet locally first
+                        Navigator.of(sheetContext).pop();
 
-                      
-                      // Broadcast the updated profile to the Bloc so other screens (like Feed) update immediately
-                      if (_profileBloc != null && _profileData != null) {
-                        _profileBloc!.add(UpdateLocalProfile(profile: _profileData!));
-                      }
-                    }
-                  },
+                        // Navigate using the PARENT context which is still mounted
+                        if (!mounted) return;
+
+                        final result =
+                            await CommunityNavigation.navigateToEditProfile(
+                              context,
+                              token: _token ?? '',
+                              currentUsername: _profileData?.username,
+                              currentBio: _profileData?.bio,
+                              currentProfileImage:
+                                  _profileData?.profileImageUrl,
+                            );
+
+                        if (result != null && mounted) {
+                          // Immediately update local state with returned data
+                          setState(() {
+                            if (_profileData != null) {
+                              _profileData = _profileData!.copyWith(
+                                username: result['username'],
+                                bio: result['bio'],
+                                profileImageUrl: result['profileImage'],
+                              );
+                            }
+                          });
+
+                          // Broadcast the updated profile to the Bloc so other screens (like Feed) update immediately
+                          if (_profileBloc != null && _profileData != null) {
+                            _profileBloc!.add(
+                              UpdateLocalProfile(profile: _profileData!),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.notifications),
+                      title: const Text('Notifications'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Notifications - Coming Soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.help),
+                      title: const Text('Help & Support'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Help & Support - Coming Soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                ListTile(
-                  leading: const Icon(Icons.notifications),
-                  title: const Text('Notifications'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Notifications - Coming Soon!')),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.help),
-                  title: const Text('Help & Support'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Help & Support - Coming Soon!')),
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -642,64 +645,76 @@ Join the conversation: $profileUrl''';
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    ListTile(
+                      leading: const Icon(Icons.lock),
+                      title: const Text('Private Account'),
+                      trailing: Switch(
+                        value:
+                            false, // This would be connected to actual privacy state
+                        onChanged: (value) {
+                          Navigator.pop(context);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                'Private Account ${value ? 'Enabled' : 'Disabled'}',
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.visibility_off),
+                      title: const Text('Hide Story'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Hide Story - Coming Soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.block),
+                      title: const Text('Blocked Users'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Blocked Users - Coming Soon!'),
+                          ),
+                        );
+                      },
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                ListTile(
-                  leading: const Icon(Icons.lock),
-                  title: const Text('Private Account'),
-                  trailing: Switch(
-                    value: false, // This would be connected to actual privacy state
-                    onChanged: (value) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Private Account ${value ? 'Enabled' : 'Disabled'}')),
-                      );
-                    },
-                  ),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.visibility_off),
-                  title: const Text('Hide Story'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Hide Story - Coming Soon!')),
-                    );
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.block),
-                  title: const Text('Blocked Users'),
-                  onTap: () {
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Blocked Users - Coming Soon!')),
-                    );
-                  },
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -713,7 +728,7 @@ Join the conversation: $profileUrl''';
 
     // Copy to clipboard functionality would go here
     // final String profileUrl = '${Env.backendBase}/profile/${_profileData!.userId}';
-    
+
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Profile link copied to clipboard'),
@@ -727,28 +742,33 @@ Join the conversation: $profileUrl''';
 
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text('Block ${_profileData!.username}?'),
-        content: Text('Are you sure you want to block ${_profileData!.username}? They won\'t be able to find your profile or send you messages.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
+      builder:
+          (context) => AlertDialog(
+            title: Text('Block ${_profileData!.username}?'),
+            content: Text(
+              'Are you sure you want to block ${_profileData!.username}? They won\'t be able to find your profile or send you messages.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        '${_profileData!.username} has been blocked',
+                      ),
+                      backgroundColor: Colors.orange,
+                    ),
+                  );
+                },
+                child: const Text('Block', style: TextStyle(color: Colors.red)),
+              ),
+            ],
           ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('${_profileData!.username} has been blocked'),
-                  backgroundColor: Colors.orange,
-                ),
-              );
-            },
-            child: const Text('Block', style: TextStyle(color: Colors.red)),
-          ),
-        ],
-      ),
     );
   }
 
@@ -761,58 +781,61 @@ Join the conversation: $profileUrl''';
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder: (context) => Container(
-        decoration: BoxDecoration(
-          color: Theme.of(context).scaffoldBackgroundColor,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        child: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
-                  ),
+      builder:
+          (context) => Container(
+            decoration: BoxDecoration(
+              color: Theme.of(context).scaffoldBackgroundColor,
+              borderRadius: const BorderRadius.vertical(
+                top: Radius.circular(20),
+              ),
+            ),
+            child: SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Container(
+                      width: 40,
+                      height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.grey[400],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      'Report ${_profileData!.username}',
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    ListTile(
+                      leading: const Icon(Icons.warning, color: Colors.red),
+                      title: const Text('Inappropriate content'),
+                      onTap: () => _submitReport('Inappropriate content'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.person_off, color: Colors.red),
+                      title: const Text('Harassment or bullying'),
+                      onTap: () => _submitReport('Harassment or bullying'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.security, color: Colors.red),
+                      title: const Text('Spam or scam'),
+                      onTap: () => _submitReport('Spam or scam'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.more_horiz, color: Colors.red),
+                      title: const Text('Other'),
+                      onTap: () => _submitReport('Other'),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 24),
-                Text(
-                  'Report ${_profileData!.username}',
-                  style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                ListTile(
-                  leading: const Icon(Icons.warning, color: Colors.red),
-                  title: const Text('Inappropriate content'),
-                  onTap: () => _submitReport('Inappropriate content'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.person_off, color: Colors.red),
-                  title: const Text('Harassment or bullying'),
-                  onTap: () => _submitReport('Harassment or bullying'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.security, color: Colors.red),
-                  title: const Text('Spam or scam'),
-                  onTap: () => _submitReport('Spam or scam'),
-                ),
-                ListTile(
-                  leading: const Icon(Icons.more_horiz, color: Colors.red),
-                  title: const Text('Other'),
-                  onTap: () => _submitReport('Other'),
-                ),
-              ],
+              ),
             ),
           ),
-        ),
-      ),
     );
   }
 
@@ -860,14 +883,18 @@ Join the conversation: $profileUrl''';
         if (profileUserId != null) {
           WidgetsBinding.instance.addPostFrameCallback((_) {
             if (mounted && !profileBloc.isClosed) {
-              profileBloc.add(GetCommunityProfile(token: _token!, userId: profileUserId!));
+              profileBloc.add(
+                GetCommunityProfile(token: _token!, userId: profileUserId!),
+              );
             }
-              
-              if (_currentUserId != profileUserId && _currentUserId != null) {
-                debugPrint('ProfilePage: Loading stored follow status for user: $profileUserId');
-                _loadStoredFollowStatus();
-                // Note: Backend now provides follow status in profile response, no need for separate API call
-              }
+
+            if (_currentUserId != profileUserId && _currentUserId != null) {
+              debugPrint(
+                'ProfilePage: Loading stored follow status for user: $profileUserId',
+              );
+              _loadStoredFollowStatus();
+              // Note: Backend now provides follow status in profile response, no need for separate API call
+            }
           });
         }
       }
@@ -893,8 +920,8 @@ Join the conversation: $profileUrl''';
       backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       body: SafeArea(
         child: BlocListener<ProfileBloc, ProfileState>(
-            listener: _handleBlocStateChanges,
-            child: CustomScrollView(
+          listener: _handleBlocStateChanges,
+          child: CustomScrollView(
             controller: _mainScrollController,
             slivers: [
               // Sticky Dynamic Header
@@ -907,9 +934,7 @@ Join the conversation: $profileUrl''';
                   onMenuPressed: () => _showMenuOptions(),
                 ),
               ),
-              SliverToBoxAdapter(
-                child: _buildProfileContent(context),
-              ),
+              SliverToBoxAdapter(child: _buildProfileContent(context)),
               SliverPersistentHeader(
                 pinned: true,
                 delegate: _StickyTabsDelegate(
@@ -932,22 +957,22 @@ Join the conversation: $profileUrl''';
 
   void _handleBlocStateChanges(BuildContext context, ProfileState state) {
     debugPrint('ProfilePage: Received BLoC state: ${state.runtimeType}');
-    
+
     if (state is CommunityProfileLoaded) {
       debugPrint('ProfilePage: Profile loaded: ${state.profile.username}');
       setState(() {
         _profileData = state.profile;
         _profileError = null; // Clear any previous error
       });
-      
+
       // Note: Backend now provides follow status in profile response, no need for separate API call
-      
+
       debugPrint('ProfilePage: Loading initial threads after profile loaded');
-      _profileBloc!.add(FetchUserThreads(
-        token: _token!,
-        userId: profileUserId!,
-      ));
-    } else if (state is CommunityProfileError && state.userId == profileUserId) {
+      _profileBloc!.add(
+        FetchUserThreads(token: _token!, userId: profileUserId!),
+      );
+    } else if (state is CommunityProfileError &&
+        state.userId == profileUserId) {
       debugPrint('ProfilePage: Profile error: ${state.message}');
       setState(() {
         _profileError = state.message;
@@ -969,12 +994,14 @@ Join the conversation: $profileUrl''';
         _repliesPage = state.currentPage;
         _loadingMoreReplies = false;
       });
-    } else if (state is UserThreadsLoadingMore && state.userId == profileUserId) {
+    } else if (state is UserThreadsLoadingMore &&
+        state.userId == profileUserId) {
       debugPrint('ProfilePage: Loading more threads');
       setState(() {
         _loadingMoreThreads = true;
       });
-    } else if (state is UserRepliesLoadingMore && state.userId == profileUserId) {
+    } else if (state is UserRepliesLoadingMore &&
+        state.userId == profileUserId) {
       debugPrint('ProfilePage: Loading more replies');
       setState(() {
         _loadingMoreReplies = true;
@@ -1002,43 +1029,51 @@ Join the conversation: $profileUrl''';
       setState(() {
         _isFollowLoading = true;
       });
-    } else if (state is FollowSuccess && state.userId == profileUserId) {
+    } else if (state is FollowSuccess) {
       debugPrint('ProfilePage: Follow operation success: ${state.message}');
+
+      final bool isTargetProfile = state.userId == profileUserId;
+
       setState(() {
-        _isFollowing = state.isFollowing;
-        _isFollowLoading = false;
-        
-        // Update the profile data's follow status to sync with the backend
-        if (_profileData != null) {
-          _profileData = CommunityProfileEntity(
-            id: _profileData!.id,
-            userId: _profileData!.userId,
-            tenantId: _profileData!.tenantId,
-            username: _profileData!.username,
-            bio: _profileData!.bio,
-            profileImageUrl: _profileData!.profileImageUrl,
-            bannerImageUrl: _profileData!.bannerImageUrl,
-            isPrivate: _profileData!.isPrivate,
-            followersCount: _profileData!.followersCount,
-            followingCount: _profileData!.followingCount,
-            postsCount: _profileData!.postsCount,
-            settings: _profileData!.settings,
-            isVerified: _profileData!.isVerified,
-            isFollowing: state.isFollowing, // Update the follow status
-            isSelf: _profileData!.isSelf,
-            createdAt: _profileData!.createdAt,
-            updatedAt: _profileData!.updatedAt,
-          );
+        if (isTargetProfile) {
+          final bool wasFollowing = _isFollowing ?? false;
+          _isFollowing = state.isFollowing;
+          _isFollowLoading = false;
+
+          if (_profileData != null && wasFollowing != state.isFollowing) {
+            int newFollowersCount = _profileData!.followersCount;
+            if (state.isFollowing) {
+              newFollowersCount++;
+            } else if (newFollowersCount > 0) {
+              newFollowersCount--;
+            }
+            _profileData = _profileData!.copyWith(
+              followersCount: newFollowersCount,
+              isFollowing: state.isFollowing,
+            );
+          }
+        }
+
+        // If we are on our own profile, update followingCount when we follow/unfollow someone else
+        if (isCurrentUserProfile && !isTargetProfile) {
+          if (_profileData != null) {
+            int newFollowingCount = _profileData!.followingCount;
+            if (state.isFollowing) {
+              newFollowingCount++;
+            } else if (newFollowingCount > 0) {
+              newFollowingCount--;
+            }
+            _profileData = _profileData!.copyWith(
+              followingCount: newFollowingCount,
+            );
+          }
         }
       });
-      
+
       _storeFollowStatus(profileUserId!, state.isFollowing);
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(state.message),
-          backgroundColor: Colors.green,
-        ),
+        SnackBar(content: Text(state.message), backgroundColor: Colors.green),
       );
     } else if (state is FollowError && state.userId == profileUserId) {
       debugPrint('ProfilePage: Follow operation error: ${state.message}');
@@ -1046,7 +1081,7 @@ Join the conversation: $profileUrl''';
         _isFollowLoading = false;
         // Revert the optimistic update on error
         _isFollowing = state.wasFollowing;
-        
+
         // Also revert profile data
         if (_profileData != null) {
           _profileData = CommunityProfileEntity(
@@ -1070,7 +1105,7 @@ Join the conversation: $profileUrl''';
           );
         }
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error: ${state.message}'),
@@ -1115,12 +1150,13 @@ Join the conversation: $profileUrl''';
               ),
               const SizedBox(height: 12),
               Text(
-                _profileError?.contains('404') == true 
+                _profileError?.contains('404') == true
                     ? 'This user doesn\'t exist or the profile has been removed.'
-                    : _profileError ?? 'Unable to load profile. Please try again.',
-                style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                  color: Colors.grey[600],
-                ),
+                    : _profileError ??
+                        'Unable to load profile. Please try again.',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge?.copyWith(color: Colors.grey[600]),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 32),
@@ -1143,14 +1179,18 @@ Join the conversation: $profileUrl''';
                   ElevatedButton(
                     onPressed: () {
                       // Retry loading profile
-                      if (_token != null && profileUserId != null && _profileBloc != null) {
+                      if (_token != null &&
+                          profileUserId != null &&
+                          _profileBloc != null) {
                         setState(() {
                           _profileError = null;
                         });
-                        _profileBloc!.add(GetCommunityProfile(
-                          token: _token!,
-                          userId: profileUserId!,
-                        ));
+                        _profileBloc!.add(
+                          GetCommunityProfile(
+                            token: _token!,
+                            userId: profileUserId!,
+                          ),
+                        );
                       }
                     },
                     style: ElevatedButton.styleFrom(
@@ -1209,7 +1249,8 @@ Join the conversation: $profileUrl''';
                       ),
                     ),
                     const SizedBox(height: 8),
-                    if (_profileData!.bio != null && _profileData!.bio!.isNotEmpty)
+                    if (_profileData!.bio != null &&
+                        _profileData!.bio!.isNotEmpty)
                       Text(
                         _profileData!.bio!,
                         style: Theme.of(context).textTheme.bodyLarge,
@@ -1217,11 +1258,82 @@ Join the conversation: $profileUrl''';
                         overflow: TextOverflow.ellipsis,
                       ),
                     const SizedBox(height: 12),
-                    Text(
-                      '${_profileData!.followersCount} followers',
-                      style: Theme.of(context).textTheme.bodyMedium!.copyWith(
-                        color: Colors.grey[600],
-                      ),
+                    Row(
+                      children: [
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (_profileData != null) {
+                              CommunityNavigation.navigateToFollowersList(
+                                context,
+                                userId:
+                                    _profileData!.userId, // Prefer Auth User ID
+                                username: _profileData!.username,
+                                isFollowers: true,
+                              );
+                            } else if (profileUserId != null) {
+                              CommunityNavigation.navigateToFollowersList(
+                                context,
+                                userId: profileUserId!,
+                                username: _profileData?.username ?? 'User',
+                                isFollowers: true,
+                              );
+                            }
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_profileData!.followersCount}',
+                                style: Theme.of(context).textTheme.bodyLarge!
+                                    .copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'followers',
+                                style: Theme.of(context).textTheme.bodyMedium!
+                                    .copyWith(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(width: 24),
+                        GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            if (_profileData != null) {
+                              CommunityNavigation.navigateToFollowersList(
+                                context,
+                                userId:
+                                    _profileData!.userId, // Prefer Auth User ID
+                                username: _profileData!.username,
+                                isFollowers: false,
+                              );
+                            } else if (profileUserId != null) {
+                              CommunityNavigation.navigateToFollowersList(
+                                context,
+                                userId: profileUserId!,
+                                username: _profileData?.username ?? 'User',
+                                isFollowers: false,
+                              );
+                            }
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                '${_profileData!.followingCount}',
+                                style: Theme.of(context).textTheme.bodyLarge!
+                                    .copyWith(fontWeight: FontWeight.bold),
+                              ),
+                              Text(
+                                'following',
+                                style: Theme.of(context).textTheme.bodyMedium!
+                                    .copyWith(color: Colors.grey[600]),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1236,73 +1348,82 @@ Join the conversation: $profileUrl''';
                     child: Container(
                       width: 80,
                       height: 80,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                      ),
-                      child: _profileData!.profileImageUrl != null && _profileData!.profileImageUrl!.isNotEmpty
-                          ? ClipOval(
-                              child: Image.network(
-                                _profileData!.profileImageUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                                    ),
-                                    child: Icon(
-                                      Icons.person,
-                                      size: 40,
-                                      color: Theme.of(context).colorScheme.primary,
-                                    ),
-                                  );
-                                },
+                      decoration: const BoxDecoration(shape: BoxShape.circle),
+                      child:
+                          _profileData!.profileImageUrl != null &&
+                                  _profileData!.profileImageUrl!.isNotEmpty
+                              ? ClipOval(
+                                child: Image.network(
+                                  _profileData!.profileImageUrl!,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Container(
+                                      decoration: BoxDecoration(
+                                        shape: BoxShape.circle,
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary
+                                            .withValues(alpha: 0.1),
+                                      ),
+                                      child: Icon(
+                                        Icons.person,
+                                        size: 40,
+                                        color:
+                                            Theme.of(
+                                              context,
+                                            ).colorScheme.primary,
+                                      ),
+                                    );
+                                  },
+                                ),
+                              )
+                              : Container(
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.1),
+                                ),
+                                child: Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
                               ),
-                            )
-                          : Container(
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                              ),
-                              child: Icon(
-                                Icons.person,
-                                size: 40,
-                                color: Theme.of(context).colorScheme.primary,
-                              ),
-                            ),
                     ),
                   );
                 },
               ),
             ],
           ),
-          
+
           const SizedBox(height: 24),
-          
+
           Row(
             children: [
               if (isCurrentUserProfile) ...[
                 Expanded(
                   child: OutlinedButton(
                     onPressed: () async {
-                      final result = await CommunityNavigation.navigateToEditProfile(
-                        context,
-                        token: _token ?? '',
-                        currentUsername: _profileData?.username,
-                        currentBio: _profileData?.bio,
-                        currentProfileImage: _profileData?.profileImageUrl,
-                      );
-                      
+                      final result =
+                          await CommunityNavigation.navigateToEditProfile(
+                            context,
+                            token: _token ?? '',
+                            currentUsername: _profileData?.username,
+                            currentBio: _profileData?.bio,
+                            currentProfileImage: _profileData?.profileImageUrl,
+                          );
+
                       if (result != null && mounted) {
                         // Immediately update local state with returned data
                         setState(() {
-                           if (_profileData != null) {
-                             _profileData = _profileData!.copyWith(
-                               username: result['username'],
-                               bio: result['bio'],
-                               profileImageUrl: result['profileImage'],
-                             );
-                           }
+                          if (_profileData != null) {
+                            _profileData = _profileData!.copyWith(
+                              username: result['username'],
+                              bio: result['bio'],
+                              profileImageUrl: result['profileImage'],
+                            );
+                          }
                         });
 
                         // Show success message
@@ -1312,11 +1433,12 @@ Join the conversation: $profileUrl''';
                             backgroundColor: Colors.green,
                           ),
                         );
-                        
-                        
+
                         // Broadcast the updated profile to the Bloc so other screens (like Feed) update immediately
                         if (_profileBloc != null && _profileData != null) {
-                          _profileBloc!.add(UpdateLocalProfile(profile: _profileData!));
+                          _profileBloc!.add(
+                            UpdateLocalProfile(profile: _profileData!),
+                          );
                         }
                       }
                     },
@@ -1355,39 +1477,58 @@ Join the conversation: $profileUrl''';
               ] else ...[
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: _isFollowLoading ? null : () {
-                      _handleFollowToggle();
-                    },
+                    onPressed:
+                        _isFollowLoading
+                            ? null
+                            : () {
+                              _handleFollowToggle();
+                            },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: (_profileData?.isFollowing ?? _isFollowing) == true 
-                        ? Colors.grey[200] 
-                        : Theme.of(context).colorScheme.primary,
-                      foregroundColor: (_profileData?.isFollowing ?? _isFollowing) == true 
-                        ? Colors.black87 
-                        : Colors.white,
+                      backgroundColor:
+                          (_profileData?.isFollowing ?? _isFollowing) == true
+                              ? Colors.grey[200]
+                              : Theme.of(context).colorScheme.primary,
+                      foregroundColor:
+                          (_profileData?.isFollowing ?? _isFollowing) == true
+                              ? Colors.black87
+                              : Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child: _isFollowLoading 
-                      ? SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              (_profileData?.isFollowing ?? _isFollowing) == true ? Colors.black54 : Colors.white,
+                    child:
+                        _isFollowLoading
+                            ? SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  (_profileData?.isFollowing ?? _isFollowing) ==
+                                          true
+                                      ? Colors.black54
+                                      : Colors.white,
+                                ),
+                              ),
+                            )
+                            : Text(
+                              (_profileData?.isFollowing ?? _isFollowing) ==
+                                      true
+                                  ? 'Following'
+                                  : 'Follow',
+                              style: Theme.of(
+                                context,
+                              ).textTheme.bodyLarge!.copyWith(
+                                fontWeight: FontWeight.w500,
+                                color:
+                                    (_profileData?.isFollowing ??
+                                                _isFollowing) ==
+                                            true
+                                        ? Colors.black87
+                                        : Colors.white,
+                              ),
                             ),
-                          ),
-                        )
-                      : Text(
-                          (_profileData?.isFollowing ?? _isFollowing) == true ? 'Following' : 'Follow',
-                          style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                            fontWeight: FontWeight.w500,
-                            color: (_profileData?.isFollowing ?? _isFollowing) == true ? Colors.black87 : Colors.white,
-                          ),
-                        ),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -1417,7 +1558,9 @@ Join the conversation: $profileUrl''';
   }
 
   Widget _buildTabs(BuildContext context) {
-    debugPrint('ProfilePage: Building tabs with active tab: ${_currentActive.name}');
+    debugPrint(
+      'ProfilePage: Building tabs with active tab: ${_currentActive.name}',
+    );
     return Container(
       decoration: BoxDecoration(
         border: Border(
@@ -1447,18 +1590,18 @@ Join the conversation: $profileUrl''';
               },
               borderRadius: BorderRadius.circular(8),
               child: AnimatedContainer(
-                
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  border: _currentActive == ActiveTab.threads
-                      ? Border(
-                          bottom: BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          ),
-                        )
-                      : null,
+                  border:
+                      _currentActive == ActiveTab.threads
+                          ? Border(
+                            bottom: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          )
+                          : null,
                 ),
                 child: AnimatedDefaultTextStyle(
                   // textHeightBehavior: TextHeightBehavior(
@@ -1467,20 +1610,20 @@ Join the conversation: $profileUrl''';
                   // ),
                   duration: const Duration(milliseconds: 200),
                   style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                    fontWeight: _currentActive == ActiveTab.threads
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: _currentActive == ActiveTab.threads
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey[600],
+                    fontWeight:
+                        _currentActive == ActiveTab.threads
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                    color:
+                        _currentActive == ActiveTab.threads
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[600],
                     fontSize: 16,
                   ),
                   child: Text(
                     'Threads',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      height: 1.2,
-                    ),
+                    style: TextStyle(height: 1.2),
                   ),
                 ),
               ),
@@ -1505,14 +1648,15 @@ Join the conversation: $profileUrl''';
                 duration: const Duration(milliseconds: 200),
                 padding: const EdgeInsets.symmetric(vertical: 12),
                 decoration: BoxDecoration(
-                  border: _currentActive == ActiveTab.replies
-                      ? Border(
-                          bottom: BorderSide(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2,
-                          ),
-                        )
-                      : null,
+                  border:
+                      _currentActive == ActiveTab.replies
+                          ? Border(
+                            bottom: BorderSide(
+                              color: Theme.of(context).colorScheme.primary,
+                              width: 2,
+                            ),
+                          )
+                          : null,
                 ),
                 child: AnimatedDefaultTextStyle(
                   // textHeightBehavior: TextHeightBehavior(
@@ -1521,20 +1665,20 @@ Join the conversation: $profileUrl''';
                   // ),
                   duration: const Duration(milliseconds: 200),
                   style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                    fontWeight: _currentActive == ActiveTab.replies
-                        ? FontWeight.w600
-                        : FontWeight.w400,
-                    color: _currentActive == ActiveTab.replies
-                        ? Theme.of(context).colorScheme.primary
-                        : Colors.grey[600],
+                    fontWeight:
+                        _currentActive == ActiveTab.replies
+                            ? FontWeight.w600
+                            : FontWeight.w400,
+                    color:
+                        _currentActive == ActiveTab.replies
+                            ? Theme.of(context).colorScheme.primary
+                            : Colors.grey[600],
                     fontSize: 16,
                   ),
                   child: const Text(
                     'Replies',
                     textAlign: TextAlign.center,
-                    style: TextStyle(
-                      height: 1,
-                    ),
+                    style: TextStyle(height: 1),
                   ),
                 ),
               ),
@@ -1547,8 +1691,10 @@ Join the conversation: $profileUrl''';
 
   Widget _buildPostsList(BuildContext context, ActiveTab tab) {
     final currentPosts = tab == ActiveTab.threads ? _threads : _replies;
-    final isLoading = tab == ActiveTab.threads ? _loadingMoreThreads : _loadingMoreReplies;
-    final hasMore = tab == ActiveTab.threads ? _hasMoreThreads : _hasMoreReplies;
+    final isLoading =
+        tab == ActiveTab.threads ? _loadingMoreThreads : _loadingMoreReplies;
+    final hasMore =
+        tab == ActiveTab.threads ? _hasMoreThreads : _hasMoreReplies;
 
     // Handle case where token or userId is not yet loaded
     if (_token == null || _currentUserId == null) {
@@ -1574,12 +1720,10 @@ Join the conversation: $profileUrl''';
               ),
               const SizedBox(height: 16),
               Text(
-                tab == ActiveTab.threads
-                    ? 'No threads yet'
-                    : 'No replies yet',
-                style: Theme.of(context).textTheme.bodyLarge!.copyWith(
-                  color: Colors.grey[600],
-                ),
+                tab == ActiveTab.threads ? 'No threads yet' : 'No replies yet',
+                style: Theme.of(
+                  context,
+                ).textTheme.bodyLarge!.copyWith(color: Colors.grey[600]),
               ),
             ],
           ),
@@ -1620,17 +1764,15 @@ class _StickyTabsDelegate extends SliverPersistentHeaderDelegate {
   final Widget child;
   final ActiveTab currentActiveTab;
 
-  _StickyTabsDelegate({
-    required this.child,
-    required this.currentActiveTab,
-  });
+  _StickyTabsDelegate({required this.child, required this.currentActiveTab});
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
-    return SizedBox(
-      height: maxExtent,
-      child: child,
-    );
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
+    return SizedBox(height: maxExtent, child: child);
   }
 
   @override
@@ -1662,7 +1804,11 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   });
 
   @override
-  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+  Widget build(
+    BuildContext context,
+    double shrinkOffset,
+    bool overlapsContent,
+  ) {
     return Container(
       height: 56,
       decoration: BoxDecoration(
@@ -1675,55 +1821,56 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
         ),
       ),
       padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // Left Icon - Back arrow
-              IconButton(
-                icon: const Icon(Icons.arrow_back, size: 24),
-                onPressed: onBackPressed,
-                padding: const EdgeInsets.all(8),
-              ),
-              
-              // Center - Username (only visible on scroll)
-              Expanded(
-                child: AnimatedOpacity(
-                  opacity: showScrolledHeader ? 1.0 : 0.0,
-                  duration: const Duration(milliseconds: 300),
-                  child: AnimatedSlide(
-                    offset: showScrolledHeader ? Offset.zero : const Offset(0, -0.3),
-                    duration: const Duration(milliseconds: 300),
-                    curve: Curves.easeOutCubic,
-                    child: Container(
-                      alignment: Alignment.center,
-                      child: Text(
-                        profileData?.username ?? '',
-                        style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 18,
-                        ),
-                        textAlign: TextAlign.center,
-                        overflow: TextOverflow.ellipsis,
-                        maxLines: 1,
-                      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Left Icon - Back arrow
+          IconButton(
+            icon: const Icon(Icons.arrow_back, size: 24),
+            onPressed: onBackPressed,
+            padding: const EdgeInsets.all(8),
+          ),
+
+          // Center - Username (only visible on scroll)
+          Expanded(
+            child: AnimatedOpacity(
+              opacity: showScrolledHeader ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: AnimatedSlide(
+                offset:
+                    showScrolledHeader ? Offset.zero : const Offset(0, -0.3),
+                duration: const Duration(milliseconds: 300),
+                curve: Curves.easeOutCubic,
+                child: Container(
+                  alignment: Alignment.center,
+                  child: Text(
+                    profileData?.username ?? '',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 18,
                     ),
+                    textAlign: TextAlign.center,
+                    overflow: TextOverflow.ellipsis,
+                    maxLines: 1,
                   ),
                 ),
               ),
-              
-              // Right Icon - Menu
-              IconButton(
-                icon: Image.asset(
-                  'assets/icons/menu_icon.png',
-                  width: 24,
-                  height: 24,
-                  color: Theme.of(context).iconTheme.color,
-                ),
-                onPressed: onMenuPressed,
-                padding: const EdgeInsets.all(8),
-              ),
-            ],
+            ),
           ),
+
+          // Right Icon - Menu
+          IconButton(
+            icon: Image.asset(
+              'assets/icons/menu_icon.png',
+              width: 24,
+              height: 24,
+              color: Theme.of(context).iconTheme.color,
+            ),
+            onPressed: onMenuPressed,
+            padding: const EdgeInsets.all(8),
+          ),
+        ],
+      ),
     );
   }
 
@@ -1736,7 +1883,7 @@ class _StickyHeaderDelegate extends SliverPersistentHeaderDelegate {
   @override
   bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
     return oldDelegate is! _StickyHeaderDelegate ||
-           oldDelegate.showScrolledHeader != showScrolledHeader ||
-           oldDelegate.profileData != profileData;
+        oldDelegate.showScrolledHeader != showScrolledHeader ||
+        oldDelegate.profileData != profileData;
   }
 }

@@ -37,6 +37,15 @@ class MainSettingsScreen extends StatefulWidget {
 
 class _MainSettingsScreenState extends State<MainSettingsScreen> {
   Future<void> _logout(BuildContext context) async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(),
+      ),
+    );
+
     // Capture navigator reference before async gap to prevent 'deactivated widget' errors
     final navigator = Navigator.of(context, rootNavigator: true);
 

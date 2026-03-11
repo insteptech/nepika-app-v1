@@ -8,6 +8,8 @@ import '../screens/community_search_screen.dart';
 import '../screens/post_detail_screen.dart';
 import '../screens/create_post_screen.dart';
 import '../screens/edit_profile_screen.dart';
+import '../screens/followers_list_screen.dart';
+import '../bloc/blocs/followers_bloc.dart';
 
 /// Optimized navigation utilities with proper BLoC availability checks
 class CommunityNavigation {
@@ -23,6 +25,7 @@ class CommunityNavigation {
       context.read<PostsBloc>();
       context.read<UserSearchBloc>();
       context.read<ProfileBloc>();
+      context.read<FollowersBloc>();
       return true;
     } catch (e) {
       debugPrint('CommunityNavigation: Required BLoCs not available: $e');
@@ -75,6 +78,7 @@ class CommunityNavigation {
               BlocProvider.value(value: context.read<PostsBloc>()),
               BlocProvider.value(value: context.read<UserSearchBloc>()),
               BlocProvider.value(value: context.read<ProfileBloc>()),
+              BlocProvider.value(value: context.read<FollowersBloc>()),
             ],
             child: UserProfileScreen(userId: userId),
           ),
@@ -112,6 +116,7 @@ class CommunityNavigation {
               BlocProvider.value(value: context.read<PostsBloc>()),
               BlocProvider.value(value: context.read<UserSearchBloc>()),
               BlocProvider.value(value: context.read<ProfileBloc>()),
+              BlocProvider.value(value: context.read<FollowersBloc>()),
             ],
             child: const CommunitySearchScreen(),
           ),
@@ -163,6 +168,7 @@ class CommunityNavigation {
               BlocProvider.value(value: context.read<PostsBloc>()),
               BlocProvider.value(value: context.read<UserSearchBloc>()),
               BlocProvider.value(value: context.read<ProfileBloc>()),
+              BlocProvider.value(value: context.read<FollowersBloc>()),
             ],
             child: PostDetailScreen(
               postId: postId,
@@ -210,6 +216,7 @@ class CommunityNavigation {
               BlocProvider.value(value: context.read<PostsBloc>()),
               BlocProvider.value(value: context.read<UserSearchBloc>()),
               BlocProvider.value(value: context.read<ProfileBloc>()),
+              BlocProvider.value(value: context.read<FollowersBloc>()),
             ],
             child: CreatePostScreen(
               token: token,
@@ -286,6 +293,57 @@ class CommunityNavigation {
         );
       }
       return null;
+    }
+  }
+
+  /// Navigate to followers or following list
+  static Future<void> navigateToFollowersList(
+    BuildContext context, {
+    required String userId,
+    required String username,
+    required bool isFollowers,
+  }) async {
+    if (!_areBlocsAvailable(context)) {
+      _showBlocError(context);
+      return;
+    }
+
+    try {
+      await Navigator.of(context, rootNavigator: true).push(
+        MaterialPageRoute(
+          builder: (newContext) => MultiBlocProvider(
+            providers: [
+              BlocProvider.value(value: context.read<PostsBloc>()),
+              BlocProvider.value(value: context.read<UserSearchBloc>()),
+              BlocProvider.value(value: context.read<ProfileBloc>()),
+              BlocProvider.value(value: context.read<FollowersBloc>()),
+            ],
+            child: FollowersListScreen(
+              userId: userId,
+              username: username,
+              isFollowers: isFollowers,
+            ),
+          ),
+          settings: RouteSettings(
+            name: '/community/followers-list',
+            arguments: {
+              'userId': userId,
+              'username': username,
+              'isFollowers': isFollowers,
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('CommunityNavigation: Error navigating to followers list: $e');
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Unable to open list: ${e.toString()}'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 

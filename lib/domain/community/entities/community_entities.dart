@@ -841,14 +841,23 @@ class UserListEntity {
 
   factory UserListEntity.fromJson(Map<String, dynamic> json) {
     final data = json['data'] ?? json;
+    
+    // Check various common keys for the user list to be robust against backend changes
+    List<dynamic>? usersList;
+    if (data is List) {
+      usersList = data;
+    } else if (data is Map) {
+      usersList = (data['users'] ?? data['followers'] ?? data['following'] ?? data['items']) as List<dynamic>?;
+    }
+
     return UserListEntity(
-      users: (data['users'] as List<dynamic>?)
+      users: usersList
           ?.map((user) => CommunityProfileEntity.fromJson(user as Map<String, dynamic>))
           .toList() ?? [],
-      total: data['total'] as int? ?? 0,
-      page: data['page'] as int? ?? 1,
-      pageSize: data['page_size'] as int? ?? 20,
-      hasMore: data['has_more'] as bool? ?? false,
+      total: (data is Map ? (data['total'] ?? data['count']) : null) as int? ?? (usersList?.length ?? 0),
+      page: (data is Map ? data['page'] : null) as int? ?? 1,
+      pageSize: (data is Map ? (data['page_size'] ?? data['limit']) : null) as int? ?? 20,
+      hasMore: (data is Map ? data['has_more'] : null) as bool? ?? false,
     );
   }
 }

@@ -95,6 +95,7 @@ abstract class CommunityRepository {
     required String userId,
     required int page,
     required int pageSize,
+    String? searchQuery,
   });
 
   Future<UserListEntity> getFollowing({
@@ -102,6 +103,7 @@ abstract class CommunityRepository {
     required String userId,
     required int page,
     required int pageSize,
+    String? searchQuery,
   });
 
   Future<FollowStatusEntity> checkFollowStatus({

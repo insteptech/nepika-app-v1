@@ -13,7 +13,18 @@ class NotificationInitial extends NotificationState {
 }
 
 class NotificationLoading extends NotificationState {
-  const NotificationLoading();
+  final List<NotificationEntity> notifications;
+  final int unreadCount;
+  final NotificationFilter currentFilter;
+
+  const NotificationLoading({
+    this.notifications = const [],
+    this.unreadCount = 0,
+    this.currentFilter = NotificationFilter.all,
+  });
+
+  @override
+  List<Object> get props => [notifications, unreadCount, currentFilter];
 }
 
 class NotificationLoaded extends NotificationState {

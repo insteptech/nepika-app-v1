@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:flutter/foundation.dart';
+import 'package:bloc_concurrency/bloc_concurrency.dart';
 import '../../../core/services/notification_service.dart';
 import '../../../domain/notifications/entities/notification_entities.dart';
 import '../../../domain/notifications/repositories/notification_repository.dart';
@@ -31,21 +32,22 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     debugPrint('🔔 NotificationBloc: INITIALIZED - Ready to receive events');
     
     // Set up event handlers
+    // Set up event handlers with concurrency to prevent queueing lag
     on<ConnectToNotificationStream>(_onConnectToNotificationStream);
     on<DisconnectFromNotificationStream>(_onDisconnectFromNotificationStream);
     on<NotificationReceived>(_onNotificationReceived);
     on<NotificationDeleted>(_onNotificationDeleted);
-    on<ChangeNotificationFilter>(_onChangeNotificationFilter);
+    on<ChangeNotificationFilter>(_onChangeNotificationFilter, transformer: concurrent());
     on<UnreadCountUpdated>(_onUnreadCountUpdated);
     on<FetchUnreadCount>(_onFetchUnreadCount);
     on<MarkAllNotificationsAsSeen>(_onMarkAllNotificationsAsSeen);
     on<ConnectionStatusChanged>(_onConnectionStatusChanged);
     on<ClearAllNotifications>(_onClearAllNotifications);
     
-    // API fetch event handlers
-    on<FetchAllNotifications>(_onFetchAllNotifications);
-    on<FetchNotificationsByType>(_onFetchNotificationsByType);
-    on<RefreshNotifications>(_onRefreshNotifications);
+    // API fetch event handlers - also concurrent so they don't block filter changes
+    on<FetchAllNotifications>(_onFetchAllNotifications, transformer: concurrent());
+    on<FetchNotificationsByType>(_onFetchNotificationsByType, transformer: concurrent());
+    on<RefreshNotifications>(_onRefreshNotifications, transformer: concurrent());
 
     // Set up stream subscriptions
     _setupStreamSubscriptions();
@@ -183,11 +185,12 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
   ) {
     _currentFilter = event.filter;
 
-    // Skip fetch if we just marked notifications as seen to avoid overwriting unreadCount=0
-    if (_justMarkedAsSeen) {
-      debugPrint('🔔 NotificationBloc: Skipping filter fetch - just marked as seen');
-      return;
-    }
+    // Always emit loading state immediately to update the UI tab indicator
+    emit(NotificationLoading(
+      notifications: _notifications,
+      unreadCount: _unreadCount,
+      currentFilter: _currentFilter,
+    ));
 
     // Fetch notifications based on new filter
     if (_currentFilter == NotificationFilter.all) {
@@ -338,15 +341,26 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     try {
-      emit(NotificationLoading());
+      emit(NotificationLoading(
+        notifications: _notifications,
+        unreadCount: _unreadCount,
+        currentFilter: _currentFilter,
+      ));
       
       final response = await _notificationRepository.getAllNotifications(
         limit: event.limit,
         offset: event.offset,
       );
       
+      // Safety check: only update if this is still the filter we want
+      if (_currentFilter != NotificationFilter.all) {
+        debugPrint('🔔 NotificationBloc: FetchAll completed but current filter is $_currentFilter. Ignoring output.');
+        return;
+      }
+
       _notifications = response.notifications;
-      _unreadCount = response.unreadCount;
+      // If we just marked as seen, keep unread count at 0 to avoid race condition fakers
+      _unreadCount = _justMarkedAsSeen ? 0 : response.unreadCount;
       
       emit(NotificationLoaded(
         notifications: _notifications,
@@ -379,7 +393,11 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
     Emitter<NotificationState> emit,
   ) async {
     try {
-      emit(NotificationLoading());
+      emit(NotificationLoading(
+        notifications: _notifications,
+        unreadCount: _unreadCount,
+        currentFilter: _currentFilter,
+      ));
       
       final response = await _notificationRepository.getNotificationsByType(
         type: event.type,
@@ -387,8 +405,15 @@ class NotificationBloc extends Bloc<NotificationEvent, NotificationState> {
         offset: event.offset,
       );
       
+      // Safety check: only update if this is still the filter we want
+      if (_currentFilter.apiType != event.type) {
+        debugPrint('🔔 NotificationBloc: FetchByType(${event.type}) completed but current filter is $_currentFilter. Ignoring output.');
+        return;
+      }
+
       _notifications = response.notifications;
-      _unreadCount = response.unreadCount;
+      // If we just marked as seen, keep unread count at 0 to avoid race condition fakers
+      _unreadCount = _justMarkedAsSeen ? 0 : response.unreadCount;
       
       emit(NotificationLoaded(
         notifications: _notifications,
