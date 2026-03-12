@@ -610,6 +610,7 @@ class CommunityProfileEntity {
   final Map<String, dynamic>? settings;
   final bool isSelf;
   final bool isFollowing;
+  final bool isSkincareProfessional;
   final String? followRequestStatus; // null, "pending", "accepted", "declined"
   final DateTime createdAt;
   final DateTime? updatedAt;
@@ -630,6 +631,7 @@ class CommunityProfileEntity {
     this.settings,
     this.isSelf = false,
     this.isFollowing = false,
+    this.isSkincareProfessional = false,
     this.followRequestStatus,
     required this.createdAt,
     this.updatedAt,
@@ -652,6 +654,7 @@ class CommunityProfileEntity {
       settings: json['settings'] as Map<String, dynamic>?,
       isSelf: json['is_self'] as bool? ?? false,
       isFollowing: json['is_following'] as bool? ?? false,
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       followRequestStatus: json['follow_request_status']?.toString(),
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'].toString())
@@ -677,6 +680,7 @@ class CommunityProfileEntity {
       'following_count': followingCount,
       'posts_count': postsCount,
       'settings': settings,
+      'is_skincare_professional': isSkincareProfessional,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -698,6 +702,7 @@ class CommunityProfileEntity {
     Map<String, dynamic>? settings,
     bool? isSelf,
     bool? isFollowing,
+    bool? isSkincareProfessional,
     String? followRequestStatus,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -718,6 +723,7 @@ class CommunityProfileEntity {
       settings: settings ?? this.settings,
       isSelf: isSelf ?? this.isSelf,
       isFollowing: isFollowing ?? this.isFollowing,
+      isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
       followRequestStatus: followRequestStatus ?? this.followRequestStatus,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -954,6 +960,13 @@ class UserSearchResultEntity {
   final bool isFollowing;
   final bool isBlocked;
   final bool isSelf;
+  final bool isSkincareProfessional;
+  final String? qualification;
+  final String? salonBusinessName;
+  final String? country;
+  final List<String>? skinConcernsTreated;
+  final String? email;
+  final String? tel;
 
   UserSearchResultEntity({
     required this.id,
@@ -965,6 +978,13 @@ class UserSearchResultEntity {
     this.isFollowing = false,
     this.isBlocked = false,
     this.isSelf = false,
+    this.isSkincareProfessional = false,
+    this.qualification,
+    this.salonBusinessName,
+    this.country,
+    this.skinConcernsTreated,
+    this.email,
+    this.tel,
   });
 
   factory UserSearchResultEntity.fromJson(Map<String, dynamic> json) {
@@ -978,6 +998,15 @@ class UserSearchResultEntity {
       isFollowing: json['is_following'] ?? false,
       isBlocked: json['is_blocked'] ?? false,
       isSelf: json['is_self'] ?? false,
+      isSkincareProfessional: json['is_skincare_professional'] ?? false,
+      qualification: json['qualification']?.toString(),
+      salonBusinessName: json['salon_business_name']?.toString(),
+      country: json['country']?.toString(),
+      skinConcernsTreated: json['skin_concerns_treated'] != null
+          ? List<String>.from(json['skin_concerns_treated'])
+          : null,
+      email: json['email']?.toString(),
+      tel: json['tel']?.toString(),
     );
   }
 
@@ -991,6 +1020,13 @@ class UserSearchResultEntity {
     bool? isFollowing,
     bool? isBlocked,
     bool? isSelf,
+    bool? isSkincareProfessional,
+    String? qualification,
+    String? salonBusinessName,
+    String? country,
+    List<String>? skinConcernsTreated,
+    String? email,
+    String? tel,
   }) {
     return UserSearchResultEntity(
       id: id ?? this.id,
@@ -1002,6 +1038,13 @@ class UserSearchResultEntity {
       isFollowing: isFollowing ?? this.isFollowing,
       isBlocked: isBlocked ?? this.isBlocked,
       isSelf: isSelf ?? this.isSelf,
+      isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
+      qualification: qualification ?? this.qualification,
+      salonBusinessName: salonBusinessName ?? this.salonBusinessName,
+      country: country ?? this.country,
+      skinConcernsTreated: skinConcernsTreated ?? this.skinConcernsTreated,
+      email: email ?? this.email,
+      tel: tel ?? this.tel,
     );
   }
 }

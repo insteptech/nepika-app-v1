@@ -17,12 +17,14 @@ class SearchUsersV2 extends UserSearchEvent {
   final String query;
   final int page;
   final int pageSize;
+  final bool isProfessional;
 
   SearchUsersV2({
     required this.token,
     required this.query,
     this.page = 1,
     this.pageSize = 10,
+    this.isProfessional = false,
   });
 }
 

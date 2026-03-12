@@ -172,11 +172,15 @@ class _UserSearchNameWithNavigation extends StatelessWidget {
           children: [
             Row(
               children: [
-                Text(
-                  '@${user.username}',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    fontSize: 16,
+                Flexible(
+                  child: Text(
+                    '@${user.username}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 16,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 if (user.isVerified) ...[
@@ -185,6 +189,33 @@ class _UserSearchNameWithNavigation extends StatelessWidget {
                     Icons.verified,
                     size: 16,
                     color: Colors.blue,
+                  ),
+                ],
+                if (user.isSkincareProfessional) ...[
+                  const SizedBox(width: 6),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3), width: 0.5),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.workspace_premium, size: 12, color: Theme.of(context).colorScheme.primary),
+                        const SizedBox(width: 2),
+                        Text(
+                          'PRO',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.primary,
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ],

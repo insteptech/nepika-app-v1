@@ -101,8 +101,11 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
   List<ConditionPrediction> _getDetectedConditions() {
     return widget.scanResponse.conditionAnalysis.sortedPredictions
         .where(
-          (p) => p.confidence > 5.0,
-        ) // Only include conditions with > 5% confidence
+          (p) {
+            final severityLabel = SeverityAnalyzer.getLabelFromScore(p.confidence);
+            return p.confidence > 5.0 && severityLabel != 'Clear';
+          },
+        ) // Only include conditions with > 5% confidence and not Clear
         .toList();
   }
 
@@ -405,17 +408,22 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
   // Slug aliases: ML model condition name → DB condition slug
   // Matches the backend SLUG_ALIASES in recommendation_engine.py
   static const Map<String, String> _slugAliases = {
-    'dark-spots': 'dark-circles',
     'englarged-pores': 'enlarged-pores',
   };
 
   bool _matchesCondition(RecommendationItem item, String conditionName) {
-    final itemCondition = item.condition.toLowerCase();
+    // Both condition from item and condition name from ML model need to be normalized
+    // to slugs (lowercase, spaces and underscores to hyphens) to match properly
+    final itemCondition = item.condition.toLowerCase().replaceAll(' ', '-').replaceAll('_', '-');
+    final normalizedConditionName = conditionName.toLowerCase().replaceAll(' ', '-').replaceAll('_', '-');
+    
     // "global" items apply to all conditions (cross-condition recommendations)
     if (itemCondition == 'global') return true;
-    final aliased = _slugAliases[conditionName];
-    return itemCondition == conditionName ||
-        itemCondition.contains(conditionName) ||
+    
+    final aliased = _slugAliases[normalizedConditionName];
+    
+    return itemCondition == normalizedConditionName ||
+        itemCondition.contains(normalizedConditionName) ||
         (aliased != null &&
             (itemCondition == aliased || itemCondition.contains(aliased)));
   }
@@ -428,6 +436,14 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     final recommendations = widget.scanResponse.recommendations;
     final conditionName = condition.name.toLowerCase();
 
+    // Let's debug what products are available before filtering
+    if (conditionName == 'dark-spots' || conditionName.contains('dark')) {
+      debugPrint('🔍 DEBUG ALL PRODUCTS:');
+      for (var item in recommendations.groups.products) {
+        debugPrint('   - Product: ${item.title} | Condition: ${item.condition} | Type: ${item.type}');
+      }
+    }
+
     // Filter recommendations for this condition
     final causes = recommendations.groups.causes
         .where((item) => _matchesCondition(item, conditionName))
@@ -435,6 +451,14 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     final products = recommendations.groups.products
         .where((item) => _matchesCondition(item, conditionName))
         .toList();
+    
+    if (conditionName == 'dark-spots' || conditionName.contains('dark')) {
+      debugPrint('🔍 MATCHED PRODUCTS: ${products.length}');
+      for (var item in products) {
+        debugPrint('   - Matched: ${item.title}');
+      }
+    }
+        
     final alternates = recommendations.groups.alternateSolutions
         .where((item) => _matchesCondition(item, conditionName))
         .toList();
@@ -453,6 +477,14 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
 
     // Get primary solution
     final primarySolution = products.isNotEmpty ? products.first : null;
+    
+    debugPrint('🐛 Condition: $conditionName');
+    debugPrint('🐛 All Recommendations count: ${widget.scanResponse.recommendations.flatItems.length}');
+    debugPrint('🐛 Matched Products count: ${products.length}');
+    debugPrint('🐛 Primary Solution found: ${primarySolution != null}');
+    if (products.isNotEmpty) {
+      debugPrint('🐛 First Product title: ${products.first.title}');
+    }
 
     final surfaceColor = isDark
         ? AppTheme.surfaceColorDark
@@ -596,15 +628,42 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
                       color: borderColor,
                     ),
                   ),
+
+                // Expandable Accordion Sections
+                if (dos.isNotEmpty)
+                  _buildAccordionSection(
+                    context,
+                    isDark,
+                    condition.name,
+                    'dos',
+                    "Do's",
+                    Icons.check_circle_outline,
+                    dos.length,
+                    () => _buildDosList(context, isDark, dos),
+                  ),
+                  if (dos.isNotEmpty)
+                    SizedBox(
+                      width: double.infinity,
+                      height: 1,
+                      child: Divider(
+                        color: borderColor,
+                      ),
+                    ),
+
+                if (donts.isNotEmpty)
+                  _buildAccordionSection(
+                    context,
+                    isDark,
+                    condition.name,
+                    'donts',
+                    "Don'ts",
+                    Icons.cancel_outlined,
+                    donts.length,
+                    () => _buildDontsList(context, isDark, donts),
+                  ),
               ],
             ),
           ),
-          // Expandable Accordion Sections
-          // Do's & Don'ts Section (always visible, not accordion)
-          if (dos.isNotEmpty || donts.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            _buildDosAndDontsSection(context, isDark, dos, donts),
-          ],
 
           // Medical Disclaimer
           const SizedBox(height: 24),
@@ -745,15 +804,15 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
             ],
           ),
           const SizedBox(height: 12),
-          // Text(
-          //   solution.title,
-          //   style: TextStyle(
-          //     fontFamily: 'HelveticaNowDisplay',
-          //     fontSize: 18,
-          //     fontWeight: FontWeight.w600,
-          //     color: Theme.of(context).colorScheme.tertiary,
-          //   ),
-          // ),
+          Text(
+            solution.title,
+            style: TextStyle(
+              fontFamily: 'HelveticaNowDisplay',
+              fontSize: 18,
+              fontWeight: FontWeight.w600,
+              color: isDark ? Colors.white : const Color(0xFF07223B),
+            ),
+          ),
           if (solution.subtitle != null) ...[
             const SizedBox(height: 4),
             Text(
@@ -1347,105 +1406,23 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     );
   }
 
-  Widget _buildDosAndDontsSection(
+  Widget _buildDosList(
     BuildContext context,
     bool isDark,
     List<RecommendationItem> dos,
+  ) {
+    return Column(
+      children: dos.map((item) => _buildDoItem(context, isDark, item)).toList(),
+    );
+  }
+
+  Widget _buildDontsList(
+    BuildContext context,
+    bool isDark,
     List<RecommendationItem> donts,
   ) {
-    final theme = Theme.of(context);
-    final textPrimary = isDark
-        ? AppTheme.textPrimaryDark
-        : AppTheme.textPrimaryLight;
-    final surfaceColor = isDark
-        ? AppTheme.surfaceColorDark
-        : AppTheme.surfaceColorLight;
-    final borderColor = isDark
-        ? const Color(0xFF2E2E2E)
-        : const Color(0xFFE5E5E5);
-
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: surfaceColor,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: borderColor),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            "Do's & Don'ts",
-            style: theme.textTheme.headlineMedium?.copyWith(
-              fontWeight: FontWeight.w600,
-              color: textPrimary,
-            ),
-          ),
-          const SizedBox(height: 16),
-
-          // Do's Section
-          if (dos.isNotEmpty) ...[
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.successColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.check,
-                    size: 14,
-                    color: AppTheme.successColor,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "Do's",
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.successColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...dos.map((item) => _buildDoItem(context, isDark, item)),
-          ],
-
-          if (dos.isNotEmpty && donts.isNotEmpty) const SizedBox(height: 20),
-
-          // Don'ts Section
-          if (donts.isNotEmpty) ...[
-            Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: AppTheme.errorColor.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    Icons.close,
-                    size: 14,
-                    color: AppTheme.errorColor,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  "Don'ts",
-                  style: theme.textTheme.bodyLarge?.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.errorColor,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            ...donts.map((item) => _buildDontItem(context, isDark, item)),
-          ],
-        ],
-      ),
+    return Column(
+      children: donts.map((item) => _buildDontItem(context, isDark, item)).toList(),
     );
   }
 
@@ -1461,43 +1438,66 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     final textSecondary = isDark
         ? AppTheme.textSecondaryDark
         : AppTheme.textSecondaryLight;
+    final primaryColor = AppTheme.successColor;
+    final itemBgColor = isDark
+        ? const Color(0xFF2E2E2E)
+        : const Color(0xFFF8F8F8);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.successColor.withOpacity(isDark ? 0.1 : 0.05),
+        color: itemBgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.successColor.withOpacity(0.2)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            item.title,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: textPrimary,
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              Icons.check_circle,
+              size: 16,
+              color: primaryColor,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            item.description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: textSecondary,
-              height: 1.4,
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  item.title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  item.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                if (item.frequency != null) ...[
+                  const SizedBox(height: 6),
+                  Text(
+                    item.frequency!,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.green.shade700,
+                    ),
+                  ),
+                ],
+              ],
             ),
           ),
-          if (item.frequency != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              item.frequency!,
-              style: theme.textTheme.bodyMedium?.copyWith(
-                fontWeight: FontWeight.w500,
-                color: Colors.green.shade700,
-              ),
-            ),
-          ],
         ],
       ),
     );
@@ -1515,51 +1515,74 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
     final textSecondary = isDark
         ? AppTheme.textSecondaryDark
         : AppTheme.textSecondaryLight;
+    final primaryColor = AppTheme.errorColor;
+    final itemBgColor = isDark
+        ? const Color(0xFF2E2E2E)
+        : const Color(0xFFF8F8F8);
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: AppTheme.errorColor.withOpacity(isDark ? 0.1 : 0.05),
+        color: itemBgColor,
         borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: AppTheme.errorColor.withOpacity(0.2)),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            item.title,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: textPrimary,
+          Container(
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+              color: primaryColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Icon(
+              Icons.cancel,
+              size: 16,
+              color: primaryColor,
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            item.description,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: textSecondary,
-              height: 1.4,
-            ),
-          ),
-          if (item.consequence != null) ...[
-            const SizedBox(height: 6),
-            Row(
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Icon(Icons.warning_amber, size: 14, color: AppTheme.errorColor),
-                const SizedBox(width: 4),
-                Expanded(
-                  child: Text(
-                    item.consequence!,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      color: Colors.red.shade700,
-                    ),
+                Text(
+                  item.title,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    fontWeight: FontWeight.w500,
+                    color: textPrimary,
                   ),
                 ),
+                const SizedBox(height: 4),
+                Text(
+                  item.description,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: textSecondary,
+                    height: 1.4,
+                  ),
+                ),
+                if (item.consequence != null) ...[
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.warning_amber, size: 14, color: primaryColor),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          item.consequence!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            fontWeight: FontWeight.w500,
+                            color: Colors.red.shade700,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
-          ],
+          ),
         ],
       ),
     );

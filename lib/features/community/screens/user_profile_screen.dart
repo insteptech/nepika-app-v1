@@ -307,24 +307,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
 
       // Also update profile data for immediate UI response
       if (_profileData != null) {
-        _profileData = CommunityProfileEntity(
-          id: _profileData!.id,
-          userId: _profileData!.userId,
-          tenantId: _profileData!.tenantId,
-          username: _profileData!.username,
-          bio: _profileData!.bio,
-          profileImageUrl: _profileData!.profileImageUrl,
-          bannerImageUrl: _profileData!.bannerImageUrl,
-          isPrivate: _profileData!.isPrivate,
-          followersCount: _profileData!.followersCount,
-          followingCount: _profileData!.followingCount,
-          postsCount: _profileData!.postsCount,
-          settings: _profileData!.settings,
-          isVerified: _profileData!.isVerified,
-          isFollowing: newFollowStatus, // Optimistically update
-          isSelf: _profileData!.isSelf,
-          createdAt: _profileData!.createdAt,
-          updatedAt: _profileData!.updatedAt,
+        _profileData = _profileData!.copyWith(
+          isFollowing: newFollowStatus,
         );
       }
     });
@@ -1084,24 +1068,8 @@ Join the conversation: $profileUrl''';
 
         // Also revert profile data
         if (_profileData != null) {
-          _profileData = CommunityProfileEntity(
-            id: _profileData!.id,
-            userId: _profileData!.userId,
-            tenantId: _profileData!.tenantId,
-            username: _profileData!.username,
-            bio: _profileData!.bio,
-            profileImageUrl: _profileData!.profileImageUrl,
-            bannerImageUrl: _profileData!.bannerImageUrl,
-            isPrivate: _profileData!.isPrivate,
-            followersCount: _profileData!.followersCount,
-            followingCount: _profileData!.followingCount,
-            postsCount: _profileData!.postsCount,
-            settings: _profileData!.settings,
-            isVerified: _profileData!.isVerified,
+          _profileData = _profileData!.copyWith(
             isFollowing: state.wasFollowing, // Revert to original status
-            isSelf: _profileData!.isSelf,
-            createdAt: _profileData!.createdAt,
-            updatedAt: _profileData!.updatedAt,
           );
         }
       });
@@ -1242,13 +1210,31 @@ Join the conversation: $profileUrl''';
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      _profileData!.username,
-                      style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                        fontWeight: FontWeight.w600,
-                      ),
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            _profileData!.username,
+                            style: Theme.of(context).textTheme.displayLarge!.copyWith(
+                              fontWeight: FontWeight.w600,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 8),
+                    if (_profileData!.isSkincareProfessional) ...[
+                      Text(
+                        'Skincare Professional',
+                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(
+                          color: Colors.grey.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                    ],
                     if (_profileData!.bio != null &&
                         _profileData!.bio!.isNotEmpty)
                       Text(

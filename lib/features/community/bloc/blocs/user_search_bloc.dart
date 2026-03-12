@@ -59,7 +59,8 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
     SearchUsersV2 event,
     Emitter<UserSearchState> emit,
   ) async {
-    if (event.query.isEmpty) {
+    // When not filtering by professional, empty query shows nothing
+    if (event.query.isEmpty && !event.isProfessional) {
       emit(UserSearchV2Empty());
       return;
     }
@@ -71,6 +72,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
         query: event.query,
         page: event.page,
         pageSize: event.pageSize,
+        isProfessional: event.isProfessional,
       );
       
       emit(UserSearchV2Loaded(

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/config/constants/app_constants.dart';
+import '../../../core/config/constants/routes.dart';
 import '../../../core/utils/shared_prefs_helper.dart';
 import '../bloc/blocs/user_search_bloc.dart';
 import '../bloc/events/user_search_event.dart';
@@ -66,7 +67,10 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> with Comm
         dispatchAfterListeners(() {
           debugPrint('CommunitySearchScreen: Dispatching search for query: "$query"');
           context.read<UserSearchBloc>().add(
-            SearchUsersV2(token: _token!, query: query),
+            SearchUsersV2(
+              token: _token!, 
+              query: query,
+            ),
           );
         });
       }
@@ -142,6 +146,73 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> with Comm
               ),
             ),
             
+            // Skincare Professional Quick Access Banner
+            SliverToBoxAdapter(
+              child: GestureDetector(
+                onTap: () {
+                  Navigator.of(context, rootNavigator: true).pushNamed(
+                    AppRoutes.skincareProfessional,
+                  );
+                },
+                child: Container(
+                  margin: const EdgeInsets.fromLTRB(20, 4, 20, 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      colors: [
+                        Theme.of(context).colorScheme.primary,
+                        Theme.of(context).colorScheme.primary.withValues(alpha: 0.75),
+                      ],
+                      begin: Alignment.centerLeft,
+                      end: Alignment.centerRight,
+                    ),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.2),
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                        child: const Icon(
+                          Icons.medical_services_outlined,
+                          size: 20,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              'Find Skincare Professionals',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w700,
+                                fontSize: 14,
+                              ),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              'Browse qualified skincare experts',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 12,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
             // Search Results with error handling
             SliverPadding(
               padding: const EdgeInsets.symmetric(horizontal: 20.0),

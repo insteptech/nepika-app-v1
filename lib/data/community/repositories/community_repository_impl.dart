@@ -1350,9 +1350,10 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String query,
     int page = 1,
     int pageSize = 10,
+    bool? isProfessional,
   }) async {
     try {
-      debugPrint('Repository: Searching users V2 with query: $query, page: $page');
+      debugPrint('Repository: Searching users V2 with query: $query, page: $page, isProfessional: $isProfessional');
       final response = await apiBase.request(
         path: ApiEndpoints.userSearch,
         method: 'GET',
@@ -1361,6 +1362,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
           'q': query,
           'page': page.toString(),
           'page_size': pageSize.toString(),
+          if (isProfessional != null) 'is_professional': isProfessional.toString(),
         },
       );
       
