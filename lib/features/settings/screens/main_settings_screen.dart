@@ -11,6 +11,7 @@ import 'package:nepika/features/settings/screens/onboarding_data_screen.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
 
 import '../components/logout_dialog.dart';
 // import '../components/delete_account_dialog.dart';
@@ -36,6 +37,23 @@ class MainSettingsScreen extends StatefulWidget {
 }
 
 class _MainSettingsScreenState extends State<MainSettingsScreen> {
+  bool _isProfessional = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserRole();
+  }
+
+  Future<void> _checkUserRole() async {
+    try {
+      setState(() {
+        _isProfessional = SharedPrefsHelper().isSkincareProfessionalSync();
+      });
+    } catch (e) {
+      debugPrint('Error loading user role in settings: $e');
+    }
+  }
   Future<void> _logout(BuildContext context) async {
     // Show loading indicator
     showDialog(
@@ -354,7 +372,7 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
             // Notifications & Reminders Section
             SliverToBoxAdapter(
               child: SettingsSection(
-                title: 'NOTIFICATIONS AND REMINDERS',
+                title: _isProfessional ? 'NOTIFICATIONS' : 'NOTIFICATIONS AND REMINDERS',
                 options: [
                   SettingsOptionData.option(
                     'Notifications & Settings',
@@ -366,51 +384,54 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                       );
                     },
                   ),
-                  SettingsOptionData.option(
-                    'Reminders',
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                        rootNavigator: true,
-                      ).pushNamed(AppRoutes.dashboardScheduledReminders);
-                    },
-                  ),
+                  if (!_isProfessional)
+                    SettingsOptionData.option(
+                      'Reminders',
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pushNamed(AppRoutes.dashboardScheduledReminders);
+                      },
+                    ),
                 ],
               ),
             ),
 
             // Subscription Section
-            SliverToBoxAdapter(
-              child: SettingsSection(
-                title: 'SUBSCRIPTION',
-                options: [
-                  SettingsOptionData.option(
-                    'Subscription & Payment',
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                        rootNavigator: true,
-                      ).pushNamed(AppRoutes.subscription);
-                    },
-                  ),
-                ],
+            if (!_isProfessional)
+              SliverToBoxAdapter(
+                child: SettingsSection(
+                  title: 'SUBSCRIPTION',
+                  options: [
+                    SettingsOptionData.option(
+                      'Subscription & Payment',
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pushNamed(AppRoutes.subscription);
+                      },
+                    ),
+                  ],
+                ),
               ),
-            ),
 
             // Info Section
             SliverToBoxAdapter(
               child: SettingsSection(
                 title: 'INFO',
                 options: [
-                  SettingsOptionData.option(
-                    'Face Scan Info',
-                    onTap: () {
-                      Navigator.of(
-                        context,
-                        rootNavigator: true,
-                      ).pushNamed(AppRoutes.faceScanInfo);
-                    },
-                  ),
+                  if (!_isProfessional)
+                    SettingsOptionData.option(
+                      'Face Scan Info',
+                      onTap: () {
+                        Navigator.of(
+                          context,
+                          rootNavigator: true,
+                        ).pushNamed(AppRoutes.faceScanInfo);
+                      },
+                    ),
                   SettingsOptionData.option(
                     'Help and Support',
                     onTap: () {

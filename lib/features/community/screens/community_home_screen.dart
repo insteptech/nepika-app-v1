@@ -217,9 +217,6 @@ class _CommunityHomeScreenState extends State<CommunityHomeScreen> {
         debugPrint('🚨 Navigating to: ${CommunityRoutes.communitySettings}');
         Navigator.of(context, rootNavigator: true).pushNamed(CommunityRoutes.communitySettings);
         break;
-      case 2: // Dashboard
-        Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.dashboardHome);
-        break;
     }
   }
 
@@ -240,10 +237,6 @@ Navigator.of(context, rootNavigator: true).pushNamed(
       const DrawerItem(
         title: 'Community Settings',
         icon: Icons.settings_outlined,
-      ),
-      const DrawerItem(
-        title: 'Dashboard',
-        icon: Icons.dashboard_outlined,
       ),
     ];
   }

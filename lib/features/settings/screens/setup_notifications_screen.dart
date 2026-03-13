@@ -4,6 +4,9 @@ import 'package:nepika/core/services/local_notification_service.dart';
 import 'package:nepika/core/di/injection_container.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/reminders/bloc/reminder_event.dart';
+import 'dart:convert';
+import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:nepika/domain/auth/usecases/get_notification_settings.dart';
 import 'package:nepika/domain/auth/usecases/update_notification_settings.dart';
@@ -27,6 +30,7 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
   bool _communityEnabled = false;
   bool _marketingEnabled = true;
   bool _isLoading = true;
+  bool _isProfessional = false;
 
   @override
   void initState() {
@@ -37,6 +41,11 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
   Future<void> _loadSettings() async {
     final helper = SharedPrefsHelper();
     
+    // 0. Check User Role
+    try {
+      _isProfessional = SharedPrefsHelper().isSkincareProfessionalSync();
+    } catch (_) {}
+
     // 1. Optimistic load from local prefs
     final reminder = await helper.getBool('Reminder notification');
     final community = await helper.getBool('Community notification');
@@ -89,7 +98,7 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
     if (reminder != null) {
       await SharedPrefsHelper().setBool('Reminder notification', reminder);
       if (reminder) {
-        sl<ReminderBloc>().add(const GetAllRemindersEvent(forceRefresh: true));
+        sl<ReminderBloc>().add(GetAllRemindersEvent(forceRefresh: true));
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Reminders scheduled')),
@@ -134,11 +143,12 @@ class _SetupNotificationsScreenState extends State<SetupNotificationsScreen> {
     if (_isLoading) return [];
 
     return [
-      SettingsOptionData.toggle(
-        'Reminder notification',
-        toggleValue: _reminderEnabled,
-        onToggle: (value) => _updateSettings(reminder: value),
-      ),
+      if (!_isProfessional)
+        SettingsOptionData.toggle(
+          'Reminder notification',
+          toggleValue: _reminderEnabled,
+          onToggle: (value) => _updateSettings(reminder: value),
+        ),
       SettingsOptionData.toggle(
         'Community notification',
         toggleValue: _communityEnabled,

@@ -7,7 +7,9 @@ import 'bloc/blocs/community_bloc_manager.dart';
 import 'bloc/blocs/profile_bloc.dart';
 import 'screens/community_home_screen.dart';
 import 'screens/community_search_screen.dart';
+import 'screens/community_search_screen.dart';
 import 'screens/user_profile_screen.dart';
+import 'screens/professional_account_profile_screen.dart';
 import 'screens/edit_profile_screen.dart';
 import 'screens/community_settings_screen.dart';
 import 'screens/followers_list_screen.dart';
@@ -112,6 +114,13 @@ class CommunityFactory {
   static Widget createUserProfileScreen() {
     return const CommunityProviders(
       child: UserProfileScreen(),
+    );
+  }
+
+  /// Create professional account profile screen with proper BLoC providers
+  static Widget createProfessionalAccountProfileScreen() {
+    return const CommunityProviders(
+      child: ProfessionalAccountProfileScreen(),
     );
   }
 

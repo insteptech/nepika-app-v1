@@ -2,19 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/utils/trial_gate_helper.dart';
 
-import '../bloc/dashboard_bloc.dart';
-
-const double kNavBarIconSize = 22.0;
-const double kScanIconSize = 24.0;
 const double kNavBarHeight = 80.0; // Configurable navbar height
-const double kScanButtonSize = 48.0; // Configurable scan button size
-const double kIconTextSpacing = 3.0; // Configurable spacing
 
 class DashboardNavBar extends StatefulWidget {
   final int selectedIndex;
   final Function(int index, String route) onNavBarTap;
   final double? height; // Optional height parameter
   final double? scanButtonSize; // Optional scan button size
+  final bool isProfessional; // Added to distinguish user roles
 
   const DashboardNavBar({
     super.key,
@@ -22,6 +17,7 @@ class DashboardNavBar extends StatefulWidget {
     required this.onNavBarTap,
     this.height,
     this.scanButtonSize,
+    this.isProfessional = false,
   });
 
   @override
@@ -29,30 +25,29 @@ class DashboardNavBar extends StatefulWidget {
 }
 
 class _DashboardNavBarState extends State<DashboardNavBar> {
-  static const _icons = [
+  // --- Regular User Configuration (5 Tabs) ---
+  static const _regularIcons = [
     'assets/icons/home_icon.png',
     'assets/icons/2_people.png',
     'assets/icons/scan_icon.png',
     'assets/icons/history_icon.png',
     'assets/icons/person_icon.png',
   ];
-  static const _filledIcons = [
+  static const _regularFilledIcons = [
     'assets/icons/filled/home_icon.png',
     'assets/icons/filled/2_people.png',
     'assets/icons/scan_icon.png',
     'assets/icons/filled/history_icon.png',
     'assets/icons/filled/person_icon.png',
   ];
-
-  static const _navRoutes = [
+  static const _regularRoutes = [
     AppRoutes.dashboardHome,
     AppRoutes.communityHome,
     AppRoutes.cameraScanGuidence,
     AppRoutes.dashboardHistory,
     AppRoutes.dashboardSettings,
   ];
-
-  static const _navRoutesName = [
+  static const _regularNames = [
     'Home',
     'Community',
     'Scan',
@@ -60,27 +55,46 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     'Settings',
   ];
 
+  // --- Professional User Configuration (4 Tabs) ---
+  // Using a mix of assets and Material icons where assets are missing
+  static const _professionalRoutes = [
+    AppRoutes.communityHome,
+    AppRoutes.dashboardClients,
+    AppRoutes.dashboardProfile,
+    AppRoutes.dashboardSettings,
+  ];
+  static const _professionalNames = [
+    'Community',
+    'Clients',
+    'Profile',
+    'Settings',
+  ];
+
+  // Gets the current configuration based on role
+  List<String> get _currentRoutes => widget.isProfessional ? _professionalRoutes : _regularRoutes;
+  int get tabCount => widget.isProfessional ? 4 : 5;
+
   void _onTabTapped(int index) async {
-    if (widget.selectedIndex == index && _navRoutes[index] != AppRoutes.cameraScanGuidence) {
+    final routes = _currentRoutes;
+    if (widget.selectedIndex == index && routes[index] != AppRoutes.cameraScanGuidence) {
       return;
     }
 
-    if (_navRoutes[index] == AppRoutes.cameraScanGuidence) {
-      // Check trial limits before scanning
+    if (routes[index] == AppRoutes.cameraScanGuidence) {
       if (await TrialGateHelper.shouldBlockScan(context)) {
         debugPrint('🚨 Trial limit reached. Showing Trial Expired Sheet.');
         TrialGateHelper.showTrialExpiredSheet(context);
-        return; // Block navigation
+        return;
       }
     }
 
-    debugPrint('🔍 NAVBAR: Tapped index $index, route: ${_navRoutes[index]}');
-    widget.onNavBarTap(index, _navRoutes[index]);
+    debugPrint('🔍 NAVBAR: Tapped index $index, route: ${routes[index]}');
+    widget.onNavBarTap(index, routes[index]);
   }
 
   @override
   Widget build(BuildContext context) {
-    final navBarHeight = (widget.height ?? kNavBarHeight).clamp(60.0, 120.0); // Ensure reasonable bounds
+    final navBarHeight = (widget.height ?? kNavBarHeight).clamp(60.0, 120.0);
     
     return Container(
       height: navBarHeight,
@@ -88,30 +102,37 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
       child: SafeArea(
         top: false,
         child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch, // Ensure proper height distribution
-          children: List.generate(_icons.length, (index) {
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: List.generate(tabCount, (index) {
             final isActive = index == widget.selectedIndex;
-            final iconPath = isActive ? _filledIcons[index] : _icons[index];
             
             return Expanded(
               child: Material(
                 color: Colors.transparent,
                 child: InkWell(
                   onTap: () => _onTabTapped(index),
-                  // Custom splash color that covers full height and width/5 with no radius
                   splashColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
                   highlightColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.zero, // No radius as requested
+                  borderRadius: BorderRadius.zero,
                   child: Container(
                     height: navBarHeight,
                     width: double.infinity,
                     constraints: BoxConstraints(
-                      minHeight: 60.0, // Minimum height for nav items
+                      minHeight: 60.0,
                       maxHeight: navBarHeight,
                     ),
-                    child: index == 2 
-                      ? _buildScanItem(context, iconPath, navBarHeight)
-                      : _buildRegularItem(context, iconPath, isActive, index, navBarHeight),
+                    child: Builder(
+                      builder: (context) {
+                        if (!widget.isProfessional && index == 2) {
+                          // Regular user Face Scan item
+                          return _buildScanItem(context, _regularIcons[index], navBarHeight);
+                        } else {
+                          // Standard item
+                          final name = widget.isProfessional ? _professionalNames[index] : _regularNames[index];
+                          return _buildRegularItem(context, isActive, index, navBarHeight, name);
+                        }
+                      }
+                    ),
                   ),
                 ),
               ),
@@ -123,7 +144,6 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
   }
 
   Widget _buildScanItem(BuildContext context, String iconPath, double navBarHeight) {
-    // Ensure scan button doesn't exceed available space
     final maxScanSize = navBarHeight * 0.8;
     final minScanSize = 40.0;
     final scanSize = maxScanSize.clamp(minScanSize, 56.0);
@@ -145,9 +165,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
         child: Center(
           child: LayoutBuilder(
             builder: (context, constraints) {
-              // Responsive icon size based on container size
-              final iconSize = (scanSize * 0.45).clamp(16.0, 28.0); // Responsive with bounds
-              
+              final iconSize = (scanSize * 0.45).clamp(16.0, 28.0);
               return Image.asset(
                 iconPath,
                 width: iconSize,
@@ -162,50 +180,70 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     );
   }
 
-  Widget _buildRegularItem(BuildContext context, String iconPath, bool isActive, int index, double navBarHeight) {
-    // Ensure minimum sizes and proper scaling
+  // A helper dynamic icon resolver
+  Widget _buildIcon(BuildContext context, bool isActive, int index, double iconSize) {
+    final color = isActive
+        ? Theme.of(context).colorScheme.primary
+        : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+
+    if (widget.isProfessional) {
+      String iconPath;
+      if (index == 0) {
+        iconPath = isActive ? 'assets/icons/filled/2_people.png' : 'assets/icons/2_people.png';
+      } else if (index == 1) {
+        iconPath = isActive ? 'assets/icons/filled/box_icon.png' : 'assets/icons/box_icon.png';
+      } else if (index == 2) {
+        iconPath = isActive ? 'assets/icons/filled/person_icon.png' : 'assets/icons/person_icon.png';
+      } else {
+        iconPath = 'assets/icons/horizontal_lines_with_dots.png'; // settings menu equivalent
+      }
+      return Image.asset(
+        iconPath,
+        width: iconSize,
+        height: iconSize,
+        color: color,
+        fit: BoxFit.contain,
+      );
+    } else {
+      final iconPath = isActive ? _regularFilledIcons[index] : _regularIcons[index];
+      return Image.asset(
+        iconPath,
+        width: iconSize,
+        height: iconSize,
+        color: color,
+        fit: BoxFit.contain,
+      );
+    }
+  }
+
+  Widget _buildRegularItem(BuildContext context, bool isActive, int index, double navBarHeight, String name) {
     final minIconSize = 16.0;
     final minTextSize = 8.0;
     final maxIconSize = 24.0;
     final maxTextSize = 12.0;
     
-    // Calculate sizes with bounds checking
     final iconSize = (navBarHeight * 0.25).clamp(minIconSize, maxIconSize);
     final textSize = (navBarHeight * 0.14).clamp(minTextSize, maxTextSize);
     
-    // Calculate available space for content
     final spacing = 2.0;
-    final totalContentHeight = iconSize + spacing + (textSize * 1.2); // Include line height
+    final totalContentHeight = iconSize + spacing + (textSize * 1.2);
     
-    // Use LayoutBuilder to get actual constraints
     return LayoutBuilder(
       builder: (context, constraints) {
-        // If content won't fit, use Flexible layout
         if (constraints.maxHeight < totalContentHeight) {
-          return _buildCompactItem(context, iconPath, isActive, index, constraints);
+          return _buildCompactItem(context, isActive, index, constraints, name);
         }
         
-        // Normal layout when space is available
         return Column(
           mainAxisSize: MainAxisSize.min,
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const SizedBox(height: 10), // 10px space at the top
-            Flexible(
-              child: Image.asset(
-                iconPath,
-                width: iconSize,
-                height: iconSize,
-                color: isActive
-                    ? Theme.of(context).colorScheme.primary
-                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-                fit: BoxFit.contain,
-              ),
-            ),
+            const SizedBox(height: 10),
+            Flexible(child: _buildIcon(context, isActive, index, iconSize)),
             SizedBox(height: spacing),
             Flexible(
               child: Text(
-                _navRoutesName[index],
+                name,
                 style: TextStyle(
                   fontSize: textSize,
                   fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
@@ -225,8 +263,7 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     );
   }
   
-  Widget _buildCompactItem(BuildContext context, String iconPath, bool isActive, int index, BoxConstraints constraints) {
-    // Compact layout for very small spaces
+  Widget _buildCompactItem(BuildContext context, bool isActive, int index, BoxConstraints constraints, String name) {
     final availableHeight = constraints.maxHeight;
     final compactIconSize = (availableHeight * 0.6).clamp(12.0, 20.0);
     final compactTextSize = (availableHeight * 0.25).clamp(6.0, 10.0);
@@ -237,19 +274,11 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
         mainAxisSize: MainAxisSize.min,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          const SizedBox(height: 8), // Reduced spacing for compact layout
-          Image.asset(
-            iconPath,
-            width: compactIconSize,
-            height: compactIconSize,
-            color: isActive
-                ? Theme.of(context).colorScheme.primary
-                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-            fit: BoxFit.contain,
-          ),
-          if (availableHeight > compactIconSize + 16) // Adjusted for top spacing
+          const SizedBox(height: 8),
+          _buildIcon(context, isActive, index, compactIconSize),
+          if (availableHeight > compactIconSize + 16)
             Text(
-              _navRoutesName[index],
+              name,
               style: TextStyle(
                 fontSize: compactTextSize,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
@@ -267,3 +296,4 @@ class _DashboardNavBarState extends State<DashboardNavBar> {
     );
   }
 }
+

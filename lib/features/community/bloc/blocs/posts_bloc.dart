@@ -216,12 +216,16 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         currentPage: _currentPage,
       ));
       
-      completer.complete();
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
     } catch (e, stackTrace) {
       _isLoading = false;
       debugPrint('PostsBloc: Error in _onFetchCommunityPosts: $e');
       emit(PostsError(e.toString()));
-      completer.completeError(e);
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
     } finally {
       _activeRequests.remove(requestKey);
     }
@@ -358,11 +362,15 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
       final postDetail = _convertToPostDetail(post);
       emit(PostDetailLoaded(post: postDetail));
       
-      completer.complete();
+      if (!completer.isCompleted) {
+        completer.complete();
+      }
     } catch (e, stackTrace) {
       debugPrint('PostsBloc: Error in _onFetchSinglePost: $e');
       emit(PostDetailError(e.toString()));
-      completer.completeError(e);
+      if (!completer.isCompleted) {
+        completer.completeError(e);
+      }
     } finally {
       _activeRequests.remove(requestKey);
     }

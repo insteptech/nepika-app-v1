@@ -101,6 +101,9 @@ class SplashBloc extends Bloc<SplashEvent, SplashState> {
           final bool onboardingCompleted = userData['onboarding_completed'] ?? false;
           final bool isSkincareProfessional = userData['is_skincare_professional'] ?? false;
 
+          // Save the professional status to SharedPreferences for sync access later
+          await SharedPrefsHelper().setSkincareProfessional(isSkincareProfessional);
+
           logJson('🔍 SPLASH DEBUG: User data received');
           logJson('  - Active Step: $activeStep');
           logJson('  - Onboarding Completed: $onboardingCompleted');

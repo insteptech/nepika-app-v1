@@ -197,9 +197,9 @@ class _FollowersListViewState extends State<FollowersListView> {
                 }
                 return ListView.separated(
                   controller: _scrollController,
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  padding: EdgeInsets.zero,
                   itemCount: users.length + (state.hasMore ? 1 : 0),
-                  separatorBuilder: (context, index) => const Divider(height: 1),
+                  separatorBuilder: (context, index) => const SizedBox.shrink(),
                   itemBuilder: (context, index) {
                     if (index < users.length) {
                       return _FollowerUserCard(
@@ -238,8 +238,10 @@ class _FollowerUserCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(vertical: 8),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: GestureDetector(
         onTap: () => _navigateToProfile(context),
         child: CircleAvatar(
@@ -247,12 +249,12 @@ class _FollowerUserCard extends StatelessWidget {
           backgroundImage: user.profileImageUrl != null && user.profileImageUrl!.isNotEmpty
               ? NetworkImage(user.profileImageUrl!)
               : null,
-          backgroundColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+          backgroundColor: colorScheme.primary.withValues(alpha: 0.1),
           child: (user.profileImageUrl == null || user.profileImageUrl!.isEmpty)
               ? Text(
                   user.username.isNotEmpty ? user.username[0].toUpperCase() : '?',
                   style: TextStyle(
-                    color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
+                    color: colorScheme.primary.withValues(alpha: 0.7),
                     fontWeight: FontWeight.bold,
                   ),
                 )
@@ -313,32 +315,67 @@ class _FollowerUserCard extends StatelessWidget {
               style: TextStyle(color: Colors.grey[600], fontSize: 13),
             )
           : null,
-      trailing: (!user.isSelf && isFollowersList)
+      trailing: (!user.isSelf)
           ? BlocBuilder<FollowersBloc, FollowersState>(
               builder: (context, state) {
-                return GestureDetector(
-                  onTap: () {
-                    context.read<FollowersBloc>().add(ToggleFollowUserInList(
+                final onToggle = () {
+                  context.read<FollowersBloc>().add(
+                    ToggleFollowUserInList(
                       token: token,
                       userId: user.userId,
                       currentFollowStatus: user.isFollowing,
-                    ));
-                  },
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-                    decoration: BoxDecoration(
-                      color: user.isFollowing ? Colors.grey[200] : Colors.black,
-                      borderRadius: BorderRadius.circular(16),
                     ),
-                    child: Text(
-                      user.isFollowing ? 'Following' : 'Follow',
-                      style: TextStyle(
-                        color: user.isFollowing ? Colors.black : Colors.white,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
+                  );
+                };
+
+                return SizedBox(
+                  height: 32,
+                  child: user.isFollowing
+                      ? OutlinedButton(
+                          onPressed: onToggle,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            side: BorderSide(
+                              color: colorScheme.outline.withValues(alpha: 0.4),
+                            ),
+                            minimumSize: const Size(96, 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            foregroundColor: Colors.black87,
+                            textStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: const Text(
+                            'Following',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        )
+                      : ElevatedButton(
+                          onPressed: onToggle,
+                          style: ElevatedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            backgroundColor: colorScheme.primary,
+                            foregroundColor: Colors.white,
+                            elevation: 0,
+                            minimumSize: const Size(88, 32),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            textStyle: const TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          child: const Text(
+                            'Follow',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
                 );
               },
             )

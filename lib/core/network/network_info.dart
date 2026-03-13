@@ -26,9 +26,10 @@ class NetworkInfoImpl implements NetworkInfo {
     return _connectivity.onConnectivityChanged.map(_isConnected);
   }
 
-  bool _isConnected(ConnectivityResult result) {
-    return result == ConnectivityResult.mobile ||
-           result == ConnectivityResult.wifi ||
-           result == ConnectivityResult.ethernet;
+  bool _isConnected(List<ConnectivityResult> results) {
+    return results.contains(ConnectivityResult.mobile) ||
+        results.contains(ConnectivityResult.wifi) ||
+        results.contains(ConnectivityResult.ethernet) ||
+        results.contains(ConnectivityResult.vpn);
   }
 }

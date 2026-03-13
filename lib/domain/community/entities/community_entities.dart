@@ -599,6 +599,7 @@ class CommunityProfileEntity {
   final String userId;
   final String? tenantId;
   final String username;
+  final String? fullName;
   final String? bio;
   final String? profileImageUrl;
   final String? bannerImageUrl;
@@ -612,6 +613,19 @@ class CommunityProfileEntity {
   final bool isFollowing;
   final bool isSkincareProfessional;
   final String? followRequestStatus; // null, "pending", "accepted", "declined"
+  
+  // Professional Fields
+  final String? qualification;
+  final String? salonBusinessName;
+  final String? country;
+  final String? cityTown;
+  final String? professionalRole;
+  final String? businessType;
+  final String? yearsOfExperience;
+  final String? email;
+  final String? tel;
+  final List<String>? skinConcernsTreated;
+
   final DateTime createdAt;
   final DateTime? updatedAt;
 
@@ -620,6 +634,7 @@ class CommunityProfileEntity {
     required this.userId,
     this.tenantId,
     required this.username,
+    this.fullName,
     this.bio,
     this.profileImageUrl,
     this.bannerImageUrl,
@@ -633,6 +648,16 @@ class CommunityProfileEntity {
     this.isFollowing = false,
     this.isSkincareProfessional = false,
     this.followRequestStatus,
+    this.qualification,
+    this.salonBusinessName,
+    this.country,
+    this.cityTown,
+    this.professionalRole,
+    this.businessType,
+    this.yearsOfExperience,
+    this.email,
+    this.tel,
+    this.skinConcernsTreated,
     required this.createdAt,
     this.updatedAt,
   });
@@ -643,6 +668,7 @@ class CommunityProfileEntity {
       userId: json['user_id']?.toString() ?? '',
       tenantId: json['tenant_id']?.toString(),
       username: json['username']?.toString() ?? '',
+      fullName: json['full_name']?.toString(),
       bio: json['bio']?.toString(),
       profileImageUrl: json['profile_image_url']?.toString(),
       bannerImageUrl: json['banner_image_url']?.toString(),
@@ -656,6 +682,18 @@ class CommunityProfileEntity {
       isFollowing: json['is_following'] as bool? ?? false,
       isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       followRequestStatus: json['follow_request_status']?.toString(),
+      qualification: json['qualification']?.toString(),
+      salonBusinessName: json['salon_business_name']?.toString(),
+      country: json['country']?.toString(),
+      cityTown: json['city_town']?.toString(),
+      professionalRole: json['professional_role']?.toString(),
+      businessType: json['business_type']?.toString(),
+      yearsOfExperience: json['years_of_experience']?.toString(),
+      email: json['email']?.toString(),
+      tel: json['tel']?.toString(),
+      skinConcernsTreated: json['skin_concerns_treated'] != null 
+          ? List<String>.from(json['skin_concerns_treated'])
+          : null,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'].toString())
           : DateTime.now(),
@@ -671,6 +709,7 @@ class CommunityProfileEntity {
       'user_id': userId,
       'tenant_id': tenantId,
       'username': username,
+      'full_name': fullName,
       'bio': bio,
       'profile_image_url': profileImageUrl,
       'banner_image_url': bannerImageUrl,
@@ -680,7 +719,20 @@ class CommunityProfileEntity {
       'following_count': followingCount,
       'posts_count': postsCount,
       'settings': settings,
+      'is_self': isSelf,
+      'is_following': isFollowing,
       'is_skincare_professional': isSkincareProfessional,
+      'follow_request_status': followRequestStatus,
+      'qualification': qualification,
+      'salon_business_name': salonBusinessName,
+      'country': country,
+      'city_town': cityTown,
+      'professional_role': professionalRole,
+      'business_type': businessType,
+      'years_of_experience': yearsOfExperience,
+      'email': email,
+      'tel': tel,
+      'skin_concerns_treated': skinConcernsTreated,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -691,6 +743,7 @@ class CommunityProfileEntity {
     String? userId,
     String? tenantId,
     String? username,
+    String? fullName,
     String? bio,
     String? profileImageUrl,
     String? bannerImageUrl,
@@ -704,6 +757,16 @@ class CommunityProfileEntity {
     bool? isFollowing,
     bool? isSkincareProfessional,
     String? followRequestStatus,
+    String? qualification,
+    String? salonBusinessName,
+    String? country,
+    String? cityTown,
+    String? professionalRole,
+    String? businessType,
+    String? yearsOfExperience,
+    String? email,
+    String? tel,
+    List<String>? skinConcernsTreated,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -712,6 +775,7 @@ class CommunityProfileEntity {
       userId: userId ?? this.userId,
       tenantId: tenantId ?? this.tenantId,
       username: username ?? this.username,
+      fullName: fullName ?? this.fullName,
       bio: bio ?? this.bio,
       profileImageUrl: profileImageUrl ?? this.profileImageUrl,
       bannerImageUrl: bannerImageUrl ?? this.bannerImageUrl,
@@ -725,11 +789,23 @@ class CommunityProfileEntity {
       isFollowing: isFollowing ?? this.isFollowing,
       isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
       followRequestStatus: followRequestStatus ?? this.followRequestStatus,
+      qualification: qualification ?? this.qualification,
+      salonBusinessName: salonBusinessName ?? this.salonBusinessName,
+      country: country ?? this.country,
+      cityTown: cityTown ?? this.cityTown,
+      professionalRole: professionalRole ?? this.professionalRole,
+      businessType: businessType ?? this.businessType,
+      yearsOfExperience: yearsOfExperience ?? this.yearsOfExperience,
+      email: email ?? this.email,
+      tel: tel ?? this.tel,
+      skinConcernsTreated: skinConcernsTreated ?? this.skinConcernsTreated,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 }
+
+
 
 class CreateProfileEntity {
   final String username;

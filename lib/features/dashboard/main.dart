@@ -25,16 +25,20 @@ import 'screens/set_reminder_screen.dart';
 import 'components/scrollable_page_wrapper.dart';
 import 'widgets/dashboard_navbar.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/presentation/bloc/app/app_bloc.dart';
 
 // Export BLoCs for dashboard feature independence
+import 'package:nepika/features/auth/bloc/auth_bloc.dart';
+import 'package:nepika/features/auth/bloc/auth_state.dart';
+
 export 'bloc/dashboard_bloc.dart';
 export 'bloc/dashboard_event.dart';
 export 'bloc/dashboard_state.dart';
-export 'bloc/auth/auth_bloc.dart';
-export 'bloc/auth/auth_event.dart';
-export 'bloc/auth/auth_state.dart';
+export 'package:nepika/features/auth/bloc/auth_bloc.dart';
+export 'package:nepika/features/auth/bloc/auth_event.dart';
+export 'package:nepika/features/auth/bloc/auth_state.dart';
 
 
 class Dashboard extends StatefulWidget {
@@ -123,7 +127,26 @@ class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
     AppRoutes.dashboardHistory: 3, // Associate with history tab
   };
 
-  int get _selectedIndex => _routeToIndex[_currentRoute] ?? 0;
+  bool get _isProfessional {
+    return SharedPrefsHelper().isSkincareProfessionalSync();
+  }
+
+  int get _selectedIndex {
+    if (_isProfessional) {
+      const Map<String, int> proRouteToIndex = {
+        AppRoutes.communityHome: 0,
+        AppRoutes.dashboardClients: 1,
+        AppRoutes.dashboardProfile: 2,
+        AppRoutes.dashboardSettings: 3,
+        AppRoutes.notificationsAndSettings: 3,
+        AppRoutes.setupNotifications: 3,
+        AppRoutes.communityAndEngagement: 3,
+        AppRoutes.helpAndSupport: 3,
+      };
+      return proRouteToIndex[_currentRoute] ?? 0;
+    }
+    return _routeToIndex[_currentRoute] ?? 0;
+  }
 
   @override
   void initState() {
@@ -134,8 +157,15 @@ class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
     
     // Navigate to initial route after dashboard is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      String routeToPush = widget.initialRoute;
+      if (_isProfessional && routeToPush == AppRoutes.dashboardHome) {
+        routeToPush = AppRoutes.communityHome;
+      }
+      setState(() {
+        _currentRoute = routeToPush;
+      });
       _navigatorKey.currentState?.pushNamed(
-        widget.initialRoute,
+        routeToPush,
         arguments: widget.arguments,
       );
     });
@@ -326,6 +356,7 @@ class _DashboardWithInitialRouteState extends State<DashboardWithInitialRoute>
                 selectedIndex: _selectedIndex,
                 onNavBarTap: _onNavBarTap,
                 height: navBarHeight, // Force exact 80px height
+                isProfessional: _isProfessional,
               ),
             ),
           ),
@@ -371,7 +402,26 @@ class _DashboardState extends State<Dashboard>
     AppRoutes.dashboardHistory: 3, // Associate with history tab
   };
 
-  int get _selectedIndex => _routeToIndex[_currentRoute] ?? 0;
+  bool get _isProfessional {
+    return SharedPrefsHelper().isSkincareProfessionalSync();
+  }
+
+  int get _selectedIndex {
+    if (_isProfessional) {
+      const Map<String, int> proRouteToIndex = {
+        AppRoutes.communityHome: 0,
+        AppRoutes.dashboardClients: 1,
+        AppRoutes.dashboardProfile: 2,
+        AppRoutes.dashboardSettings: 3,
+        AppRoutes.notificationsAndSettings: 3,
+        AppRoutes.setupNotifications: 3,
+        AppRoutes.communityAndEngagement: 3,
+        AppRoutes.helpAndSupport: 3,
+      };
+      return proRouteToIndex[_currentRoute] ?? 0;
+    }
+    return _routeToIndex[_currentRoute] ?? 0;
+  }
 
   @override
   void initState() {
@@ -381,6 +431,12 @@ class _DashboardState extends State<Dashboard>
     
     // Execute any pending navigation from notification taps during app launch
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_isProfessional && _currentRoute == AppRoutes.dashboardHome) {
+        setState(() {
+          _currentRoute = AppRoutes.communityHome;
+        });
+        _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.communityHome);
+      }
       NavigationService.executePendingNavigation();
     });
   }
@@ -501,13 +557,15 @@ class _DashboardState extends State<Dashboard>
       onPopInvokedWithResult: (didPop, result) async {
         if (!didPop) {
           final navigator = _navigatorKey.currentState;
+          final fallbackRoute = _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome;
+          
           if (navigator != null && navigator.canPop()) {
             navigator.pop();
-          } else if (_currentRoute != AppRoutes.dashboardHome) {
+          } else if (_currentRoute != fallbackRoute) {
             // We're on a non-home tab with no stack to pop — go back to Home
-            _navigatorKey.currentState?.pushReplacementNamed(AppRoutes.dashboardHome);
+            _navigatorKey.currentState?.pushReplacementNamed(fallbackRoute);
             setState(() {
-              _currentRoute = AppRoutes.dashboardHome;
+              _currentRoute = fallbackRoute;
             });
             _resetNavBarVisibility();
           }
@@ -517,7 +575,7 @@ class _DashboardState extends State<Dashboard>
       child: Scaffold(
         body: Navigator(
           key: _navigatorKey,
-          initialRoute: AppRoutes.dashboardHome,
+          initialRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
           observers: [
             _DashboardRouteObserver(onRouteChanged: (route) {
               if (mounted && _currentRoute != route) {
@@ -560,13 +618,29 @@ class _DashboardState extends State<Dashboard>
         return _InterceptPopRoute(
           settings: RouteSettings(name: AppRoutes.communityHome),
           navigatorKey: _navigatorKey,
+          fallbackRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
           builder: (_) => CommunityFeature.create(),
         );
       case AppRoutes.dashboardExplore:
         return _InterceptPopRoute(
           settings: RouteSettings(name: AppRoutes.dashboardExplore),
           navigatorKey: _navigatorKey,
+          fallbackRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
           builder: (_) => const Placeholder(),
+        );
+      case AppRoutes.dashboardClients:
+        return _InterceptPopRoute(
+          settings: RouteSettings(name: AppRoutes.dashboardClients),
+          navigatorKey: _navigatorKey,
+          fallbackRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
+          builder: (_) => const Scaffold(body: Center(child: Text("Clients - Coming Soon"))),
+        );
+      case AppRoutes.dashboardProfile:
+        return _InterceptPopRoute(
+          settings: RouteSettings(name: AppRoutes.dashboardProfile),
+          navigatorKey: _navigatorKey,
+          fallbackRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
+          builder: (_) => CommunityFactory.createProfessionalAccountProfileScreen(),
         );
       case AppRoutes.dashboardTodaysRoutine:
         return _buildScrollableRoute(
@@ -651,6 +725,7 @@ class _DashboardState extends State<Dashboard>
         return _InterceptPopRoute(
           settings: RouteSettings(name: AppRoutes.dashboardImageGallery),
           navigatorKey: _navigatorKey,
+          fallbackRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
           builder: (_) => ImageGalleryScreen(initialImages: images),
         );
       case AppRoutes.dashboardHistory:
@@ -670,6 +745,7 @@ class _DashboardState extends State<Dashboard>
     return _InterceptPopRoute(
       settings: settings,
       navigatorKey: _navigatorKey,
+      fallbackRoute: _isProfessional ? AppRoutes.communityHome : AppRoutes.dashboardHome,
       builder: (_) => ScrollablePageWrapper(
         onScroll: _handleScroll,
         child: child,
@@ -691,6 +767,7 @@ class _DashboardState extends State<Dashboard>
                 selectedIndex: _selectedIndex,
                 onNavBarTap: _onNavBarTap,
                 height: navBarHeight, // Force exact 80px height
+                isProfessional: _isProfessional,
               ),
             ),
           ),
@@ -705,19 +782,21 @@ class _DashboardState extends State<Dashboard>
 /// instead of leaving the navigator empty and showing a 404 page.
 class _InterceptPopRoute<T> extends MaterialPageRoute<T> {
   final GlobalKey<NavigatorState> navigatorKey;
+  final String fallbackRoute;
 
   _InterceptPopRoute({
     required super.builder,
     super.settings,
     required this.navigatorKey,
+    required this.fallbackRoute,
   });
 
   @override
   bool didPop(T? result) {
-    if (settings.name != AppRoutes.dashboardHome) {
+    if (settings.name != fallbackRoute) {
       // Instead of popping into nothingness, push the user back to the Home tab
       Future.microtask(() {
-         navigatorKey.currentState?.pushReplacementNamed(AppRoutes.dashboardHome);
+         navigatorKey.currentState?.pushReplacementNamed(fallbackRoute);
       });
       return false; 
     }

@@ -61,4 +61,13 @@ class SharedPrefsHelper {
     await SharedPrefsHelper.init();
     return _prefs?.getBool(AppConstants.notificationPermissionGrantedKey) ?? false;
   }
+
+  Future<void> setSkincareProfessional(bool isProfessional) async {
+    await SharedPrefsHelper.init();
+    await _prefs?.setBool(AppConstants.isSkincareProfessionalKey, isProfessional);
+  }
+
+  bool isSkincareProfessionalSync() {
+    return _prefs?.getBool(AppConstants.isSkincareProfessionalKey) ?? false;
+  }
 }

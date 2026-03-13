@@ -75,9 +75,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               : 'Unknown';
     }
 
-    if (!_isInitialized &&
-        profileUserId != null &&
-        profileUserId != 'Unknown') {
+    if (!_isInitialized) {
       _isInitialized = true;
       _initializeData();
     }
@@ -207,11 +205,16 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       if (userDataString != null) {
         final userData = jsonDecode(userDataString);
         _currentUserId = userData['id'];
+        
+        // If no explicit user ID is given, fallback to showing the current logged-in user profile
+        if (profileUserId == 'Unknown' || profileUserId == null) {
+          profileUserId = _currentUserId;
+        }
       }
 
       // ProfileBloc initialization is now handled in the build method
       // Just trigger a rebuild to ensure the build method runs
-      if (_token != null && profileUserId != null && mounted) {
+      if (_token != null && profileUserId != null && profileUserId != 'Unknown' && mounted) {
         setState(() {});
       }
     } catch (e) {
@@ -1382,6 +1385,123 @@ Join the conversation: $profileUrl''';
               ),
             ],
           ),
+
+          if (_profileData!.isSkincareProfessional) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.2),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.verified, size: 18, color: Theme.of(context).colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        'Verified Professional',
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  if (_profileData!.salonBusinessName != null && _profileData!.salonBusinessName!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.storefront, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _profileData!.salonBusinessName!,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_profileData!.qualification != null && _profileData!.qualification!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.school, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _profileData!.qualification!,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_profileData!.country != null && _profileData!.country!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Icon(Icons.location_on, size: 16, color: Colors.grey[600]),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              _profileData!.country!,
+                              style: Theme.of(context).textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  if (_profileData!.skinConcernsTreated != null && _profileData!.skinConcernsTreated!.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Specialties:',
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: Colors.grey[600],
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Wrap(
+                            spacing: 6,
+                            runSpacing: 6,
+                            children: _profileData!.skinConcernsTreated!.map((concern) {
+                              return Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+                                  borderRadius: BorderRadius.circular(4),
+                                ),
+                                child: Text(
+                                  concern,
+                                  style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: Theme.of(context).colorScheme.primary,
+                                  ),
+                                ),
+                              );
+                            }).toList(),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
 
           const SizedBox(height: 24),
 

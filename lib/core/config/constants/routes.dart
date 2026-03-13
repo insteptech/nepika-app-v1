@@ -51,6 +51,7 @@ class AppRoutes {
   static const String dashboardExplore = '/dashboard/explore';
   static const String dashboardScan = '/dashboard/scan';
   static const String dashboardProfile = '/dashboard/profile';
+  static const String dashboardClients = '/dashboard/clients';
 
 
   static const String conditionDetailsPage = '/skin/condition/info';

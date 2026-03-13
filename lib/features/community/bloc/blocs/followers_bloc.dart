@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../domain/community/entities/community_entities.dart';
 import '../../../../domain/community/repositories/community_repository.dart';
 import '../events/followers_event.dart';
@@ -177,6 +178,17 @@ class FollowersBloc extends Bloc<FollowersEvent, FollowersState> {
           await repository.unfollowUser(token: event.token, userId: event.userId);
         } else {
           await repository.followUser(token: event.token, userId: event.userId);
+        }
+
+        // Persist latest follow status so profile screens can reflect it immediately
+        try {
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(
+            'follow_status_${event.userId}',
+            !event.currentFollowStatus,
+          );
+        } catch (_) {
+          // Ignore persistence errors; UI is already updated optimistically
         }
       } catch (e) {
         // Revert on error

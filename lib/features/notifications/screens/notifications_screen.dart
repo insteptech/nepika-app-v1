@@ -4,6 +4,7 @@ import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/features/dashboard/widgets/dashboard_navbar.dart';
 import 'package:nepika/core/utils/trial_gate_helper.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'dart:convert';
 import 'dart:async';
 
@@ -95,6 +96,17 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         }
       },
     );
+
+    // Trigger initial notifications fetch so we show a loader instead of a flash of empty state
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final bloc = context.read<NotificationBloc>();
+        bloc.add(const FetchAllNotifications(limit: 20, offset: 0));
+      } catch (_) {
+        // If bloc not available, fail silently
+      }
+    });
 
     // Check if this screen was opened from a notification tap
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -199,6 +211,10 @@ class _NotificationsScreenState extends State<NotificationsScreen>
   // NAVBAR UI
   // ------------------------------------------------------------
 
+  bool get _isProfessional {
+    return SharedPrefsHelper().isSkincareProfessionalSync();
+  }
+
   Widget _buildAnimatedNavBar() {
     return SizeTransition(
       sizeFactor: _navBarAnimation,
@@ -207,8 +223,9 @@ class _NotificationsScreenState extends State<NotificationsScreen>
         height: 80,
         color: Theme.of(context).scaffoldBackgroundColor,
         child: DashboardNavBar(
-          selectedIndex: 2,
+          selectedIndex: _isProfessional ? 0 : 1, // Community tab
           onNavBarTap: _onNavBarTap,
+          isProfessional: _isProfessional,
         ),
       ),
     );
@@ -300,7 +317,8 @@ class _NotificationsScreenState extends State<NotificationsScreen>
               // NOTIFICATIONS LIST
               BlocBuilder<NotificationBloc, NotificationState>(
                 builder: (context, state) {
-                  if ((state is NotificationLoading && state.notifications.isEmpty) ||
+                  if (state is NotificationInitial ||
+                      (state is NotificationLoading && state.notifications.isEmpty) ||
                       state is NotificationConnecting) {
                     return const SliverFillRemaining(
                       hasScrollBody: false,
