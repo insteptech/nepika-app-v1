@@ -14,17 +14,21 @@ class ClearUserSearch extends UserSearchEvent {}
 
 class SearchUsersV2 extends UserSearchEvent {
   final String token;
-  final String query;
+  final String? query;
   final int page;
   final int pageSize;
   final bool isProfessional;
+  final String? country;
+  final List<String>? skinConditions;
 
   SearchUsersV2({
     required this.token,
-    required this.query,
+    this.query,
     this.page = 1,
     this.pageSize = 10,
     this.isProfessional = false,
+    this.country,
+    this.skinConditions,
   });
 }
 

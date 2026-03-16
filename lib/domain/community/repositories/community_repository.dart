@@ -195,9 +195,11 @@ abstract class CommunityRepository {
   // New User Search Methods
   Future<UserSearchResponseEntity> searchUsersV2({
     required String token,
-    required String query,
+    String? query,
     int page = 1,
     int pageSize = 10,
     bool? isProfessional,
+    String? country,
+    List<String>? skinConditions,
   });
 }

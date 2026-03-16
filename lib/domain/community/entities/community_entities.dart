@@ -32,11 +32,13 @@ class AuthorEntity {
   final String id;
   final String fullName;
   final String avatarUrl;
+  final bool isSkincareProfessional;
 
   AuthorEntity({
     required this.id,
     required this.fullName,
-    required this.avatarUrl,  
+    required this.avatarUrl,
+    this.isSkincareProfessional = false,
   });
 
   factory AuthorEntity.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class AuthorEntity {
       id: json['id']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? '',
       avatarUrl: json['avatar_url']?.toString() ?? '',
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
     );
   }
 }
@@ -96,6 +99,7 @@ class PostEntity {
   final String username; // Direct from API
   final String? userAvatar; // Direct from API
   final bool isLikedByUser; // Direct from API
+  final bool isSkincareProfessional; // Direct from API
   final List<String>? mediaUrls; // Direct from API
 
   PostEntity({
@@ -113,6 +117,7 @@ class PostEntity {
     required this.username,
     this.userAvatar,
     required this.isLikedByUser,
+    this.isSkincareProfessional = false,
     this.mediaUrls,
   });
 
@@ -122,7 +127,7 @@ class PostEntity {
   String? get avatarUrl => userAvatar;
 
   factory PostEntity.fromJson(Map<String, dynamic> json) {
-    return PostEntity(
+    final post = PostEntity(
       id: json['id']?.toString() ?? '',
       userId: json['user_id']?.toString() ?? '',
       tenantId: json['tenant_id']?.toString(),
@@ -141,10 +146,12 @@ class PostEntity {
       username: json['username']?.toString() ?? '',
       userAvatar: json['user_avatar']?.toString(),
       isLikedByUser: json['is_liked_by_user'] as bool? ?? false,
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       mediaUrls: json['media_urls'] != null 
           ? List<String>.from(json['media_urls']) 
           : null,
     );
+    return post;
   }
 
   Map<String, dynamic> toJson() {
@@ -163,6 +170,7 @@ class PostEntity {
       'username': username,
       'user_avatar': userAvatar,
       'is_liked_by_user': isLikedByUser,
+      'is_skincare_professional': isSkincareProfessional,
       'media_urls': mediaUrls,
     };
   }
@@ -352,6 +360,7 @@ class PostDetailEntity {
               id: json['user_id']?.toString() ?? '',
               fullName: json['username']?.toString() ?? '',
               avatarUrl: json['user_avatar']?.toString() ?? '',
+              isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
             ),
       likes: json['likes'] != null
           ? List<LikeEntity>.from(

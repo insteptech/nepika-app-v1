@@ -19,46 +19,46 @@ class CommunityNavigation {
     // No separate BLoC manager needed
   }
   
-  /// Check if required BLoCs are available in context
-  static bool _areBlocsAvailable(BuildContext context) {
+  /// Try to get BLoCs safely, returning null if not found
+  static T? _readSafe<T>(BuildContext context) {
     try {
-      context.read<PostsBloc>();
-      context.read<UserSearchBloc>();
-      context.read<ProfileBloc>();
-      context.read<FollowersBloc>();
-      return true;
-    } catch (e) {
-      debugPrint('CommunityNavigation: Required BLoCs not available: $e');
-      return false;
+      return context.read<T>();
+    } catch (_) {
+      return null;
     }
   }
-  
-  /// Show error dialog when BLoCs are not available
-  static void _showBlocError(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Navigation Error'),
-        content: const Text('Unable to navigate. Please try restarting the app.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('OK'),
-          ),
-        ],
-      ),
-    );
+
+  /// Create a safe provider list from available BLoCs
+  static List<BlocProvider> _createSafeProviders(BuildContext context) {
+    final providers = <BlocProvider>[];
+    
+    final postsBloc = _readSafe<PostsBloc>(context);
+    if (postsBloc != null) {
+      providers.add(BlocProvider<PostsBloc>.value(value: postsBloc));
+    }
+    
+    final userSearchBloc = _readSafe<UserSearchBloc>(context);
+    if (userSearchBloc != null) {
+      providers.add(BlocProvider<UserSearchBloc>.value(value: userSearchBloc));
+    }
+    
+    final profileBloc = _readSafe<ProfileBloc>(context);
+    if (profileBloc != null) {
+      providers.add(BlocProvider<ProfileBloc>.value(value: profileBloc));
+    }
+    
+    final followersBloc = _readSafe<FollowersBloc>(context);
+    if (followersBloc != null) {
+      providers.add(BlocProvider<FollowersBloc>.value(value: followersBloc));
+    }
+    
+    return providers;
   }
   
-  /// Navigate to user profile screen with proper BLoC providers
   static Future<void> navigateToUserProfile(
     BuildContext context, {
     String? userId,
   }) async {
-    if (!_areBlocsAvailable(context)) {
-      _showBlocError(context);
-      return;
-    }
     
     if (userId == null || userId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -71,17 +71,19 @@ class CommunityNavigation {
     }
     
     try {
+      final providers = _createSafeProviders(context);
+      
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (newContext) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<PostsBloc>()),
-              BlocProvider.value(value: context.read<UserSearchBloc>()),
-              BlocProvider.value(value: context.read<ProfileBloc>()),
-              BlocProvider.value(value: context.read<FollowersBloc>()),
-            ],
-            child: UserProfileScreen(userId: userId),
-          ),
+          builder: (newContext) {
+            if (providers.isEmpty) {
+              return UserProfileScreen(userId: userId);
+            }
+            return MultiBlocProvider(
+              providers: providers,
+              child: UserProfileScreen(userId: userId),
+            );
+          },
           settings: RouteSettings(
             name: '/community/profile',
             arguments: {'userId': userId},
@@ -101,25 +103,22 @@ class CommunityNavigation {
     }
   }
   
-  /// Navigate to search screen with proper BLoC providers
   static Future<void> navigateToSearch(BuildContext context) async {
-    if (!_areBlocsAvailable(context)) {
-      _showBlocError(context);
-      return;
-    }
     
     try {
+      final providers = _createSafeProviders(context);
+
       await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (newContext) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<PostsBloc>()),
-              BlocProvider.value(value: context.read<UserSearchBloc>()),
-              BlocProvider.value(value: context.read<ProfileBloc>()),
-              BlocProvider.value(value: context.read<FollowersBloc>()),
-            ],
-            child: const CommunitySearchScreen(),
-          ),
+          builder: (newContext) {
+            if (providers.isEmpty) {
+              return const CommunitySearchScreen();
+            }
+            return MultiBlocProvider(
+              providers: providers,
+              child: const CommunitySearchScreen(),
+            );
+          },
           settings: const RouteSettings(name: '/community/search'),
         ),
       );
@@ -136,7 +135,6 @@ class CommunityNavigation {
     }
   }
   
-  /// Navigate to post detail screen with proper BLoC providers
   static Future<void> navigateToPostDetail(
     BuildContext context, {
     required String postId,
@@ -145,10 +143,6 @@ class CommunityNavigation {
     bool? currentLikeStatus,
     int? currentLikeCount,
   }) async {
-    if (!_areBlocsAvailable(context)) {
-      _showBlocError(context);
-      return;
-    }
     
     if (postId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -161,23 +155,26 @@ class CommunityNavigation {
     }
     
     try {
+      final providers = _createSafeProviders(context);
+
       await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
-          builder: (newContext) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<PostsBloc>()),
-              BlocProvider.value(value: context.read<UserSearchBloc>()),
-              BlocProvider.value(value: context.read<ProfileBloc>()),
-              BlocProvider.value(value: context.read<FollowersBloc>()),
-            ],
-            child: PostDetailScreen(
+          builder: (newContext) {
+            final screen = PostDetailScreen(
               postId: postId,
               token: token,
               userId: userId,
               currentLikeStatus: currentLikeStatus,
               currentLikeCount: currentLikeCount,
-            ),
-          ),
+            );
+            if (providers.isEmpty) {
+              return screen;
+            }
+            return MultiBlocProvider(
+              providers: providers,
+              child: screen,
+            );
+          },
           settings: RouteSettings(
             name: '/community/post',
             arguments: {'postId': postId},
@@ -197,32 +194,30 @@ class CommunityNavigation {
     }
   }
   
-  /// Navigate to create post screen with proper BLoC providers
   static Future<void> navigateToCreatePost(
     BuildContext context, {
     String? token,
     String? userId,
   }) async {
-    if (!_areBlocsAvailable(context)) {
-      _showBlocError(context);
-      return;
-    }
     
     try {
+      final providers = _createSafeProviders(context);
+
       final result = await Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (newContext) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<PostsBloc>()),
-              BlocProvider.value(value: context.read<UserSearchBloc>()),
-              BlocProvider.value(value: context.read<ProfileBloc>()),
-              BlocProvider.value(value: context.read<FollowersBloc>()),
-            ],
-            child: CreatePostScreen(
+          builder: (newContext) {
+            final screen = CreatePostScreen(
               token: token,
               userId: userId,
-            ),
-          ),
+            );
+            if (providers.isEmpty) {
+              return screen;
+            }
+            return MultiBlocProvider(
+              providers: providers,
+              child: screen,
+            );
+          },
           settings: const RouteSettings(name: '/community/create-post'),
         ),
       );
@@ -296,34 +291,32 @@ class CommunityNavigation {
     }
   }
 
-  /// Navigate to followers or following list
   static Future<void> navigateToFollowersList(
     BuildContext context, {
     required String userId,
     required String username,
     required bool isFollowers,
   }) async {
-    if (!_areBlocsAvailable(context)) {
-      _showBlocError(context);
-      return;
-    }
 
     try {
+      final providers = _createSafeProviders(context);
+
       await Navigator.of(context, rootNavigator: true).push(
         MaterialPageRoute(
-          builder: (newContext) => MultiBlocProvider(
-            providers: [
-              BlocProvider.value(value: context.read<PostsBloc>()),
-              BlocProvider.value(value: context.read<UserSearchBloc>()),
-              BlocProvider.value(value: context.read<ProfileBloc>()),
-              BlocProvider.value(value: context.read<FollowersBloc>()),
-            ],
-            child: FollowersListScreen(
+          builder: (newContext) {
+            final screen = FollowersListScreen(
               userId: userId,
               username: username,
               isFollowers: isFollowers,
-            ),
-          ),
+            );
+            if (providers.isEmpty) {
+              return screen;
+            }
+            return MultiBlocProvider(
+              providers: providers,
+              child: screen,
+            );
+          },
           settings: RouteSettings(
             name: '/community/followers-list',
             arguments: {

@@ -23,50 +23,89 @@ class SkincareProfessionalScreen extends StatefulWidget {
 class _SkincareProfessionalScreenState
     extends State<SkincareProfessionalScreen> {
   String? _token;
-  final TextEditingController _searchController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  String? _selectedCountry;
+  final Set<String> _selectedConcerns = {};
+  List<Map<String, String>> _allConcerns = [];
+  bool _showingResults = true;
   Timer? _debounceTimer;
-  bool _showingResults = false;
+  
+  // We can populate countries from a static list or an API if available.
+  // Using a static representative list for the dropdown for demonstration.
+  final List<String> _countries = [
+    'United States',
+    'United Kingdom',
+    'Canada',
+    'Australia',
+    'India',
+    'Ireland',
+    'Germany',
+    'France',
+    'Italy',
+    'Spain',
+    'Netherlands',
+    'Sweden',
+    'Brazil',
+    'Other'
+  ];
 
   @override
   void initState() {
     super.initState();
     _initializeAndLoad();
-    _searchController.addListener(_onSearchChanged);
+    _fetchSkinConcerns();
+  }
+
+  Future<void> _fetchSkinConcerns() async {
+    // These are the exact 10 skin conditions used by the Nepika backend AI analysis
+    setState(() {
+      _allConcerns = [
+        {'id': 'wrinkle', 'name': 'Wrinkles'},
+        {'id': 'acne', 'name': 'Acne'},
+        {'id': 'dark-spots', 'name': 'Dark Spots'},
+        {'id': 'pores', 'name': 'Enlarged Pores'},
+        {'id': 'eyebags', 'name': 'Eyebags'},
+        {'id': 'oily-skin', 'name': 'Oily Skin'},
+        {'id': 'dry-skin', 'name': 'Dry Skin'},
+        {'id': 'blackheads', 'name': 'Blackheads'},
+        {'id': 'whiteheads', 'name': 'Whiteheads'},
+        {'id': 'skin-redness', 'name': 'Skin Redness'},
+      ];
+    });
   }
 
   Future<void> _initializeAndLoad() async {
     try {
       final prefs = await SharedPreferences.getInstance();
       _token = prefs.getString(AppConstants.accessTokenKey);
-      if (mounted) setState(() {});
+      if (mounted) {
+        setState(() {});
+        // Initial fetch of all professionals
+        _onFilterChanged();
+      }
     } catch (e) {
       debugPrint('SkincareProfessionalScreen: $e');
     }
   }
 
-  void _onSearchChanged() {
+  void _onFilterChanged() {
     _debounceTimer?.cancel();
-    final query = _searchController.text.trim();
-
-    if (query.isEmpty) {
-      setState(() => _showingResults = false);
-      context.read<UserSearchBloc>().add(ClearUserSearch());
-      return;
-    }
-
-    setState(() {});
+    
+    // If neither filter is selected, we can clear or return all professionals.
+    // Assuming we want to show all if no filters are selected (or clear search).
+    setState(() => _showingResults = true);
 
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
-      if (mounted && _token != null && query.isNotEmpty) {
-        setState(() => _showingResults = true);
+      if (mounted && _token != null) {
         final bloc = context.read<UserSearchBloc>();
         if (!bloc.isClosed) {
           bloc.add(
             SearchUsersV2(
               token: _token!,
-              query: query,
+              // Passing empty query means we rely solely on filters and isProfessional=true
+              query: '', 
               isProfessional: true,
+              country: _selectedCountry,
+              skinConditions: _selectedConcerns.toList(),
             ),
           );
         }
@@ -77,9 +116,6 @@ class _SkincareProfessionalScreenState
   @override
   void dispose() {
     _debounceTimer?.cancel();
-    _searchController.removeListener(_onSearchChanged);
-    _searchController.dispose();
-    _focusNode.dispose();
     super.dispose();
   }
 
@@ -129,60 +165,101 @@ class _SkincareProfessionalScreenState
               ),
             ),
 
-            // ── Search bar ───────────────────────────────────────────────────
+            // ── Filters ───────────────────────────────────────────────────
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
-              child: Container(
-                height: 50,
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.onTertiary,
-                  borderRadius: BorderRadius.circular(50),
-                  border: Border.all(color: theme.dividerColor, width: 0.8),
-                ),
-                child: Row(
-                  children: [
-                    const SizedBox(width: 14),
-                    Icon(Icons.search, size: 20,
-                        color: theme.colorScheme.onSurface
-                            .withValues(alpha: 0.4)),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: TextField(
-                        controller: _searchController,
-                        focusNode: _focusNode,
-                        style: theme.textTheme.bodyLarge,
-                        decoration: InputDecoration(
-                          hintText: 'Search professionals…',
-                          hintStyle: theme.textTheme.bodyLarge?.copyWith(
-                            color: theme.colorScheme.onSurface
-                                .withValues(alpha: 0.4),
-                          ),
-                          border: InputBorder.none,
-                          focusedBorder: InputBorder.none,
-                          enabledBorder: InputBorder.none,
-                          disabledBorder: InputBorder.none,
-                          errorBorder: InputBorder.none,
-                          focusedErrorBorder: InputBorder.none,
-                          isDense: true,
-                          contentPadding: EdgeInsets.zero,
-                        ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Country Dropdown
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: theme.colorScheme.surface,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: theme.colorScheme.outline.withValues(alpha: 0.5), 
+                        width: 1,
                       ),
                     ),
-                    if (_searchController.text.isNotEmpty)
-                      GestureDetector(
-                        onTap: () {
-                          _searchController.clear();
-                          _focusNode.unfocus();
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: Icon(Icons.close, size: 18,
-                              color: theme.colorScheme.onSurface
-                                  .withValues(alpha: 0.4)),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        value: _selectedCountry,
+                        hint: Text(
+                          'Select Country',
+                          style: theme.textTheme.bodyLarge?.copyWith(
+                            color: theme.colorScheme.onSurface.withValues(alpha: 0.4),
+                          ),
                         ),
+                        isExpanded: true,
+                        icon: Icon(Icons.keyboard_arrow_down, color: theme.colorScheme.primary),
+                        items: _countries.map((String country) {
+                          return DropdownMenuItem<String>(
+                            value: country,
+                            child: Text(country, style: theme.textTheme.bodyLarge),
+                          );
+                        }).toList(),
+                        onChanged: (String? newValue) {
+                          setState(() {
+                            _selectedCountry = newValue;
+                          });
+                          _onFilterChanged();
+                        },
                       ),
-                  ],
-                ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  // Skin Conditions Filter Chips (Horizontal Scroll)
+                  if (_allConcerns.isNotEmpty)
+                    SizedBox(
+                      height: 40,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _allConcerns.length,
+                        separatorBuilder: (context, index) => const SizedBox(width: 8),
+                        itemBuilder: (context, index) {
+                          final concern = _allConcerns[index];
+                          final id = concern['id'] ?? '';
+                          final name = concern['name'] ?? '';
+                          final isSelected = _selectedConcerns.contains(id);
+                          return FilterChip(
+                            label: Text(
+                              name,
+                              style: TextStyle(
+                                color: isSelected ? Colors.white : theme.colorScheme.onSurface,
+                                fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
+                              ),
+                            ),
+                            selected: isSelected,
+                            showCheckmark: false,
+                            onSelected: (bool selected) {
+                              setState(() {
+                                if (selected) {
+                                  if (_selectedConcerns.length < 10) {
+                                    _selectedConcerns.add(id);
+                                  } else {
+                                    _showSnack(context, 'You can select up to 10 conditions');
+                                  }
+                                } else {
+                                  _selectedConcerns.remove(id);
+                                }
+                              });
+                              _onFilterChanged();
+                            },
+                            backgroundColor: theme.colorScheme.surface,
+                            selectedColor: theme.colorScheme.primary,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                              side: BorderSide(
+                                color: isSelected ? theme.colorScheme.primary : theme.colorScheme.outline.withValues(alpha: 0.3),
+                                width: 1,
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                ],
               ),
             ),
 
@@ -192,10 +269,11 @@ class _SkincareProfessionalScreenState
                   ? const Center(child: CircularProgressIndicator())
                   : !_showingResults
                       // Show recent searches history when search bar is empty
+                      // Now we just show results automatically if filters change, so we might want to default to `true`
                       ? RecentSearchesView(
                           token: _token!,
                           onRecentSearchSelected: () {
-                            _searchController.clear();
+                            // Empty for now since we removed search bar
                           },
                         )
                       // Show search results while user has typed something
@@ -209,14 +287,9 @@ class _SkincareProfessionalScreenState
                             }
 
                             if (state is UserSearchV2Loaded) {
-                              // Client-side filter: backend ignores query for professional
-                              // searches so we filter locally by username/name
-                              final q = _searchController.text.trim().toLowerCase();
-                              final professionals = q.isEmpty
-                                  ? state.users
-                                  : state.users.where((u) {
-                                      return u.username.toLowerCase().contains(q);
-                                    }).toList();
+                              // We removed client-side name search filtering as we no longer have a text field.
+                              // We use the results direct from the API.
+                              final professionals = state.users;
 
                               if (professionals.isEmpty) {
                                 return Center(
@@ -296,11 +369,7 @@ class _SkincareProfessionalScreenState
                                     const SizedBox(height: 12),
                                     ElevatedButton(
                                       onPressed: () {
-                                        if (_searchController.text
-                                            .trim()
-                                            .isNotEmpty) {
-                                          _onSearchChanged();
-                                        }
+                                        _onFilterChanged();
                                       },
                                       child: const Text('Retry'),
                                     ),

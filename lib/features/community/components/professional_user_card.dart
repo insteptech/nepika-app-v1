@@ -202,7 +202,7 @@ class ProfessionalUserCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       user.skinConcernsTreated!.map((s) {
-                        return s.split('_').map((w) {
+                        return s.replaceAll('-', '_').split('_').map((w) {
                           if (w.isEmpty) return '';
                           return '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}';
                         }).join(' ');

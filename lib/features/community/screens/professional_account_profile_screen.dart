@@ -9,6 +9,7 @@ import 'package:nepika/features/community/bloc/events/profile_event.dart';
 import 'package:nepika/features/community/bloc/states/profile_state.dart';
 import 'package:nepika/features/community/widgets/user_avatar.dart';
 import 'package:nepika/features/settings/screens/onboarding_data_screen.dart';
+import 'package:nepika/features/community/widgets/professional_badge.dart';
 
 class ProfessionalAccountProfileScreen extends StatefulWidget {
   const ProfessionalAccountProfileScreen({super.key});
@@ -165,20 +166,28 @@ class _ProfessionalAccountProfileScreenState
                   children: [
                     Row(
                       children: [
-                        Expanded(
+                        Flexible(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                profile.fullName?.isNotEmpty == true
-                                    ? profile.fullName!
-                                    : profile.username,
-                                style: const TextStyle(
-                                  fontSize: 18,
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.black87,
+                            Row(
+                              children: [
+                                Flexible(
+                                  child: Text(
+                                    profile.fullName?.isNotEmpty == true
+                                        ? profile.fullName!
+                                        : profile.username,
+                                    style: const TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.black87,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                              ),
+                                const ProfessionalBadge(height: 18),
+                              ],
+                            ),
                               if (profile.fullName?.isNotEmpty == true && profile.username != profile.fullName)
                                 Text(
                                   '@${profile.username}',
@@ -318,16 +327,16 @@ class _ProfessionalAccountProfileScreenState
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: specializations.map((spec) => _buildSpecializationChip(spec)).toList(),
+            children: specializations.map((spec) => _buildSpecializationChip(context, spec)).toList(),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildSpecializationChip(String label) {
+  Widget _buildSpecializationChip(BuildContext context, String label) {
     // Format "oily_skin" to "Oily Skin"
-    final formattedLabel = label.split('_').map((word) {
+    final formattedLabel = label.replaceAll('-', '_').split('_').map((word) {
       if (word.isEmpty) return word;
       return word[0].toUpperCase() + word.substring(1).toLowerCase();
     }).join(' ');
@@ -335,7 +344,7 @@ class _ProfessionalAccountProfileScreenState
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF6B66FF),
+        color: Theme.of(context).colorScheme.primary,
         borderRadius: BorderRadius.circular(20),
       ),
       child: Text(
@@ -365,6 +374,7 @@ class _ProfessionalAccountProfileScreenState
           const SizedBox(height: 16),
           if (profile.qualification != null && profile.qualification!.isNotEmpty) ...[
             _buildCredentialItem(
+              context,
               profile.qualification!,
               'Professional Qualification',
             ),
@@ -372,6 +382,7 @@ class _ProfessionalAccountProfileScreenState
           ],
           if (profile.professionalRole != null && profile.professionalRole!.isNotEmpty) ...[
             _buildCredentialItem(
+              context,
               profile.professionalRole!,
               'Professional Role',
             ),
@@ -379,6 +390,7 @@ class _ProfessionalAccountProfileScreenState
           ],
           if (profile.yearsOfExperience != null && profile.yearsOfExperience!.isNotEmpty) ...[
             _buildCredentialItem(
+              context,
               profile.yearsOfExperience!,
               'Years of Experience',
             ),
@@ -386,6 +398,7 @@ class _ProfessionalAccountProfileScreenState
           ],
           if (profile.salonBusinessName != null && profile.salonBusinessName!.isNotEmpty) ...[
             _buildCredentialItem(
+              context,
               profile.salonBusinessName!,
               profile.businessType != null && profile.businessType!.isNotEmpty 
                 ? profile.businessType!
@@ -396,6 +409,7 @@ class _ProfessionalAccountProfileScreenState
           if ((profile.qualification == null || profile.qualification!.isEmpty) &&
               (profile.salonBusinessName == null || profile.salonBusinessName!.isEmpty))
             _buildCredentialItem(
+              context,
               'Certified Skincare Professional',
               'Verified by Nepika',
             ),
@@ -404,15 +418,15 @@ class _ProfessionalAccountProfileScreenState
     );
   }
 
-  Widget _buildCredentialItem(String title, String subtitle) {
+  Widget _buildCredentialItem(BuildContext context, String title, String subtitle) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Container(
           width: 36,
           height: 36,
-          decoration: const BoxDecoration(
-            color: Color(0xFF6B66FF),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.primary,
             shape: BoxShape.circle,
           ),
           child: const Icon(

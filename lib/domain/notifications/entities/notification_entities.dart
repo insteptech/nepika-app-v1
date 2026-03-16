@@ -105,12 +105,14 @@ class NotificationActorEntity extends Equatable {
   final String username;
   final String fullName;
   final String? profileImageUrl;
+  final bool isSkincareProfessional;
 
   const NotificationActorEntity({
     required this.id,
     required this.username,
     required this.fullName,
     this.profileImageUrl,
+    this.isSkincareProfessional = false,
   });
 
   factory NotificationActorEntity.fromJson(Map<String, dynamic> json) {
@@ -119,6 +121,7 @@ class NotificationActorEntity extends Equatable {
       username: json['username']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? '',
       profileImageUrl: json['profile_image_url']?.toString(),
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
     );
   }
 
@@ -128,6 +131,7 @@ class NotificationActorEntity extends Equatable {
       username: json['username']?.toString() ?? '',
       fullName: json['full_name']?.toString() ?? '',
       profileImageUrl: json['profile_picture_url']?.toString(),
+      isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
     );
   }
 
@@ -137,11 +141,12 @@ class NotificationActorEntity extends Equatable {
       'username': username,
       'full_name': fullName,
       'profile_image_url': profileImageUrl,
+      'is_skincare_professional': isSkincareProfessional,
     };
   }
 
   @override
-  List<Object?> get props => [id, username, fullName, profileImageUrl];
+  List<Object?> get props => [id, username, fullName, profileImageUrl, isSkincareProfessional];
 }
 
 // Main Notification Entity

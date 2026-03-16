@@ -60,12 +60,12 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
     Emitter<UserSearchState> emit,
   ) async {
     // When not filtering by professional, empty query shows nothing
-    if (event.query.isEmpty && !event.isProfessional) {
+    if ((event.query == null || event.query!.isEmpty) && !event.isProfessional) {
       emit(UserSearchV2Empty());
       return;
     }
     
-    emit(UserSearchV2Loading(query: event.query));
+    emit(UserSearchV2Loading(query: event.query ?? ''));
     try {
       final response = await repository.searchUsersV2(
         token: event.token,
@@ -73,6 +73,8 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
         page: event.page,
         pageSize: event.pageSize,
         isProfessional: event.isProfessional,
+        country: event.country,
+        skinConditions: event.skinConditions,
       );
       
       emit(UserSearchV2Loaded(
@@ -83,7 +85,7 @@ class UserSearchBloc extends Bloc<UserSearchEvent, UserSearchState> {
       debugPrint('UserSearchBloc: Error in _onSearchUsersV2: $e');
       debugPrint('UserSearchBloc: Stack trace: $stackTrace');
       emit(UserSearchV2Error(
-        query: event.query,
+        query: event.query ?? '',
         message: e.toString(),
       ));
     }

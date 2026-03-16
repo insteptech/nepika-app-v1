@@ -462,6 +462,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
           username: cachedPost.username,
           userAvatar: cachedPost.userAvatar,
           isLikedByUser: newLikeStatus,
+          isSkincareProfessional: cachedPost.isSkincareProfessional,
+          mediaUrls: cachedPost.mediaUrls,
         );
         await localDataSource.updateCachedPost(updatedPost);
       }
@@ -501,6 +503,8 @@ class CommunityRepositoryImpl implements CommunityRepository {
             username: cachedPost.username,
             userAvatar: cachedPost.userAvatar,
             isLikedByUser: serverLikeStatus,
+            isSkincareProfessional: cachedPost.isSkincareProfessional,
+            mediaUrls: cachedPost.mediaUrls,
           );
           await localDataSource.updateCachedPost(updatedPost);
         }
@@ -1347,23 +1351,38 @@ class CommunityRepositoryImpl implements CommunityRepository {
   @override
   Future<UserSearchResponseEntity> searchUsersV2({
     required String token,
-    required String query,
+    String? query,
     int page = 1,
     int pageSize = 10,
     bool? isProfessional,
+    String? country,
+    List<String>? skinConditions,
   }) async {
     try {
-      debugPrint('Repository: Searching users V2 with query: $query, page: $page, isProfessional: $isProfessional');
+      final Map<String, dynamic> queryParameters = {
+        'page': page.toString(),
+        'page_size': pageSize.toString(),
+      };
+
+      if (query != null && query.isNotEmpty) {
+        queryParameters['q'] = query;
+      }
+      if (isProfessional != null) {
+        queryParameters['is_professional'] = isProfessional.toString();
+      }
+      if (country != null && country.isNotEmpty) {
+        queryParameters['country'] = country;
+      }
+      if (skinConditions != null && skinConditions.isNotEmpty) {
+        queryParameters['skin_conditions'] = skinConditions; 
+      }
+
+      debugPrint('Repository: Searching users V2 with query parameters: $queryParameters');
       final response = await apiBase.request(
         path: ApiEndpoints.userSearch,
         method: 'GET',
         headers: {'Authorization': 'Bearer $token'},
-        query: {
-          'q': query,
-          'page': page.toString(),
-          'page_size': pageSize.toString(),
-          if (isProfessional != null) 'is_professional': isProfessional.toString(),
-        },
+        query: queryParameters,
       );
       
       debugPrint('Repository: searchUsersV2 response: ${response.statusCode}');

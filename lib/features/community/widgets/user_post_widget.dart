@@ -79,6 +79,7 @@ class _UserPostWidgetState extends State<UserPostWidget> {
             id: _currentPost.userId,
             fullName: _currentPost.username.isNotEmpty ? _currentPost.username : 'User',
             avatarUrl: _currentPost.userAvatar ?? '',
+            isSkincareProfessional: _currentPost.isSkincareProfessional,
           ),
         ),
         const SizedBox(width: 5),

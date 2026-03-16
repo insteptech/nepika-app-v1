@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../domain/notifications/entities/notification_entities.dart';
+import '../../community/widgets/professional_badge.dart';
 
 class NotificationItem extends StatefulWidget {
   final NotificationEntity notification;
@@ -167,7 +168,7 @@ class _NotificationItemState extends State<NotificationItem>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           // Full name (as per API structure)
-                          Expanded(
+                          Flexible(
                             child: Text(
                               widget.notification.actor.fullName.isNotEmpty
                                   ? widget.notification.actor.fullName
@@ -181,6 +182,8 @@ class _NotificationItemState extends State<NotificationItem>
                               overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          if (widget.notification.actor.isSkincareProfessional)
+                            const ProfessionalBadge(height: 16),
 
                           const SizedBox(width: 8),
 

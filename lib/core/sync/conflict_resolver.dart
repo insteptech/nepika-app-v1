@@ -177,6 +177,8 @@ class ConflictResolver {
       username: server.username,
       userAvatar: server.userAvatar,
       isLikedByUser: server.isLikedByUser, // Server wins for engagement
+      isSkincareProfessional: server.isSkincareProfessional, // Server wins
+      mediaUrls: server.mediaUrls ?? local.mediaUrls, // Merge media urls
     );
   }
 

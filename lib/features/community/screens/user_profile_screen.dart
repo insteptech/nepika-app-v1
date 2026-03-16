@@ -13,6 +13,7 @@ import '../../../core/config/env.dart';
 import 'dart:convert';
 import '../utils/community_navigation.dart';
 import '../widgets/post_skeleton_loader.dart';
+import '../widgets/professional_badge.dart';
 
 enum ActiveTab { threads, replies }
 
@@ -1213,20 +1214,22 @@ Join the conversation: $profileUrl''';
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      children: [
-                        Flexible(
-                          child: Text(
-                            _profileData!.username,
-                            style: Theme.of(context).textTheme.displayLarge!.copyWith(
-                              fontWeight: FontWeight.w600,
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(
+                                _profileData!.username,
+                                style: Theme.of(context).textTheme.displayLarge!.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                             ),
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
+                            if (_profileData!.isSkincareProfessional)
+                              const ProfessionalBadge(height: 20),
+                          ],
                         ),
-                      ],
-                    ),
                     const SizedBox(height: 8),
                     if (_profileData!.isSkincareProfessional) ...[
                       Text(
@@ -1401,19 +1404,19 @@ Join the conversation: $profileUrl''';
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
-                    children: [
-                      Icon(Icons.verified, size: 18, color: Theme.of(context).colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Text(
-                        'Verified Professional',
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                      ),
-                    ],
+                    // children: [
+                    //   Icon(Icons.verified, size: 18, color: Theme.of(context).colorScheme.primary),
+                    //   const SizedBox(width: 8),
+                    //   Text(
+                    //     'Verified Professional',
+                    //     style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    //       fontWeight: FontWeight.bold,
+                    //       color: Theme.of(context).colorScheme.primary,
+                    //     ),
+                    //   ),
+                    // ],
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 4),
                   if (_profileData!.salonBusinessName != null && _profileData!.salonBusinessName!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
@@ -1487,7 +1490,10 @@ Join the conversation: $profileUrl''';
                                   borderRadius: BorderRadius.circular(4),
                                 ),
                                 child: Text(
-                                  concern,
+                                  concern.replaceAll('-', '_').split('_').map((w) {
+                                    if (w.isEmpty) return w;
+                                    return '${w[0].toUpperCase()}${w.substring(1).toLowerCase()}';
+                                  }).join(' '),
                                   style: Theme.of(context).textTheme.labelSmall?.copyWith(
                                     color: Theme.of(context).colorScheme.primary,
                                   ),

@@ -89,6 +89,8 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
         username: post.username,
         userAvatar: post.userAvatar,
         isLikedByUser: event.state.isLiked,
+        isSkincareProfessional: post.isSkincareProfessional,
+        mediaUrls: post.mediaUrls,
       );
       
       _allPosts[postIndex] = updatedPost;
@@ -144,6 +146,8 @@ class PostsBloc extends Bloc<PostsEvent, PostsState> {
           username: post.username,
           userAvatar: post.userAvatar,
           isLikedByUser: likeState.isLiked,
+          isSkincareProfessional: post.isSkincareProfessional,
+          mediaUrls: post.mediaUrls,
         );
         
         debugPrint('PostsBloc: Synced post ${post.id} with like state - liked: ${likeState.isLiked}, count: ${likeState.likeCount}');

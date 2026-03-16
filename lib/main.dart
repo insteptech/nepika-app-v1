@@ -72,6 +72,10 @@ void main() async {
   // Only essential initialization - defer everything else
   final sharedPreferences = await SharedPreferences.getInstance();
 
+  // Temporary: force clear old cached posts missing the professional badge flag
+  await sharedPreferences.remove('community_posts');
+
+
   // Initialize core dependencies with lazy loading pattern
   di.ServiceLocator.initializeCore(sharedPreferences);
 
