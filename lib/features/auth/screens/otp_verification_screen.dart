@@ -11,6 +11,7 @@ import '../bloc/auth_event.dart';
 import '../bloc/auth_state.dart';
 import '../services/otp_service.dart';
 import '../components/otp_permission_handler.dart';
+import '../../../core/utils/shared_prefs_helper.dart';
 
 class OtpVerificationScreen extends StatefulWidget {
   final String? phoneNumber;
@@ -541,6 +542,10 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
 
       case OtpVerified():
         debugPrint('OTP verification successful');
+        
+        // Save the professional status immediately so the Dashboard reads the correct value
+        SharedPrefsHelper().setSkincareProfessional(state.authResponse.user.isSkincareProfessional);
+
         setState(() {
           _isLoading = false;
           _hasVerifiedSuccessfully =
