@@ -568,10 +568,9 @@ class _OnboardingScreenState extends State<OnboardingScreen>
         // Flag the user as professional in the backend (fire-and-forget)
         SkincareProfessionalDataSource(ApiBase()).flagAsProfessional();
         if (mounted) {
-          // Use pushReplacementNamed to remove onboarding from the stack
-          Navigator.of(
-            context,
-          ).pushReplacementNamed(AppRoutes.skincareProfessional);
+          Navigator.of(context).pushReplacementNamed(
+            AppRoutes.skincareProfessionalOnboarding,
+          );
         }
         return;
       }

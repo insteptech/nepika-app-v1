@@ -21,6 +21,7 @@ class AppRoutes {
   // Onboarding Routes
   static const String faceScanOnboarding = '/face-scan-onboarding';
   static const String skincareProfessional = '/skincare-professional';
+  static const String skincareProfessionalOnboarding = '/skincare-professional-onboarding';
   
   static const String sendOtp = '/auth/users/send-otp';
   static const String verifyOtp = '/auth/users/verify-otp';

@@ -10,6 +10,7 @@ import 'package:nepika/core/config/constants/app_constants.dart';
 import 'package:nepika/core/utils/shared_prefs_helper.dart';
 import 'package:nepika/features/onboarding/screens/onboarding_screen.dart';
 import 'package:nepika/features/community/screens/skincare_professional_screen.dart' as community_pro;
+import 'package:nepika/features/onboarding/screens/skincare_professional_screen.dart' as onboarding_pro;
 import 'package:nepika/features/dashboard/screens/skin_condition_details_screen.dart';
 import 'package:nepika/features/face_scan/main.dart';
 import 'package:nepika/features/face_scan/screens/scan_report_loader_screen.dart';
@@ -271,6 +272,10 @@ class MyApp extends StatelessWidget {
             case AppRoutes.faceScanOnboarding:
               return MaterialPageRoute(
                 builder: (_) => const FaceScanMainScreen(),
+              );
+            case AppRoutes.skincareProfessionalOnboarding:
+              return MaterialPageRoute(
+                builder: (_) => const onboarding_pro.SkincareProfessionalScreen(),
               );
             case AppRoutes.skincareProfessional:
               return MaterialPageRoute(

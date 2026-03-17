@@ -559,7 +559,7 @@ class _OtpVerificationScreenState extends State<OtpVerificationScreen> {
             route = AppRoutes.userInfo;
           } else if (state.authResponse.user.isSkincareProfessional &&
               !state.authResponse.user.onboardingCompleted) {
-            route = AppRoutes.skincareProfessional;
+            route = AppRoutes.skincareProfessionalOnboarding;
           } else {
             route = AppRoutes.dashboardHome;
           }
