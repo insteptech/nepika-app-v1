@@ -154,7 +154,13 @@ class _PricingScreenState extends State<PricingScreen> {
                     );
                     context.read<AppBloc>().add(AppSubscriptions(token));
                   } else if (state is IAPError) {
-                    // Error handling is done in bottom sheet
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(state.message), 
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 4),
+                      ),
+                    );
                   }
                 },
               ),

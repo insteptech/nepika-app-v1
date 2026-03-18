@@ -245,14 +245,19 @@ class IAPService {
 
         case PurchaseStatus.purchased:
           // New purchase - verify and deliver immediately
-          final valid = await _verifyPurchase(purchase);
+          final verificationError = await _verifyPurchase(purchase);
 
-          if (valid) {
-            await _deliverProduct(purchase);
-            _statusController.add(IAPStatus.purchased);
-            _purchaseController.add(purchase);
+          if (verificationError == null) {
+            final deliveryError = await _deliverProduct(purchase);
+            if (deliveryError == null) {
+              _statusController.add(IAPStatus.purchased);
+              _purchaseController.add(purchase);
+            } else {
+              _errorController.add(deliveryError);
+              _statusController.add(IAPStatus.failed);
+            }
           } else {
-            _errorController.add('Purchase verification failed');
+            _errorController.add(verificationError);
             _statusController.add(IAPStatus.failed);
           }
 
@@ -261,18 +266,26 @@ class IAPService {
           }
           break;
 
-        case PurchaseStatus.restored:
+          case PurchaseStatus.restored:
           // Restored purchase - collect for batch sync if restoring
           if (_isRestoring) {
             _restoredPurchases.add(purchase);
             debugPrint('IAP: Collected restored purchase: ${purchase.productID}');
           } else {
             // Single restore (e.g., from previous incomplete transaction)
-            final valid = await _verifyPurchase(purchase);
-            if (valid) {
-              await _deliverProduct(purchase);
-              _statusController.add(IAPStatus.restored);
-              _purchaseController.add(purchase);
+            final verificationError = await _verifyPurchase(purchase);
+            if (verificationError == null) {
+              final deliveryError = await _deliverProduct(purchase);
+              if (deliveryError == null) {
+                _statusController.add(IAPStatus.restored);
+                _purchaseController.add(purchase);
+              } else {
+                _errorController.add(deliveryError);
+                _statusController.add(IAPStatus.failed);
+              }
+            } else {
+              _errorController.add(verificationError);
+              _statusController.add(IAPStatus.failed);
             }
           }
 
@@ -343,24 +356,28 @@ class IAPService {
     }
   }
 
-  Future<bool> _verifyPurchase(PurchaseDetails purchase) async {
-    if (_isMockMode) return true;
+  /// Returns null if successful, or an error message string if failed
+  Future<String?> _verifyPurchase(PurchaseDetails purchase) async {
+    if (_isMockMode) return null;
     
     final verificationService = PurchaseVerificationService();
-    return await verificationService.verifyPurchase(purchase);
+    final isValid = await verificationService.verifyPurchase(purchase);
+    return isValid ? null : 'Purchase verification failed';
   }
 
-  Future<void> _deliverProduct(PurchaseDetails purchase) async {
+  /// Returns null if successful, or an error message string if failed
+  Future<String?> _deliverProduct(PurchaseDetails purchase) async {
     debugPrint('IAP: Delivering product ${purchase.productID}');
     
     final verificationService = PurchaseVerificationService();
-    final success = await verificationService.updateSubscription(purchase);
+    final errorMessage = await verificationService.updateSubscription(purchase);
     
-    if (success) {
+    if (errorMessage == null) {
       debugPrint('IAP: Product delivered and subscription activated');
     } else {
-      debugPrint('IAP: Failed to activate subscription on server');
+      debugPrint('IAP: Failed to activate subscription on server: $errorMessage');
     }
+    return errorMessage;
   }
 
   Future<void> restorePurchases() async {
@@ -403,9 +420,9 @@ class IAPService {
     debugPrint('IAP: Syncing ${_restoredPurchases.length} restored purchases with backend');
 
     final verificationService = PurchaseVerificationService();
-    final success = await verificationService.restorePurchases(_restoredPurchases);
+    final errorMessage = await verificationService.restorePurchases(_restoredPurchases);
 
-    if (success) {
+    if (errorMessage == null) {
       debugPrint('IAP: Successfully synced restored purchases with backend');
       _statusController.add(IAPStatus.restored);
       // Emit the most recent purchase for UI updates
@@ -413,8 +430,8 @@ class IAPService {
         _purchaseController.add(_restoredPurchases.last);
       }
     } else {
-      debugPrint('IAP: Failed to sync restored purchases with backend');
-      _errorController.add('Failed to sync restored purchases');
+      debugPrint('IAP: Failed to sync restored purchases with backend: $errorMessage');
+      _errorController.add(errorMessage);
       _statusController.add(IAPStatus.failed);
     }
 

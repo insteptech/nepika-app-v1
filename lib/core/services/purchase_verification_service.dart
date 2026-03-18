@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:in_app_purchase/in_app_purchase.dart';
+import 'package:dio/dio.dart';
 import '../api_base.dart';
 
 class PurchaseVerificationService {
@@ -91,7 +92,8 @@ class PurchaseVerificationService {
 
   /// Restore purchases and sync with server
   /// Supports both StoreKit 1 and StoreKit 2 transactions
-  Future<bool> restorePurchases(List<PurchaseDetails> purchases) async {
+  /// Returns null if successful, or an error message string if failed
+  Future<String?> restorePurchases(List<PurchaseDetails> purchases) async {
     try {
       debugPrint('Restoring ${purchases.length} purchases');
 
@@ -126,22 +128,36 @@ class PurchaseVerificationService {
         body: {'purchases': purchaseData},
       );
 
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data['success'] == true) {
+      final data = response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (data != null && data['success'] == true) {
           debugPrint('Purchase restoration successful');
-          return true;
+          return null; // Success
         } else {
-          debugPrint('Purchase restoration failed: ${data['message']}');
-          return false;
+          final msg = data?['message'] ?? 'Restoration failed';
+          debugPrint('Purchase restoration failed: $msg');
+          return msg;
         }
+      } else if (response.statusCode == 409) {
+        final msg = data?['message'] ?? 'Subscription is already in use by another account.';
+        debugPrint('Purchase restoration conflict: $msg');
+        return msg;
       } else {
-        debugPrint('Purchase restoration failed with status: ${response.statusCode}');
-        return false;
+        final msg = data?['message'] ?? 'Purchase restoration failed with status: ${response.statusCode}';
+        debugPrint(msg);
+        return msg;
       }
     } catch (e) {
+      if (e is DioException) {
+        if (e.response?.statusCode == 409) {
+          final data = e.response?.data;
+          final msg = data?['message'] ?? 'Subscription is already in use by another account.';
+          debugPrint('Purchase restoration conflict: $msg');
+          return msg;
+        }
+      }
       debugPrint('Purchase restoration error: $e');
-      return false;
+      return 'An unexpected error occurred while restoring purchases: ${e is DioException ? e.message : e}';
     }
   }
 
@@ -168,7 +184,8 @@ class PurchaseVerificationService {
 
   /// Update subscription on server after successful purchase
   /// Supports both StoreKit 1 and StoreKit 2 transactions
-  Future<bool> updateSubscription(PurchaseDetails purchase) async {
+  /// Returns null if successful, or an error message string if failed
+  Future<String?> updateSubscription(PurchaseDetails purchase) async {
     try {
       debugPrint('Updating subscription for: ${purchase.productID}');
 
@@ -199,22 +216,36 @@ class PurchaseVerificationService {
         body: subscriptionData,
       );
 
-      if (response.statusCode == 200) {
-        final data = response.data;
-        if (data['success'] == true) {
+      final data = response.data;
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        if (data != null && data['success'] == true) {
           debugPrint('Subscription update successful');
-          return true;
+          return null; // Success
         } else {
-          debugPrint('Subscription update failed: ${data['message']}');
-          return false;
+          final msg = data?['message'] ?? 'Subscription update failed';
+          debugPrint('Subscription update failed: $msg');
+          return msg;
         }
+      } else if (response.statusCode == 409) {
+        final msg = data?['message'] ?? 'Subscription is already in use by another account.';
+        debugPrint('Subscription update conflict: $msg');
+        return msg;
       } else {
-        debugPrint('Subscription update failed with status: ${response.statusCode}');
-        return false;
+        final msg = data?['message'] ?? 'Subscription update failed with status: ${response.statusCode}';
+        debugPrint(msg);
+        return msg;
       }
     } catch (e) {
+      if (e is DioException) {
+        if (e.response?.statusCode == 409) {
+          final data = e.response?.data;
+          final msg = data?['message'] ?? 'Subscription is already in use by another account.';
+          debugPrint('Subscription update conflict: $msg');
+          return msg;
+        }
+      }
       debugPrint('Subscription update error: $e');
-      return false;
+      return 'An unexpected error occurred while activating subscription: ${e is DioException ? e.message : e}';
     }
   }
 }
