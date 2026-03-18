@@ -263,13 +263,39 @@ class _PhoneEntryScreenState extends State<PhoneEntryScreen> {
 
       debugPrint('Error sending OTP: ${state.message}');
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Failed to send OTP: ${state.message}'),
-          duration: const Duration(seconds: 2),
-          backgroundColor: Theme.of(context).colorScheme.error,
-        ),
-      );
+      if (state.message.contains('Account suspended')) {
+        _showSuspensionDialog(state.message);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to send OTP: ${state.message}'),
+            duration: const Duration(seconds: 2),
+            backgroundColor: Theme.of(context).colorScheme.error,
+          ),
+        );
+      }
     }
+  }
+
+  void _showSuspensionDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 32),
+        title: const Text('Account Suspended', textAlign: TextAlign.center),
+        content: const Text(
+          'Your account has been suspended by an administrator. Please contact support for more information.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
+    );
   }
 }

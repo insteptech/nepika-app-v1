@@ -95,7 +95,13 @@ class _MobileRecoveryScreenState extends State<MobileRecoveryScreen> {
     setState(() => _isLoading = false);
 
     result.fold(
-      (failure) => _showError(failure.message),
+      (failure) {
+        if (failure.message.contains('Account suspended')) {
+          _showSuspensionDialog(failure.message);
+        } else {
+          _showError(failure.message);
+        }
+      },
       (data) {
         setState(() {
           _email = email;
@@ -163,7 +169,13 @@ class _MobileRecoveryScreenState extends State<MobileRecoveryScreen> {
     setState(() => _isLoading = false);
 
     result.fold(
-      (failure) => _showError(failure.message),
+      (failure) {
+        if (failure.message.contains('Account suspended')) {
+          _showSuspensionDialog(failure.message);
+        } else {
+          _showError(failure.message);
+        }
+      },
       (data) {
         setState(() {
           _newMobileNumber = _fullMobileNumber;
@@ -203,6 +215,29 @@ class _MobileRecoveryScreenState extends State<MobileRecoveryScreen> {
         // Navigate back to login or phone entry
         Navigator.of(context).popUntil((route) => route.isFirst);
       },
+    );
+  }
+
+  void _showSuspensionDialog(String message) {
+    if (!mounted) return;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        icon: Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error, size: 32),
+        title: const Text('Account Suspended', textAlign: TextAlign.center),
+        content: const Text(
+          'Your account has been suspended by an administrator. Please contact support for more information.',
+          textAlign: TextAlign.center,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('OK'),
+          ),
+        ],
+      ),
     );
   }
 

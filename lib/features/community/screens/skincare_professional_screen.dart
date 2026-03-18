@@ -26,7 +26,7 @@ class _SkincareProfessionalScreenState
   String? _selectedCountry;
   final Set<String> _selectedConcerns = {};
   List<Map<String, String>> _allConcerns = [];
-  bool _showingResults = true;
+  bool _showingResults = false;
   Timer? _debounceTimer;
   
   // We can populate countries from a static list or an API if available.
@@ -79,19 +79,26 @@ class _SkincareProfessionalScreenState
       _token = prefs.getString(AppConstants.accessTokenKey);
       if (mounted) {
         setState(() {});
-        // Initial fetch of all professionals
-        _onFilterChanged();
+        // We no longer fetch all professionals on load.
+        // The user will see their recent searches history first.
       }
     } catch (e) {
-      debugPrint('SkincareProfessionalScreen: $e');
+      debugPrint('🔍 SkincarePro: Error in _initializeAndLoad: $e');
     }
   }
 
   void _onFilterChanged() {
     _debounceTimer?.cancel();
     
-    // If neither filter is selected, we can clear or return all professionals.
-    // Assuming we want to show all if no filters are selected (or clear search).
+    final hasFilters = _selectedCountry != null || _selectedConcerns.isNotEmpty;
+
+    if (!hasFilters) {
+      if (_showingResults) {
+        setState(() => _showingResults = false);
+      }
+      return;
+    }
+
     setState(() => _showingResults = true);
 
     _debounceTimer = Timer(const Duration(milliseconds: 500), () {
@@ -101,7 +108,6 @@ class _SkincareProfessionalScreenState
           bloc.add(
             SearchUsersV2(
               token: _token!,
-              // Passing empty query means we rely solely on filters and isProfessional=true
               query: '', 
               isProfessional: true,
               country: _selectedCountry,
@@ -278,6 +284,14 @@ class _SkincareProfessionalScreenState
                         )
                       // Show search results while user has typed something
                       : BlocBuilder<UserSearchBloc, UserSearchState>(
+                          buildWhen: (previous, current) {
+                            // Only rebuild for search-related states, not follow toggle states
+                            return current is UserSearchInitial ||
+                                current is UserSearchV2Loading ||
+                                current is UserSearchV2Loaded ||
+                                current is UserSearchV2Error ||
+                                current is UserSearchV2Empty;
+                          },
                           builder: (context, state) {
                             if (state is UserSearchV2Loading) {
                               return const Padding(
@@ -378,7 +392,13 @@ class _SkincareProfessionalScreenState
                               );
                             }
 
-                            return const SizedBox.shrink();
+                            // Initial state or any other state — show loading
+                            return const Center(
+                              child: Padding(
+                                padding: EdgeInsets.symmetric(horizontal: 16),
+                                child: SearchSkeletonLoader(),
+                              ),
+                            );
                           },
                         ),
             ),

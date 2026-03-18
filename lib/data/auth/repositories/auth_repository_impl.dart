@@ -40,7 +40,7 @@ class AuthRepositoryImpl implements AuthRepository {
       return success(response);
     } catch (e) {
       return failure(
-        ServerFailure(message: 'Failed to send OTP: ${e.toString()}'),
+        ServerFailure(message: _getErrorMessage(e)),
       );
     }
   }

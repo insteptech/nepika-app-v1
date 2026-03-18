@@ -276,6 +276,11 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
                       (condition) =>
                           _buildConditionSection(context, isDark, condition),
                     ),
+                    if (conditions.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        child: _buildFindProfessionalsBanner(context),
+                      ),
                     const SizedBox(height: 100),
                   ],
                 ),
@@ -669,6 +674,71 @@ class _ScanRecommendationsScreenState extends State<ScanRecommendationsScreen> {
           const SizedBox(height: 24),
           _buildMedicalDisclaimer(context, isDark),
         ],
+      ),
+    );
+  }
+
+  Widget _buildFindProfessionalsBanner(BuildContext context) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.of(context, rootNavigator: true).pushNamed(
+          AppRoutes.skincareProfessional,
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [
+              Theme.of(context).colorScheme.primary,
+              Theme.of(context).colorScheme.primary.withValues(alpha: 0.75),
+            ],
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+          ),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(
+                Icons.medical_services_outlined,
+                size: 20,
+                color: Colors.white,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: const [
+                  Text(
+                    'Find Skincare Professionals',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 14,
+                    ),
+                  ),
+                  SizedBox(height: 2),
+                  Text(
+                    'Browse qualified skincare experts',
+                    style: TextStyle(
+                      color: Colors.white70,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.arrow_forward_ios, size: 14, color: Colors.white),
+          ],
+        ),
       ),
     );
   }

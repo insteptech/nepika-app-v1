@@ -40,6 +40,7 @@ import 'package:nepika/features/notifications/screens/notification_debug_screen.
 import 'package:nepika/features/community/bloc/blocs/posts_bloc.dart';
 import 'package:nepika/features/community/bloc/blocs/user_search_bloc.dart';
 import 'package:nepika/features/community/bloc/blocs/profile_bloc.dart';
+import 'package:nepika/domain/community/repositories/community_repository.dart';
 import 'package:nepika/features/blocked_users/screens/blocked_users_screen.dart';
 import 'package:nepika/features/community/screens/edit_profile_screen.dart';
 import 'package:nepika/features/notifications/bloc/notification_bloc.dart';
@@ -281,7 +282,9 @@ class MyApp extends StatelessWidget {
               return MaterialPageRoute(
                 builder: (_) => MultiBlocProvider(
                   providers: [
-                    BlocProvider(create: (context) => di.sl<UserSearchBloc>()),
+                    BlocProvider(create: (context) => UserSearchBloc(
+                      repository: di.sl<CommunityRepository>(),
+                    )),
                   ],
                   child: const community_pro.SkincareProfessionalScreen(),
                 ),
