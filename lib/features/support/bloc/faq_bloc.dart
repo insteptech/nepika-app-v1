@@ -11,7 +11,13 @@ abstract class FaqEvent extends Equatable {
   List<Object?> get props => [];
 }
 
-class GetFaqsEvent extends FaqEvent {}
+class GetFaqsEvent extends FaqEvent {
+  final String? targetAudience;
+  const GetFaqsEvent({this.targetAudience});
+
+  @override
+  List<Object?> get props => [targetAudience];
+}
 
 // States
 abstract class FaqState extends Equatable {
@@ -51,7 +57,7 @@ class FaqBloc extends Bloc<FaqEvent, FaqState> {
 
   Future<void> _onGetFaqs(GetFaqsEvent event, Emitter<FaqState> emit) async {
     emit(FaqLoading());
-    final result = await getFaqs();
+    final result = await getFaqs(targetAudience: event.targetAudience);
     result.fold(
       (failure) {
         String message = 'Failed to load FAQs';

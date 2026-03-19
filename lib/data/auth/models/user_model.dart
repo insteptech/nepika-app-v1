@@ -21,6 +21,7 @@ class UserModel extends User {
     required super.onboardingCompleted,
     required super.activeStep,
     super.isSkincareProfessional,
+    super.adminGrantedPremium,
     super.createdAt,
     super.updatedAt,
   });
@@ -48,6 +49,7 @@ class UserModel extends User {
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       activeStep: json['active_step'] as int ? ?? 1,
       isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
+      adminGrantedPremium: json['admin_granted_premium'] as bool? ?? false,
       createdAt: json['created_at'] != null 
           ? DateTime.parse(json['created_at'] as String)
           : null,
@@ -75,6 +77,7 @@ class UserModel extends User {
       'onboarding_completed': onboardingCompleted,
       'active_step': activeStep,
       'is_skincare_professional': isSkincareProfessional,
+      'admin_granted_premium': adminGrantedPremium,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };
@@ -97,6 +100,7 @@ class UserModel extends User {
       onboardingCompleted: user.onboardingCompleted,
       activeStep: user.activeStep,
       isSkincareProfessional: user.isSkincareProfessional,
+      adminGrantedPremium: user.adminGrantedPremium,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
     );
@@ -119,6 +123,7 @@ class UserModel extends User {
       onboardingCompleted: onboardingCompleted,
       activeStep: activeStep,
       isSkincareProfessional: isSkincareProfessional,
+      adminGrantedPremium: adminGrantedPremium,
       createdAt: createdAt,
       updatedAt: updatedAt,
     );
@@ -140,6 +145,7 @@ class UserModel extends User {
     bool? onboardingCompleted,
     int? activeStep,
     bool? isSkincareProfessional,
+    bool? adminGrantedPremium,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -159,6 +165,7 @@ class UserModel extends User {
       onboardingCompleted: onboardingCompleted ?? this.onboardingCompleted,
       activeStep: activeStep ?? this.activeStep,
       isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
+      adminGrantedPremium: adminGrantedPremium ?? this.adminGrantedPremium,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );

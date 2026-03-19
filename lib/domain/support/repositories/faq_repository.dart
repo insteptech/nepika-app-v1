@@ -3,5 +3,5 @@ import '../../../../core/error/failures.dart';
 import '../entities/faq.dart';
 
 abstract class FaqRepository {
-  Future<Either<Failure, List<Faq>>> getFaqs();
+  Future<Either<Failure, List<Faq>>> getFaqs({String? targetAudience});
 }

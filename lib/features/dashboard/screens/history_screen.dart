@@ -73,7 +73,8 @@ class _HistoryScreenState extends State<HistoryScreen> {
         final data = ScanHistoryResponse.fromJson(response.data as Map<String, dynamic>);
         
         debugPrint('✅ Loaded ${data.scans.length} scans (total: ${data.totalCount})');
-
+        
+        if (!mounted) return;
         setState(() {
           _scans.clear();
           _scans.addAll(data.scans);
@@ -86,6 +87,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     } catch (e) {
       debugPrint('❌ Error fetching history: $e');
+      if (!mounted) return;
       setState(() {
         _error = e.toString();
         _isLoading = false;
@@ -97,6 +99,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
     if (_isLoadingMore || !_hasMore) return;
 
     try {
+      if (!mounted) return;
       setState(() {
         _isLoadingMore = true;
       });
@@ -117,6 +120,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         
         debugPrint('✅ Loaded ${data.scans.length} more scans');
 
+        if (!mounted) return;
         setState(() {
           _scans.addAll(data.scans);
           _hasMore = data.scans.length >= _limit && _scans.length < data.totalCount;
@@ -128,6 +132,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
       }
     } catch (e) {
       debugPrint('❌ Error loading more history: $e');
+      if (!mounted) return;
       setState(() {
         _isLoadingMore = false;
       });

@@ -88,7 +88,7 @@ class _GreetingSectionState extends State<GreetingSection> {
                           'Hey, ${userName.isNotEmpty ? userName.split(' ')[0] : 'User'}',
                           style: Theme.of(context).textTheme.displaySmall,
                         ),
-                        if (isPremium) ...[
+                        if (isPremium && (widget.user['is_skincare_professional'] == true)) ...[
                           const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),

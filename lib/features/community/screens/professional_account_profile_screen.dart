@@ -203,7 +203,9 @@ class _ProfessionalAccountProfileScreenState
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      profile.qualification ?? 'Skincare Professional',
+                      profile.qualifications?.isNotEmpty == true
+                          ? profile.qualifications!.join(' · ')
+                          : 'Skincare Professional',
                       style: TextStyle(
                         fontSize: 14,
                         color: Colors.grey.shade700,
@@ -372,11 +374,33 @@ class _ProfessionalAccountProfileScreenState
             ),
           ),
           const SizedBox(height: 16),
-          if (profile.qualification != null && profile.qualification!.isNotEmpty) ...[
-            _buildCredentialItem(
-              context,
-              profile.qualification!,
-              'Professional Qualification',
+          if (profile.qualifications != null && profile.qualifications!.isNotEmpty) ...[
+            const Text(
+              'Professional Qualifications',
+              style: TextStyle(fontSize: 13, color: Colors.grey, fontWeight: FontWeight.w500),
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: profile.qualifications!.map((q) => Container(
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(
+                    color: Theme.of(context).colorScheme.primary.withOpacity(0.4),
+                  ),
+                ),
+                child: Text(
+                  q,
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w500,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+              )).toList(),
             ),
             const SizedBox(height: 16),
           ],
@@ -406,7 +430,7 @@ class _ProfessionalAccountProfileScreenState
             ),
             const SizedBox(height: 16),
           ],
-          if ((profile.qualification == null || profile.qualification!.isEmpty) &&
+          if ((profile.qualifications == null || profile.qualifications!.isEmpty) &&
               (profile.salonBusinessName == null || profile.salonBusinessName!.isEmpty))
             _buildCredentialItem(
               context,

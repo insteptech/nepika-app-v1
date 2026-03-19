@@ -6,7 +6,7 @@ import '../models/faq_model.dart';
 import '../../../../core/utils/app_logger.dart';
 
 abstract class FaqRemoteDataSource {
-  Future<List<FaqModel>> getFaqs();
+  Future<List<FaqModel>> getFaqs({String? targetAudience});
 }
 
 class FaqRemoteDataSourceImpl implements FaqRemoteDataSource {
@@ -15,11 +15,16 @@ class FaqRemoteDataSourceImpl implements FaqRemoteDataSource {
   FaqRemoteDataSourceImpl(this.apiBase);
 
   @override
-  Future<List<FaqModel>> getFaqs() async {
+  Future<List<FaqModel>> getFaqs({String? targetAudience}) async {
     try {
+      final Map<String, dynamic>? queryParams = targetAudience != null
+          ? {'target_audience': targetAudience}
+          : null;
+
       final response = await apiBase.request(
         path: ApiEndpoints.faqs,
         method: 'GET',
+        query: queryParams,
       );
 
       if (response.statusCode == 200 && response.data['success'] == true) {
@@ -43,3 +48,4 @@ class FaqRemoteDataSourceImpl implements FaqRemoteDataSource {
     }
   }
 }
+

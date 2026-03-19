@@ -1433,7 +1433,7 @@ Join the conversation: $profileUrl''';
                         ],
                       ),
                     ),
-                  if (_profileData!.qualification != null && _profileData!.qualification!.isNotEmpty)
+                  if (_profileData!.qualifications != null && _profileData!.qualifications!.isNotEmpty)
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8),
                       child: Row(
@@ -1442,7 +1442,7 @@ Join the conversation: $profileUrl''';
                           const SizedBox(width: 8),
                           Expanded(
                             child: Text(
-                              _profileData!.qualification!,
+                              _profileData!.qualifications!.join('  ·  '),
                               style: Theme.of(context).textTheme.bodyMedium,
                             ),
                           ),

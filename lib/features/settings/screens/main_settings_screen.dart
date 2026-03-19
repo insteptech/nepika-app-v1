@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:nepika/core/config/constants/routes.dart';
 import 'package:nepika/core/config/constants/app_constants.dart';
+import 'package:nepika/core/api_base.dart';
 import 'package:nepika/core/di/injection_container.dart' as di;
 import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/settings/bloc/delete_account_bloc.dart';
@@ -38,6 +39,7 @@ class MainSettingsScreen extends StatefulWidget {
 
 class _MainSettingsScreenState extends State<MainSettingsScreen> {
   bool _isProfessional = false;
+  bool _isAdminGrantedPremium = false;
 
   @override
   void initState() {
@@ -47,9 +49,61 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
 
   Future<void> _checkUserRole() async {
     try {
-      setState(() {
-        _isProfessional = SharedPrefsHelper().isSkincareProfessionalSync();
-      });
+      final sharedPrefs = await SharedPreferences.getInstance();
+      final userDataStr = sharedPrefs.getString(AppConstants.userDataKey);
+      
+      // 1. Initial load from local cache for immediate UI responsiveness
+      if (userDataStr != null) {
+        final Map<String, dynamic> userData = jsonDecode(userDataStr);
+        if (mounted) {
+          setState(() {
+            _isProfessional = userData['is_skincare_professional'] == true;
+            _isAdminGrantedPremium = userData['admin_granted_premium'] == true;
+          });
+        }
+      }
+
+      // 2. Background refresh from server to pick up admin changes (like premium override)
+      try {
+        final response = await ApiBase().request(
+          path: "/auth/users/validate",
+          method: "GET",
+        );
+
+        if (response.statusCode == 200 && response.data['success'] == true) {
+          final serverData = response.data['data'];
+          if (serverData != null) {
+            // Update local state
+            final bool serverIsPro = serverData['is_skincare_professional'] == true;
+            final bool serverIsAdminPremium = serverData['admin_granted_premium'] == true;
+
+            if (mounted) {
+              setState(() {
+                _isProfessional = serverIsPro;
+                _isAdminGrantedPremium = serverIsAdminPremium;
+              });
+            }
+
+            // Update local cache to persist the change
+            if (userDataStr != null) {
+              final Map<String, dynamic> localData = jsonDecode(userDataStr);
+              localData['is_skincare_professional'] = serverIsPro;
+              localData['admin_granted_premium'] = serverIsAdminPremium;
+              // Also update onboarding status if returned
+              if (serverData.containsKey('onboarding_completed')) {
+                localData['onboarding_completed'] = serverData['onboarding_completed'];
+              }
+              if (serverData.containsKey('active_step')) {
+                localData['active_step'] = serverData['active_step'];
+              }
+              
+              await sharedPrefs.setString(AppConstants.userDataKey, jsonEncode(localData));
+            }
+          }
+        }
+      } catch (apiError) {
+        debugPrint('Error refreshing user data from server in settings: $apiError');
+      }
     } catch (e) {
       debugPrint('Error loading user role in settings: $e');
     }
@@ -398,8 +452,8 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
               ),
             ),
 
-            // Subscription Section
-            if (!_isProfessional)
+            // Subscription Section — hidden for professionals and admin-granted premium users
+            if (!_isProfessional && !_isAdminGrantedPremium)
               SliverToBoxAdapter(
                 child: SettingsSection(
                   title: 'SUBSCRIPTION',

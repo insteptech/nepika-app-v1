@@ -16,10 +16,10 @@ class FaqRepositoryImpl implements FaqRepository {
   });
 
   @override
-  Future<Either<Failure, List<Faq>>> getFaqs() async {
+  Future<Either<Failure, List<Faq>>> getFaqs({String? targetAudience}) async {
     if (await networkInfo.isConnected) {
       try {
-        final faqs = await remoteDataSource.getFaqs();
+        final faqs = await remoteDataSource.getFaqs(targetAudience: targetAudience);
         // Sort by display order
         faqs.sort((a, b) => a.displayOrder.compareTo(b.displayOrder));
         return Right(faqs);

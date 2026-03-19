@@ -16,6 +16,7 @@ class User {
   final int activeStep;
   final bool isSkincareProfessional;
   final bool isNewUser;
+  final bool adminGrantedPremium;
   final DateTime? createdAt;
   final DateTime? updatedAt;
 
@@ -33,6 +34,7 @@ class User {
     this.isEmailVerified,
     this.isNewUser = false,
     this.isSkincareProfessional = false,
+    this.adminGrantedPremium = false,
     this.isPhoneVerified,
     required this.onboardingCompleted,
     required this.activeStep,
@@ -64,6 +66,7 @@ class User {
       onboardingCompleted: json['onboarding_completed'] as bool? ?? false,
       activeStep: json['active_step'] as int? ?? 1,
       isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
+      adminGrantedPremium: json['admin_granted_premium'] as bool? ?? false,
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'] as String)
           : null,
@@ -90,6 +93,7 @@ class User {
       'onboarding_completed': onboardingCompleted,
       'active_step': activeStep,
       'is_skincare_professional': isSkincareProfessional,
+      'admin_granted_premium': adminGrantedPremium,
       'created_at': createdAt?.toIso8601String(),
       'updated_at': updatedAt?.toIso8601String(),
     };

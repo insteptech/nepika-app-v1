@@ -155,7 +155,7 @@ class ProfessionalUserCard extends StatelessWidget {
             const SizedBox(height: 12),
 
             // ── Qualification row ────────────────────────────────────────────
-            if (user.qualification?.isNotEmpty == true) ...[
+            if (user.qualifications?.isNotEmpty == true) ...[
               Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -163,7 +163,7 @@ class ProfessionalUserCard extends StatelessWidget {
                   const SizedBox(width: 6),
                   Expanded(
                     child: Text(
-                      user.qualification!,
+                      user.qualifications!.join('  ·  '),
                       style: TextStyle(
                         fontSize: 13,
                         fontWeight: FontWeight.w500,

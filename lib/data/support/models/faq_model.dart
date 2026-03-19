@@ -7,6 +7,7 @@ class FaqModel extends Faq {
     required super.answer,
     required super.displayOrder,
     super.category,
+    super.targetAudience,
   });
 
   factory FaqModel.fromJson(Map<String, dynamic> json) {
@@ -16,6 +17,7 @@ class FaqModel extends Faq {
       answer: json['answer'] as String,
       displayOrder: json['display_order'] as int? ?? 0,
       category: json['category'] as String?,
+      targetAudience: json['target_audience'] as String?,
     );
   }
 
@@ -26,6 +28,8 @@ class FaqModel extends Faq {
       'answer': answer,
       'display_order': displayOrder,
       'category': category,
+      'target_audience': targetAudience,
     };
   }
 }
+

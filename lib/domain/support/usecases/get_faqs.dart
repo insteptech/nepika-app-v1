@@ -8,7 +8,7 @@ class GetFaqs {
 
   GetFaqs(this.repository);
 
-  Future<Either<Failure, List<Faq>>> call() async {
-    return await repository.getFaqs();
+  Future<Either<Failure, List<Faq>>> call({String? targetAudience}) async {
+    return await repository.getFaqs(targetAudience: targetAudience);
   }
 }

@@ -624,7 +624,7 @@ class CommunityProfileEntity {
   final String? followRequestStatus; // null, "pending", "accepted", "declined"
   
   // Professional Fields
-  final String? qualification;
+  final List<String>? qualifications;
   final String? salonBusinessName;
   final String? country;
   final String? cityTown;
@@ -657,7 +657,7 @@ class CommunityProfileEntity {
     this.isFollowing = false,
     this.isSkincareProfessional = false,
     this.followRequestStatus,
-    this.qualification,
+    this.qualifications,
     this.salonBusinessName,
     this.country,
     this.cityTown,
@@ -691,7 +691,9 @@ class CommunityProfileEntity {
       isFollowing: json['is_following'] as bool? ?? false,
       isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       followRequestStatus: json['follow_request_status']?.toString(),
-      qualification: json['qualification']?.toString(),
+      qualifications: json['qualification'] is List
+          ? List<String>.from(json['qualification'])
+          : (json['qualification'] != null ? [json['qualification'].toString()] : null),
       salonBusinessName: json['salon_business_name']?.toString(),
       country: json['country']?.toString(),
       cityTown: json['city_town']?.toString(),
@@ -732,7 +734,7 @@ class CommunityProfileEntity {
       'is_following': isFollowing,
       'is_skincare_professional': isSkincareProfessional,
       'follow_request_status': followRequestStatus,
-      'qualification': qualification,
+      'qualification': qualifications,
       'salon_business_name': salonBusinessName,
       'country': country,
       'city_town': cityTown,
@@ -766,7 +768,7 @@ class CommunityProfileEntity {
     bool? isFollowing,
     bool? isSkincareProfessional,
     String? followRequestStatus,
-    String? qualification,
+    List<String>? qualifications,
     String? salonBusinessName,
     String? country,
     String? cityTown,
@@ -798,7 +800,7 @@ class CommunityProfileEntity {
       isFollowing: isFollowing ?? this.isFollowing,
       isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
       followRequestStatus: followRequestStatus ?? this.followRequestStatus,
-      qualification: qualification ?? this.qualification,
+      qualifications: qualifications ?? this.qualifications,
       salonBusinessName: salonBusinessName ?? this.salonBusinessName,
       country: country ?? this.country,
       cityTown: cityTown ?? this.cityTown,
@@ -1046,7 +1048,7 @@ class UserSearchResultEntity {
   final bool isBlocked;
   final bool isSelf;
   final bool isSkincareProfessional;
-  final String? qualification;
+  final List<String>? qualifications;
   final String? salonBusinessName;
   final String? country;
   final List<String>? skinConcernsTreated;
@@ -1064,7 +1066,7 @@ class UserSearchResultEntity {
     this.isBlocked = false,
     this.isSelf = false,
     this.isSkincareProfessional = false,
-    this.qualification,
+    this.qualifications,
     this.salonBusinessName,
     this.country,
     this.skinConcernsTreated,
@@ -1084,7 +1086,9 @@ class UserSearchResultEntity {
       isBlocked: json['is_blocked'] ?? false,
       isSelf: json['is_self'] ?? false,
       isSkincareProfessional: json['is_skincare_professional'] ?? false,
-      qualification: json['qualification']?.toString(),
+      qualifications: json['qualification'] is List
+          ? List<String>.from(json['qualification'])
+          : (json['qualification'] != null ? [json['qualification'].toString()] : null),
       salonBusinessName: json['salon_business_name']?.toString(),
       country: json['country']?.toString(),
       skinConcernsTreated: json['skin_concerns_treated'] != null
@@ -1106,7 +1110,7 @@ class UserSearchResultEntity {
     bool? isBlocked,
     bool? isSelf,
     bool? isSkincareProfessional,
-    String? qualification,
+    List<String>? qualifications,
     String? salonBusinessName,
     String? country,
     List<String>? skinConcernsTreated,
@@ -1124,7 +1128,7 @@ class UserSearchResultEntity {
       isBlocked: isBlocked ?? this.isBlocked,
       isSelf: isSelf ?? this.isSelf,
       isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
-      qualification: qualification ?? this.qualification,
+      qualifications: qualifications ?? this.qualifications,
       salonBusinessName: salonBusinessName ?? this.salonBusinessName,
       country: country ?? this.country,
       skinConcernsTreated: skinConcernsTreated ?? this.skinConcernsTreated,

@@ -27,7 +27,8 @@ class _SkincareProfessionalScreenState
   // Dropdown values
   String? _selectedCountry;
   String? _selectedRole;
-  String? _selectedQualification;
+  // Qualifications (multi-select)
+  final Set<String> _selectedQualifications = {};
   String? _selectedBusinessType;
   String? _selectedExperience;
 
@@ -125,7 +126,14 @@ class _SkincareProfessionalScreenState
         _cityController.text = profile['city_town'] ?? '';
         _selectedCountry = profile['country'];
         _selectedRole = profile['professional_role'];
-        _selectedQualification = profile['qualification'];
+
+        // qualification may be a List<dynamic> (new) or a String (legacy)
+        final raw = profile['qualification'];
+        if (raw is List) {
+          _selectedQualifications.addAll(raw.map((e) => e.toString()));
+        } else if (raw is String && raw.isNotEmpty) {
+          _selectedQualifications.add(raw);
+        }
         _selectedBusinessType = profile['business_type'];
         _selectedExperience = profile['years_of_experience'];
 
@@ -162,7 +170,7 @@ class _SkincareProfessionalScreenState
     return _salonNameController.text.trim().isNotEmpty &&
         _selectedCountry != null &&
         _selectedRole != null &&
-        _selectedQualification != null &&
+        _selectedQualifications.isNotEmpty &&
         _selectedConcerns.isNotEmpty &&
         _selectedBusinessType != null &&
         _selectedExperience != null &&
@@ -183,7 +191,7 @@ class _SkincareProfessionalScreenState
                 ? null
                 : _cityController.text.trim(),
         professionalRole: _selectedRole!,
-        qualification: _selectedQualification!,
+        qualifications: _selectedQualifications.toList(),
         skinConcernsTreated: _selectedConcerns.toList(),
         businessType: _selectedBusinessType!,
         yearsOfExperience: _selectedExperience!,
@@ -383,14 +391,53 @@ class _SkincareProfessionalScreenState
                         ),
                         const SizedBox(height: 16),
                         _buildRequiredField(
-                          'Qualification',
-                          _buildDropdown(
-                            value: _selectedQualification,
-                            hint: 'Select qualification',
-                            items: _qualifications,
-                            onChanged:
-                                (v) =>
-                                    setState(() => _selectedQualification = v),
+                          'Qualifications',
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: _qualifications.map((q) {
+                              final isSelected = _selectedQualifications.contains(q);
+                              return GestureDetector(
+                                onTap: () {
+                                  setState(() {
+                                    if (isSelected) {
+                                      _selectedQualifications.remove(q);
+                                    } else {
+                                      _selectedQualifications.add(q);
+                                    }
+                                  });
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 16,
+                                    vertical: 10,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? theme.colorScheme.primary
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: Border.all(
+                                      color: isSelected
+                                          ? theme.colorScheme.primary
+                                          : theme.dividerColor,
+                                      width: 1,
+                                    ),
+                                  ),
+                                  child: Text(
+                                    q,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      color: isSelected
+                                          ? Colors.white
+                                          : theme.textTheme.bodyMedium?.color,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }).toList(),
                           ),
                         ),
                         const SizedBox(height: 4),
