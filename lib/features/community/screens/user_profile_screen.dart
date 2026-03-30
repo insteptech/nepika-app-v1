@@ -374,6 +374,30 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     }
   }
 
+  Future<void> _refreshFollowStatusFromPrefs() async {
+    if (profileUserId == null) return;
+    final storedStatus = await _getStoredFollowStatus(profileUserId!);
+    if (storedStatus != null && mounted) {
+      setState(() {
+        final bool wasFollowing = _profileData?.isFollowing ?? _isFollowing ?? false;
+        _isFollowing = storedStatus;
+        if (_profileData != null && wasFollowing != storedStatus) {
+          int newFollowersCount = _profileData!.followersCount;
+          if (storedStatus) {
+            newFollowersCount++;
+          } else if (newFollowersCount > 0) {
+            newFollowersCount--;
+          }
+          _profileData = _profileData!.copyWith(
+            isFollowing: storedStatus,
+            followersCount: newFollowersCount,
+          );
+        }
+      });
+      debugPrint('ProfilePage: Refreshed follow status after returning: $storedStatus');
+    }
+  }
+
   void _shareProfile() {
     if (_profileData == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -1000,6 +1024,15 @@ Join the conversation: $profileUrl''';
       debugPrint('ProfilePage: Profile loaded: ${state.profile.username}');
       setState(() {
         _profileData = state.profile;
+        
+        // If we have a local optimistic status (from SharedPreferences/Followers list), safely override 
+        // the backend's status, as the backend might be serving slightly stale cached data.
+        if (_isFollowing != null) {
+          _profileData = _profileData!.copyWith(isFollowing: _isFollowing);
+        } else {
+          _isFollowing = _profileData!.isFollowing;
+        }
+        
         _profileError = null; // Clear any previous error
       });
 
@@ -1317,22 +1350,24 @@ Join the conversation: $profileUrl''';
                       children: [
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () {
+                          onTap: () async {
                             if (_profileData != null) {
-                              CommunityNavigation.navigateToFollowersList(
+                              await CommunityNavigation.navigateToFollowersList(
                                 context,
                                 userId:
                                     _profileData!.userId, // Prefer Auth User ID
                                 username: _profileData!.username,
                                 isFollowers: true,
                               );
+                              if (mounted) await _refreshFollowStatusFromPrefs();
                             } else if (profileUserId != null) {
-                              CommunityNavigation.navigateToFollowersList(
+                              await CommunityNavigation.navigateToFollowersList(
                                 context,
                                 userId: profileUserId!,
                                 username: _profileData?.username ?? 'User',
                                 isFollowers: true,
                               );
+                              if (mounted) await _refreshFollowStatusFromPrefs();
                             }
                           },
                           child: Column(
@@ -1354,22 +1389,24 @@ Join the conversation: $profileUrl''';
                         const SizedBox(width: 24),
                         GestureDetector(
                           behavior: HitTestBehavior.opaque,
-                          onTap: () {
+                          onTap: () async {
                             if (_profileData != null) {
-                              CommunityNavigation.navigateToFollowersList(
+                              await CommunityNavigation.navigateToFollowersList(
                                 context,
                                 userId:
                                     _profileData!.userId, // Prefer Auth User ID
                                 username: _profileData!.username,
                                 isFollowers: false,
                               );
+                              if (mounted) await _refreshFollowStatusFromPrefs();
                             } else if (profileUserId != null) {
-                              CommunityNavigation.navigateToFollowersList(
+                              await CommunityNavigation.navigateToFollowersList(
                                 context,
                                 userId: profileUserId!,
                                 username: _profileData?.username ?? 'User',
                                 isFollowers: false,
                               );
+                              if (mounted) await _refreshFollowStatusFromPrefs();
                             }
                           },
                           child: Column(
