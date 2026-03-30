@@ -2,20 +2,39 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../domain/community/entities/community_entities.dart';
+import '../../core/config/constants/app_constants.dart';
 
 /// Service for managing recent search data in local storage
-/// Saves user search results only when user visits their profile
+/// Saves user search results in user-isolated SharedPreferences
 class RecentSearchesService {
-  static const String _recentSearchesKey = 'recent_searches';
   static const int _maxRecentSearches = 10;
+
+  /// Generate a unique storage key for the current logged-in user
+  static Future<String> _getStorageKey() async {
+    final prefs = await SharedPreferences.getInstance();
+    final userDataStr = prefs.getString(AppConstants.userDataKey);
+    if (userDataStr != null) {
+      try {
+        final userData = jsonDecode(userDataStr);
+        final userId = userData['id'];
+        if (userId != null) {
+          return 'recent_searches_$userId';
+        }
+      } catch (e) {
+        debugPrint('RecentSearchesService: Error parsing user data: $e');
+      }
+    }
+    return 'recent_searches_anonymous';
+  }
 
   /// Save a user to recent searches when they visit their profile
   static Future<void> saveRecentSearch(UserSearchResultEntity user) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final key = await _getStorageKey();
       final recentSearches = await getRecentSearches();
       
-      // Remove if already exists to avoid duplicates
+      // Remove if already exists to avoid duplicates (moves it to the top)
       recentSearches.removeWhere((search) => search.id == user.id);
       
       // Add to the beginning of the list
@@ -27,27 +46,28 @@ class RecentSearchesService {
       }
       
       // Convert to JSON and save
-      final jsonList = recentSearches.map((user) => _userToJson(user)).toList();
-      await prefs.setString(_recentSearchesKey, jsonEncode(jsonList));
+      final jsonList = recentSearches.map((u) => _userToJson(u)).toList();
+      await prefs.setString(key, jsonEncode(jsonList));
       
-      debugPrint('RecentSearchesService: Saved recent search for user: ${user.username}');
+      debugPrint('RecentSearchesService: Saved recent search for user: ${user.username} under key: $key');
     } catch (e) {
       debugPrint('RecentSearchesService: Error saving recent search: $e');
     }
   }
 
-  /// Get all recent searches
+  /// Get all recent searches for the logged-in user
   static Future<List<UserSearchResultEntity>> getRecentSearches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString = prefs.getString(_recentSearchesKey);
+      final key = await _getStorageKey();
+      final jsonString = prefs.getString(key);
       
       if (jsonString == null || jsonString.isEmpty) {
         return [];
       }
       
       final jsonList = jsonDecode(jsonString) as List<dynamic>;
-      return jsonList.map((json) => _userFromJson(json)).toList();
+      return jsonList.map((json) => _userFromJson(json as Map<String, dynamic>)).toList();
     } catch (e) {
       debugPrint('RecentSearchesService: Error getting recent searches: $e');
       return [];
@@ -58,13 +78,14 @@ class RecentSearchesService {
   static Future<void> removeRecentSearch(String userId) async {
     try {
       final prefs = await SharedPreferences.getInstance();
+      final key = await _getStorageKey();
       final recentSearches = await getRecentSearches();
       
       recentSearches.removeWhere((search) => search.id == userId);
       
       // Save updated list
       final jsonList = recentSearches.map((user) => _userToJson(user)).toList();
-      await prefs.setString(_recentSearchesKey, jsonEncode(jsonList));
+      await prefs.setString(key, jsonEncode(jsonList));
       
       debugPrint('RecentSearchesService: Removed recent search for user: $userId');
     } catch (e) {
@@ -72,12 +93,13 @@ class RecentSearchesService {
     }
   }
 
-  /// Clear all recent searches
+  /// Clear all recent searches for the logged-in user
   static Future<void> clearAllRecentSearches() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_recentSearchesKey);
-      debugPrint('RecentSearchesService: Cleared all recent searches');
+      final key = await _getStorageKey();
+      await prefs.remove(key);
+      debugPrint('RecentSearchesService: Cleared all recent searches under key: $key');
     } catch (e) {
       debugPrint('RecentSearchesService: Error clearing recent searches: $e');
     }
@@ -106,14 +128,14 @@ class RecentSearchesService {
   /// Convert JSON to UserSearchResultEntity
   static UserSearchResultEntity _userFromJson(Map<String, dynamic> json) {
     return UserSearchResultEntity(
-      id: json['id'] ?? '',
-      username: json['username'] ?? '',
-      profileImageUrl: json['profileImageUrl'],
-      followersCount: json['followersCount'] ?? 0,
-      isFollowing: json['isFollowing'] ?? false,
-      isVerified: json['isVerified'] ?? false,
-      isSelf: json['isSelf'] ?? false,
-      createdAt: DateTime.tryParse(json['savedAt'] ?? '') ?? DateTime.now(),
+      id: json['id'] as String? ?? '',
+      username: json['username'] as String? ?? '',
+      profileImageUrl: json['profileImageUrl'] as String?,
+      followersCount: json['followersCount'] as int? ?? 0,
+      isFollowing: json['isFollowing'] as bool? ?? false,
+      isVerified: json['isVerified'] as bool? ?? false,
+      isSelf: json['isSelf'] as bool? ?? false,
+      createdAt: DateTime.tryParse(json['savedAt'] as String? ?? '') ?? DateTime.now(),
     );
   }
 }

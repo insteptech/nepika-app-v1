@@ -370,8 +370,8 @@ class _FollowerUserCard extends StatelessWidget {
                               fontWeight: FontWeight.w600,
                             ),
                           ),
-                          child: const Text(
-                            'Follow',
+                          child: Text(
+                            user.followsViewer ? 'Follow back' : 'Follow',
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),

@@ -16,7 +16,6 @@ class CommunitySettingsScreen extends StatefulWidget {
 }
 
 class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
-  bool _isPrivateProfile = false;
   String? _token;
   CommunityProfileEntity? _currentUserProfile;
 
@@ -154,8 +153,6 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16),
       child: Column(
         children: [
-                    const SizedBox(height: 16),
-          _buildPrivateProfileOption(),
           const SizedBox(height: 16),
           _buildOptionItem(
             icon: Icons.people_outline,
@@ -193,62 +190,6 @@ class _CommunitySettingsScreenState extends State<CommunitySettingsScreen> {
           ),
         ],
       ),
-    );
-  }
-
-  Widget _buildPrivateProfileOption() {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        Container(
-          width: 40,
-          height: 40,
-          decoration: BoxDecoration(
-            color: theme.brightness == Brightness.dark 
-                ? AppTheme.surfaceColorDark 
-                : AppTheme.surfaceColorLight,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Icon(
-            Icons.lock_outline,
-            size: 20,
-            color: theme.brightness == Brightness.dark 
-                ? AppTheme.textPrimaryDark 
-                : AppTheme.textPrimaryLight,
-          ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Text(
-            'Private Profile',
-            style: theme.textTheme.headlineMedium?.copyWith(
-              color: theme.brightness == Brightness.dark 
-                  ? AppTheme.textPrimaryDark 
-                  : AppTheme.textPrimaryLight,
-            ),
-          ),
-        ),
-        SizedBox(
-          width: 58,
-          height: 35,
-          child: Switch(
-            value: _isPrivateProfile,
-            onChanged: (value) {
-              setState(() {
-                _isPrivateProfile = value;
-              });
-            },
-            activeColor: AppTheme.whiteBlack,
-            activeTrackColor: AppTheme.primaryColor,
-            inactiveThumbColor: AppTheme.whiteBlack,
-            inactiveTrackColor: (theme.brightness == Brightness.dark 
-                ? AppTheme.textSecondaryDark 
-                : AppTheme.textSecondaryLight).withValues(alpha: 0.3),
-            trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
-            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-        ),
-      ],
     );
   }
 

@@ -161,6 +161,10 @@ class _PricingScreenState extends State<PricingScreen> {
                         duration: const Duration(seconds: 4),
                       ),
                     );
+                    if (state.message.contains('already own')) {
+                      // Auto-trigger restore if user tries to buy something they already own
+                      context.read<IAPBloc>().add(RestorePurchases());
+                    }
                   }
                 },
               ),
@@ -1055,6 +1059,7 @@ class _PricingScreenState extends State<PricingScreen> {
     final nextBillingDate = currentPlan['current_period_end']?.toString() ?? currentPlan['next_billing_date']?.toString() ?? '';
     final cancelAtPeriodEnd = currentPlan['cancel_at_period_end'] == true;
     final subscriptionId = currentPlan['subscription_id']?.toString() ?? '';
+    final purchasePlatform = currentPlan['platform']?.toString().toLowerCase() ?? '';
 
     showModalBottomSheet(
       context: context,
@@ -1246,44 +1251,104 @@ class _PricingScreenState extends State<PricingScreen> {
             ),
             const SizedBox(height: 24),
 
-            // Apple subscription management button (for IAP subscriptions)
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () async {
-                  final uri = Uri.parse('https://apps.apple.com/account/subscriptions');
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  }
-                },
-                icon: const Icon(Icons.apple, size: 20),
-                label: const Text('Manage in Apple Settings'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: theme.brightness == Brightness.dark 
-                      ? Colors.white 
-                      : Colors.black,
-                  foregroundColor: theme.brightness == Brightness.dark 
-                      ? Colors.black 
-                      : Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Platform-specific subscription management button
+            if (purchasePlatform == 'ios') ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse('https://apps.apple.com/account/subscriptions');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.apple, size: 20),
+                  label: const Text('Manage in Apple Settings'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: theme.brightness == Brightness.dark
+                        ? Colors.white
+                        : Colors.black,
+                    foregroundColor: theme.brightness == Brightness.dark
+                        ? Colors.black
+                        : Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 8),
-              child: Text(
-                'To cancel your subscription or change billing, use Apple\'s subscription settings.',
-                textAlign: TextAlign.center,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.outline,
-                  fontSize: 11,
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'You purchased this subscription on iOS. To cancel or change billing, use Apple\'s subscription settings.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontSize: 11,
+                  ),
                 ),
               ),
-            ),
+            ] else if (purchasePlatform == 'android') ...[
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () async {
+                    final uri = Uri.parse('https://play.google.com/store/account/subscriptions');
+                    if (await canLaunchUrl(uri)) {
+                      await launchUrl(uri, mode: LaunchMode.externalApplication);
+                    }
+                  },
+                  icon: const Icon(Icons.shop, size: 20),
+                  label: const Text('Manage in Google Play'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF34A853),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'You purchased this subscription on Android. To cancel or change billing, use Google Play subscriptions.',
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.outline,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ] else ...[
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.primary.withValues(alpha: 0.05),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: theme.colorScheme.primary.withValues(alpha: 0.15)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: theme.colorScheme.primary, size: 18),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        'To cancel your subscription, contact support or manage your billing settings.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
             const SizedBox(height: 16),
             
             // Cancel in our system button

@@ -9,11 +9,9 @@ import '../../../core/di/injection_container.dart' as di;
 /// Follows Single Responsibility Principle - only handles header display
 class CommunityHeader extends SliverPersistentHeaderDelegate {
   final VoidCallback onSearchTap;
-  final VoidCallback onMenuTap;
 
   CommunityHeader({
     required this.onSearchTap,
-    required this.onMenuTap,
   });
 
   @override
@@ -43,53 +41,32 @@ class CommunityHeader extends SliverPersistentHeaderDelegate {
               color: Theme.of(context).colorScheme.primary,
             ),
           ),
-
-          // Hamburger Menu Button
+          // Search Icon (Left)
           Positioned(
             left: 0,
             child: IconButton(
-              splashRadius: 20,
-              onPressed: onMenuTap,
-              icon: Icon(
-                Icons.menu,
-                size: 28,
-                color: Theme.of(context).colorScheme.primary,
+              splashRadius: 10,
+              onPressed: onSearchTap,
+              icon: AnimatedContainer(
+                duration: const Duration(milliseconds: 100),
+                child: Image.asset(
+                  'assets/icons/search_icon.png',
+                  height: searchHeight,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
           ),
 
-          // Search and Notification Icons
+          // Notification Badge (Right)
           Positioned(
             right: 0,
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                // Search Icon
-                IconButton(
-                  splashRadius: 10,
-                  onPressed: onSearchTap,
-                  icon: AnimatedContainer(
-                    duration: const Duration(milliseconds: 100),
-                    child: Image.asset(
-                      'assets/icons/search_icon.png',
-                      height: searchHeight,
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                  ),
-                ),
-                
-                const SizedBox(width: 9),
-                
-                // Notification Badge
-                BlocProvider(
-                  create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
-                  child: NotificationBadge(
-                      iconSize: searchHeight,
-                      iconColor: Theme.of(context).colorScheme.primary,
-                    ),
-                ),
-              ],
+            child: BlocProvider(
+              create: (context) => di.sl<NotificationBloc>()..add(const FetchAllNotifications()),
+              child: NotificationBadge(
+                iconSize: searchHeight,
+                iconColor: Theme.of(context).colorScheme.primary,
+              ),
             ),
           ),
         ],

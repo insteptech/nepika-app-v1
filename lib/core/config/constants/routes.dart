@@ -107,6 +107,7 @@ class AppRoutes {
   static const String faq = '/faq';
   static const String feedback = '/feedback';
   static const String about = '/about';
+  static const String communityInsights = '/community-insights';
 
   CommunityRoutes get community => CommunityRoutes();
 

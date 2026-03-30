@@ -50,7 +50,7 @@ class IAPDiagnostics {
   static Future<void> _checkProductAvailability(Map<String, dynamic> results) async {
     try {
       const productIds = {
-        'com.assisted.nepika.weekly',
+        'com.assisted.nepika.monthly',
         'com.assisted.nepika.yearly',
       };
 

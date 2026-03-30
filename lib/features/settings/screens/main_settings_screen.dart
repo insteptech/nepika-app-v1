@@ -9,6 +9,7 @@ import 'package:nepika/features/reminders/bloc/reminder_bloc.dart';
 import 'package:nepika/features/settings/bloc/delete_account_bloc.dart';
 import 'package:nepika/features/settings/components/delete_account_dialog.dart';
 import 'package:nepika/features/settings/screens/onboarding_data_screen.dart';
+import 'package:nepika/features/dashboard/widgets/feature_suggestion_dialog.dart';
 import 'package:nepika/features/dashboard/screens/set_reminder_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -21,7 +22,6 @@ import '../models/settings_option_data.dart';
 import '../widgets/settings_header.dart';
 import '../widgets/settings_section.dart';
 // import '../bloc/delete_account_bloc.dart';
-import 'community_settings_screen.dart';
 import 'help_support_screen.dart';
 import 'notifications_settings_screen.dart';
 import '../../community/screens/edit_profile_screen.dart';
@@ -55,12 +55,18 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
       // 1. Initial load from local cache for immediate UI responsiveness
       if (userDataStr != null) {
         final Map<String, dynamic> userData = jsonDecode(userDataStr);
+        debugPrint('🔍 MainSettingsScreen: Cached data found');
+        debugPrint('🔍 MainSettingsScreen: cachedIsPro=${userData['is_skincare_professional']}');
+        debugPrint('🔍 MainSettingsScreen: cachedIsAdminPremium=${userData['admin_granted_premium']}');
         if (mounted) {
           setState(() {
             _isProfessional = userData['is_skincare_professional'] == true;
             _isAdminGrantedPremium = userData['admin_granted_premium'] == true;
           });
+          debugPrint('🔍 MainSettingsScreen: Initial state set from cache: _isPro=$_isProfessional, _isAdminPremium=$_isAdminGrantedPremium');
         }
+      } else {
+        debugPrint('🔍 MainSettingsScreen: No cached user data found');
       }
 
       // 2. Background refresh from server to pick up admin changes (like premium override)
@@ -78,10 +84,14 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
             final bool serverIsAdminPremium = serverData['admin_granted_premium'] == true;
 
             if (mounted) {
+              debugPrint('🔍 MainSettingsScreen: Server response received');
+              debugPrint('🔍 MainSettingsScreen: serverIsPro=$serverIsPro');
+              debugPrint('🔍 MainSettingsScreen: serverIsAdminPremium=$serverIsAdminPremium');
               setState(() {
                 _isProfessional = serverIsPro;
                 _isAdminGrantedPremium = serverIsAdminPremium;
               });
+              debugPrint('🔍 MainSettingsScreen: State updated: _isPro=$_isProfessional, _isAdminPremium=$_isAdminGrantedPremium');
             }
 
             // Update local cache to persist the change
@@ -410,13 +420,9 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                 title: 'COMMUNITY',
                 options: [
                   SettingsOptionData.option(
-                    'Community & Engagement',
+                    'Community Insights',
                     onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(
-                          builder: (_) => const CommunitySettingsScreen(),
-                        ),
-                      );
+                      Navigator.of(context, rootNavigator: true).pushNamed(AppRoutes.communityInsights);
                     },
                   ),
                 ],
@@ -529,6 +535,15 @@ class _MainSettingsScreenState extends State<MainSettingsScreen> {
                         context,
                         rootNavigator: true,
                       ).pushNamed(AppRoutes.feedback);
+                    },
+                  ),
+                  SettingsOptionData.option(
+                    'Suggest a Feature Form',
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => const FeatureSuggestionDialog(),
+                      );
                     },
                   ),
                 ],

@@ -54,6 +54,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
   
   // Store the loaded post to prevent blank screen during comment operations
   PostDetailEntity? _loadedPost;
+  PostEntity? _parentPost; // Added to store parent post if this is a reply
   
   // Local state for comments to prevent conflicts with post loading
   List<PostEntity> _localComments = [];
@@ -90,6 +91,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
       
       // Reset the loaded post to prevent showing wrong content
       _loadedPost = null;
+      _parentPost = null;
       
       // Reset comments state as well
       _localComments.clear();
@@ -359,6 +361,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     
     // Clear all cached post data to prevent conflicts between different post details
     _loadedPost = null;
+    _parentPost = null;
     
     // Clear comments data
     _localComments.clear();
@@ -658,6 +661,11 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
         setState(() {
           _loadedPost = state.post;
         });
+        
+        // If this is a reply, fetch the parent post
+        if (state.post.parentPostId != null && state.post.parentPostId!.isNotEmpty) {
+          _fetchParentPost(state.post.parentPostId!);
+        }
       }
       debugPrint('Post Detail Loaded: ${state.post.id}');
     } else if (state is CommentsState && state.parentPostId == widget.postId) {
@@ -682,7 +690,28 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
       }
     }
   }
-  
+
+  Future<void> _fetchParentPost(String parentPostId) async {
+    if (_token == null) return;
+
+    try {
+      debugPrint('PostDetailScreen: Fetching parent post $parentPostId');
+      final repository = sl<CommunityRepository>();
+      final parentPost = await repository.fetchSinglePost(
+        token: _token!,
+        postId: parentPostId,
+      );
+
+      if (mounted) {
+        setState(() {
+          _parentPost = parentPost;
+        });
+      }
+    } catch (e) {
+      debugPrint('PostDetailScreen: Error fetching parent post: $e');
+    }
+  }
+
   Future<void> _refreshComments() async {
     if (mounted) {
       setState(() {
@@ -907,6 +936,12 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
        child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Parent Post Preview (if this is a reply)
+          if (_parentPost != null) ...[
+            _buildParentPostPreview(context),
+            const SizedBox(height: 12),
+          ],
+
           // User Info Row
           Row(
             children: [
@@ -977,6 +1012,75 @@ class _PostDetailScreenState extends State<PostDetailScreen> with CommunityState
     );
   }
 
+
+  Widget _buildParentPostPreview(BuildContext context) {
+    if (_parentPost == null) return const SizedBox.shrink();
+
+    return InkWell(
+      onTap: () => CommunityNavigation.navigateToPostDetail(
+        context,
+        postId: _parentPost!.id,
+        token: _token,
+        userId: _userId,
+      ),
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.2),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                UserImageIcon(
+                  author: AuthorEntity(
+                    id: _parentPost!.userId,
+                    fullName: _parentPost!.username,
+                    avatarUrl: _parentPost!.userAvatar ?? '',
+                  ),
+                  size: 24,
+                  padding: 0,
+                ),
+                const SizedBox(width: 8),
+                Text(
+                  _parentPost!.username,
+                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  '•',
+                  style: TextStyle(color: Theme.of(context).colorScheme.outline),
+                ),
+                const SizedBox(width: 4),
+                Text(
+                  'Original Post',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.outline,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              _parentPost!.content,
+              maxLines: 3,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Widget _buildCommentInput(BuildContext context, PostDetailEntity post) {
     return Container(

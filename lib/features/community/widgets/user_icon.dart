@@ -5,12 +5,13 @@ import 'package:nepika/domain/community/entities/community_entities.dart';
 
 class UserImageIcon extends StatelessWidget {
   final AuthorEntity author;
-  
+  final double size;
   final int padding;
 
   const UserImageIcon({
     super.key,
     required this.author,
+    this.size = 40,
     this.padding = 0,
   });
 
@@ -30,8 +31,8 @@ class UserImageIcon extends StatelessWidget {
         },
         borderRadius: BorderRadius.circular(20),
         child: Container(
-          height: 40,
-          width: 40,
+          height: size,
+          width: size,
           margin: EdgeInsets.all(padding.toDouble()),
           decoration: BoxDecoration(
             shape: BoxShape.circle,
@@ -49,8 +50,8 @@ class UserImageIcon extends StatelessWidget {
               ? ClipOval(
                   child: Image.network(
                     avatarUrl,
-                    height: 40,
-                    width: 40,
+                    height: size,
+                    width: size,
                     fit: BoxFit.cover,
                     errorBuilder: (context, error, stackTrace) {
                       return _buildDefaultIcon(context);
@@ -67,7 +68,7 @@ class UserImageIcon extends StatelessWidget {
     return Center(
       child: Icon(
         Icons.person,
-        size: 24,
+        size: size * 0.6,
         color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.7),
       ),
     );

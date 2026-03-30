@@ -25,6 +25,7 @@ import 'core/services/fcm_background_handler.dart';
 import 'package:nepika/features/settings/screens/privacy_policy_screen.dart';
 import 'package:nepika/features/settings/screens/terms_of_use_screen.dart';
 import 'package:nepika/features/settings/screens/face_scan_info_screen.dart';
+import 'package:nepika/features/settings/screens/community_insights_screen.dart';
 import 'package:nepika/features/dashboard/main.dart';
 import 'package:nepika/features/onboarding/bloc/onboarding_bloc.dart';
 import 'package:nepika/features/products/main.dart';
@@ -445,6 +446,10 @@ class MyApp extends StatelessWidget {
             case AppRoutes.faceScanInfo:
               return MaterialPageRoute(
                 builder: (_) => const FaceScanInfoScreen(),
+              );
+            case AppRoutes.communityInsights:
+              return MaterialPageRoute(
+                builder: (_) => const CommunityInsightsScreen(),
               );
             case AppRoutes.faq:
               return MaterialPageRoute(builder: (_) => const FaqScreen());

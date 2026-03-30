@@ -98,6 +98,7 @@ class PostEntity {
   final DateTime? updatedAt;
   final String username; // Direct from API
   final String? userAvatar; // Direct from API
+  final String? parentUsername; // Direct from API
   final bool isLikedByUser; // Direct from API
   final bool isSkincareProfessional; // Direct from API
   final List<String>? mediaUrls; // Direct from API
@@ -116,6 +117,7 @@ class PostEntity {
     this.updatedAt,
     required this.username,
     this.userAvatar,
+    this.parentUsername,
     required this.isLikedByUser,
     this.isSkincareProfessional = false,
     this.mediaUrls,
@@ -145,6 +147,7 @@ class PostEntity {
           : null,
       username: json['username']?.toString() ?? '',
       userAvatar: json['user_avatar']?.toString(),
+      parentUsername: json['parent_username']?.toString(),
       isLikedByUser: json['is_liked_by_user'] as bool? ?? false,
       isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       mediaUrls: json['media_urls'] != null 
@@ -169,6 +172,7 @@ class PostEntity {
       'updated_at': updatedAt?.toIso8601String(),
       'username': username,
       'user_avatar': userAvatar,
+      'parent_username': parentUsername,
       'is_liked_by_user': isLikedByUser,
       'is_skincare_professional': isSkincareProfessional,
       'media_urls': mediaUrls,
@@ -620,6 +624,7 @@ class CommunityProfileEntity {
   final Map<String, dynamic>? settings;
   final bool isSelf;
   final bool isFollowing;
+  final bool followsViewer;
   final bool isSkincareProfessional;
   final String? followRequestStatus; // null, "pending", "accepted", "declined"
   
@@ -655,6 +660,7 @@ class CommunityProfileEntity {
     this.settings,
     this.isSelf = false,
     this.isFollowing = false,
+    this.followsViewer = false,
     this.isSkincareProfessional = false,
     this.followRequestStatus,
     this.qualifications,
@@ -689,6 +695,7 @@ class CommunityProfileEntity {
       settings: json['settings'] as Map<String, dynamic>?,
       isSelf: json['is_self'] as bool? ?? false,
       isFollowing: json['is_following'] as bool? ?? false,
+      followsViewer: json['follows_viewer'] as bool? ?? false,
       isSkincareProfessional: json['is_skincare_professional'] as bool? ?? false,
       followRequestStatus: json['follow_request_status']?.toString(),
       qualifications: json['qualification'] is List
@@ -732,6 +739,7 @@ class CommunityProfileEntity {
       'settings': settings,
       'is_self': isSelf,
       'is_following': isFollowing,
+      'follows_viewer': followsViewer,
       'is_skincare_professional': isSkincareProfessional,
       'follow_request_status': followRequestStatus,
       'qualification': qualifications,
@@ -766,6 +774,7 @@ class CommunityProfileEntity {
     Map<String, dynamic>? settings,
     bool? isSelf,
     bool? isFollowing,
+    bool? followsViewer,
     bool? isSkincareProfessional,
     String? followRequestStatus,
     List<String>? qualifications,
@@ -798,6 +807,7 @@ class CommunityProfileEntity {
       settings: settings ?? this.settings,
       isSelf: isSelf ?? this.isSelf,
       isFollowing: isFollowing ?? this.isFollowing,
+      followsViewer: followsViewer ?? this.followsViewer,
       isSkincareProfessional: isSkincareProfessional ?? this.isSkincareProfessional,
       followRequestStatus: followRequestStatus ?? this.followRequestStatus,
       qualifications: qualifications ?? this.qualifications,

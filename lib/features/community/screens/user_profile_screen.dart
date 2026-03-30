@@ -15,6 +15,14 @@ import '../utils/community_navigation.dart';
 import '../widgets/post_skeleton_loader.dart';
 import '../widgets/professional_badge.dart';
 
+// Settings APIs
+import '../../../domain/auth/usecases/get_notification_settings.dart';
+import '../../../domain/auth/usecases/update_notification_settings.dart';
+import '../../../domain/auth/entities/notification_settings.dart';
+import '../../../core/di/injection_container.dart';
+import '../../../core/config/constants/routes.dart';
+import '../../../core/config/constants/theme.dart';
+
 enum ActiveTab { threads, replies }
 
 class UserProfileScreen extends StatefulWidget {
@@ -263,6 +271,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
       if (_threads.isEmpty && _profileBloc != null && _token != null) {
         debugPrint('ProfilePage: Dispatching FetchUserThreads event');
+        setState(() {
+          _loadingMoreThreads = true;
+        });
         _profileBloc!.add(
           FetchUserThreads(token: _token!, userId: profileUserId!),
         );
@@ -277,6 +288,9 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       );
       if (_replies.isEmpty && _profileBloc != null && _token != null) {
         debugPrint('ProfilePage: Dispatching FetchUserReplies event');
+        setState(() {
+          _loadingMoreReplies = true;
+        });
         _profileBloc!.add(
           FetchUserReplies(token: _token!, userId: profileUserId!),
         );
@@ -439,17 +453,6 @@ Join the conversation: $profileUrl''';
         },
       ),
       ListTile(
-        leading: Icon(
-          Icons.lock_outline,
-          color: Theme.of(context).iconTheme.color,
-        ),
-        title: Text('Privacy', style: Theme.of(context).textTheme.bodyLarge),
-        onTap: () {
-          Navigator.pop(context);
-          _showPrivacyOptions();
-        },
-      ),
-      ListTile(
         leading: Icon(Icons.share, color: Theme.of(context).iconTheme.color),
         title: Text(
           'Share profile',
@@ -599,11 +602,15 @@ Join the conversation: $profileUrl''';
                       title: const Text('Notifications'),
                       onTap: () {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Notifications - Coming Soon!'),
-                          ),
-                        );
+                        _showNotificationsOptions();
+                      },
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.block_outlined),
+                      title: const Text('Blocked Users'),
+                      onTap: () {
+                        Navigator.pop(context);
+                        Navigator.of(context).pushNamed(AppRoutes.blockedUsers);
                       },
                     ),
                     ListTile(
@@ -611,11 +618,7 @@ Join the conversation: $profileUrl''';
                       title: const Text('Help & Support'),
                       onTap: () {
                         Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Help & Support - Coming Soon!'),
-                          ),
-                        );
+                        Navigator.of(context).pushNamed(AppRoutes.helpAndSupport);
                       },
                     ),
                   ],
@@ -626,15 +629,21 @@ Join the conversation: $profileUrl''';
     );
   }
 
-  void _showPrivacyOptions() {
+  void _showNotificationsOptions() async {
+    final helper = SharedPrefsHelper();
+    bool communityEnabled = await helper.getBool('Community notification');
+
+    if (!mounted) return;
+
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      builder:
-          (context) => Container(
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return Container(
             decoration: BoxDecoration(
               color: Theme.of(context).scaffoldBackgroundColor,
               borderRadius: const BorderRadius.vertical(
@@ -656,53 +665,94 @@ Join the conversation: $profileUrl''';
                       ),
                     ),
                     const SizedBox(height: 24),
-                    ListTile(
-                      leading: const Icon(Icons.lock),
-                      title: const Text('Private Account'),
-                      trailing: Switch(
-                        value:
-                            false, // This would be connected to actual privacy state
-                        onChanged: (value) {
-                          Navigator.pop(context);
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
-                              content: Text(
-                                'Private Account ${value ? 'Enabled' : 'Disabled'}',
-                              ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 40,
+                          height: 40,
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).brightness == Brightness.dark 
+                                ? AppTheme.surfaceColorDark 
+                                : AppTheme.surfaceColorLight,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Icon(
+                            Icons.notifications_active_outlined,
+                            size: 20,
+                            color: Theme.of(context).brightness == Brightness.dark 
+                                ? AppTheme.textPrimaryDark 
+                                : AppTheme.textPrimaryLight,
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Text(
+                            'Community Notifications',
+                            style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                              color: Theme.of(context).brightness == Brightness.dark 
+                                  ? AppTheme.textPrimaryDark 
+                                  : AppTheme.textPrimaryLight,
                             ),
-                          );
-                        },
-                      ),
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.visibility_off),
-                      title: const Text('Hide Story'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Hide Story - Coming Soon!'),
                           ),
-                        );
-                      },
-                    ),
-                    ListTile(
-                      leading: const Icon(Icons.block),
-                      title: const Text('Blocked Users'),
-                      onTap: () {
-                        Navigator.pop(context);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Blocked Users - Coming Soon!'),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: SizedBox(
+                            width: 58,
+                            height: 35,
+                            child: Switch(
+                              value: communityEnabled,
+                              activeColor: AppTheme.whiteBlack,
+                              activeTrackColor: AppTheme.primaryColor,
+                              inactiveThumbColor: AppTheme.whiteBlack,
+                              inactiveTrackColor: (Theme.of(context).brightness == Brightness.dark 
+                                  ? AppTheme.textSecondaryDark 
+                                  : AppTheme.textSecondaryLight).withValues(alpha: 0.3),
+                              trackOutlineColor: WidgetStateProperty.all(Colors.transparent),
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              onChanged: (value) async {
+                                setModalState(() {
+                                  communityEnabled = value;
+                                });
+                                await helper.setBool('Community notification', value);
+
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(value ? 'Community notifications enabled' : 'Community notifications disabled'),
+                                      duration: const Duration(seconds: 2),
+                                    ),
+                                  );
+                                }
+
+                                // Try updating backend
+                                try {
+                                   final getRes = await sl<GetNotificationSettings>().call();
+                                   getRes.fold((_) {}, (settings) async {
+                                      final updated = NotificationSettings(
+                                        remindersEnabled: settings.remindersEnabled,
+                                        communityEnabled: value,
+                                        marketingEnabled: settings.marketingEnabled,
+                                      );
+                                      await sl<UpdateNotificationSettings>().call(updated);
+                                   });
+                                } catch (e) {
+                                  // Ignore failure, local state is still saved
+                                }
+                              },
+                            ),
                           ),
-                        );
-                      },
+                        ),
+                      ],
                     ),
+                    const SizedBox(height: 20),
                   ],
                 ),
               ),
             ),
-          ),
+          );
+        },
+      ),
     );
   }
 
@@ -956,6 +1006,9 @@ Join the conversation: $profileUrl''';
       // Note: Backend now provides follow status in profile response, no need for separate API call
 
       debugPrint('ProfilePage: Loading initial threads after profile loaded');
+      setState(() {
+        _loadingMoreThreads = true;
+      });
       _profileBloc!.add(
         FetchUserThreads(token: _token!, userId: profileUserId!),
       );
@@ -981,6 +1034,16 @@ Join the conversation: $profileUrl''';
         _hasMoreReplies = state.hasMoreReplies;
         _repliesPage = state.currentPage;
         _loadingMoreReplies = false;
+      });
+    } else if (state is UserThreadsLoading && state.userId == profileUserId) {
+      debugPrint('ProfilePage: Loading initial threads');
+      setState(() {
+        _loadingMoreThreads = true;
+      });
+    } else if (state is UserRepliesLoading && state.userId == profileUserId) {
+      debugPrint('ProfilePage: Loading initial replies');
+      setState(() {
+        _loadingMoreReplies = true;
       });
     } else if (state is UserThreadsLoadingMore &&
         state.userId == profileUserId) {
@@ -1609,8 +1672,7 @@ Join the conversation: $profileUrl''';
                         borderRadius: BorderRadius.circular(8),
                       ),
                     ),
-                    child:
-                        _isFollowLoading
+                    child: _isFollowLoading
                             ? SizedBox(
                               height: 20,
                               width: 20,
@@ -1628,7 +1690,7 @@ Join the conversation: $profileUrl''';
                               (_profileData?.isFollowing ?? _isFollowing) ==
                                       true
                                   ? 'Following'
-                                  : 'Follow',
+                                  : ((_profileData?.followsViewer ?? false) == true ? 'Follow back' : 'Follow'),
                               style: Theme.of(
                                 context,
                               ).textTheme.bodyLarge!.copyWith(

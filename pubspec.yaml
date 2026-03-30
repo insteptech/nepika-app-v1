@@ -1,7 +1,7 @@
 name: nepika
 description: "A new Flutter project."
 publish_to: 'none'
-version: 1.0.1+20
+version: 1.0.1+26
 
 environment:
   sdk: ^3.7.0
@@ -56,6 +56,7 @@ dependencies:
   package_info_plus: ^8.0.2
 
   in_app_purchase: ^3.2.3
+  in_app_purchase_android: ^0.4.0
   in_app_purchase_storekit: ^0.4.4
   # File type detection
   mime: ^1.0.6
@@ -74,6 +75,7 @@ dependencies:
   flutter_stripe_web: ^7.3.0
   bloc_concurrency: ^0.2.5
   flutter_markdown: ^0.7.7+1
+  fl_chart: ^1.2.0
 
 dev_dependencies:
   flutter_test:

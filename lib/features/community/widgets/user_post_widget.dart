@@ -146,7 +146,9 @@ class _UserPostWidgetState extends State<UserPostWidget> {
             children: [
               const TextSpan(text: 'Replying to '),
               TextSpan(
-                text: '@thread', // This should come from API
+                text: _currentPost.parentUsername != null && _currentPost.parentUsername!.isNotEmpty
+                    ? '@${_currentPost.parentUsername}'
+                    : 'original post',
                 style: TextStyle(
                   color: Theme.of(context).colorScheme.primary,
                   fontWeight: FontWeight.w600,
